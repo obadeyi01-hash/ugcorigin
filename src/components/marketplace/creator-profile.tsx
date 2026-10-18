@@ -1,0 +1,144 @@
+import Link from "next/link";
+import { MapPin, ArrowRight, ShieldCheck, Check } from "lucide-react";
+import { Chip } from "@/components/ui/chip";
+import { PillRow } from "@/components/ui/pill-row";
+import { Button } from "@/components/ui/button";
+import { Card, CardBody } from "@/components/ui/card";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
+import { TierBadge } from "@/components/ui/tier-badge";
+import { SocialIcon, socialUrl } from "@/components/ui/social-icons";
+import { ShareCard } from "@/components/marketplace/share-card";
+import { Reviews, type ReviewItem } from "@/components/marketplace/reviews";
+import { SocialEmbeds, type EmbedLink } from "@/components/marketplace/social-embeds";
+import { ReportButton } from "@/components/moderation/report-button";
+import { formatNaira } from "@/lib/utils";
+
+export type ProfileData = {
+  id?: string;
+  handle: string;
+  name: string;
+  bio?: string | null;
+  location?: string | null;
+  niches: string[];
+  verified: boolean;
+  tier?: string | null;
+  startingRate?: number | null;
+  url: string;
+  socials: { platform: string; handle: string; url?: string | null }[];
+  packages: {
+    id: string;
+    title: string;
+    type: string;
+    price_naira: number;
+    revisions?: number | null;
+    format?: string | null;
+  }[];
+  reviews: ReviewItem[];
+  averageRating: number;
+  embeds: EmbedLink[];
+};
+
+export function CreatorProfile({ data }: { data: ProfileData }) {
+  const hasPackages = data.packages.length > 0;
+
+  return (
+    <div className="grid gap-10 py-10 md:grid-cols-[1fr_340px]">
+      {/* Main */}
+      <div>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{data.name}</h1>
+          {data.verified && <VerifiedBadge />}
+          {data.tier && <TierBadge tier={data.tier} />}
+        </div>
+        <p className="mt-1.5 flex items-center gap-1.5 text-ink-3">
+          <MapPin className="size-4" /> {data.location || "Nigeria"} · @{data.handle}
+        </p>
+
+        {data.socials.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {data.socials.map((s) => (
+              <a
+                key={s.platform}
+                href={socialUrl(s.platform, s.handle, s.url)}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={s.platform}
+                className="u-press grid size-10 place-items-center rounded-full border border-line bg-surface text-ink-2 transition-colors hover:border-accent hover:text-accent"
+              >
+                <SocialIcon platform={s.platform} className="size-4" />
+              </a>
+            ))}
+          </div>
+        )}
+
+        {data.bio && <p className="mt-6 max-w-prose leading-relaxed text-ink-2">{data.bio}</p>}
+
+        <PillRow className="mt-6">
+          {data.niches.map((n) => <Chip key={n}>{n}</Chip>)}
+        </PillRow>
+
+        {/* Packages */}
+        {hasPackages && (
+          <div className="mt-10">
+            <h2 className="font-display text-lg font-semibold text-ink">Packages</h2>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {data.packages.map((p) => (
+                <Card key={p.id}>
+                  <CardBody>
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-semibold text-ink">{p.title}</h3>
+                      <span className="shrink-0 rounded-full bg-accent-tint px-2 py-0.5 text-xs font-medium capitalize text-accent-hover">
+                        {p.type}
+                      </span>
+                    </div>
+                    {p.format && <p className="mt-1 text-xs text-ink-3">{p.format}</p>}
+                    <ul className="mt-3 space-y-1.5 text-sm text-ink-2">
+                      {p.revisions != null && (
+                        <li className="flex items-center gap-1.5"><Check className="size-3.5 text-success" /> {p.revisions} revision{p.revisions === 1 ? "" : "s"} included</li>
+                      )}
+                    </ul>
+                    <p className="mt-4 font-display text-xl font-bold text-ink">{formatNaira(p.price_naira)}</p>
+                  </CardBody>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <SocialEmbeds links={data.embeds} />
+
+        <Reviews reviews={data.reviews} average={data.averageRating} />
+
+        {data.id && (
+          <div className="mt-8 border-t border-line pt-4">
+            <ReportButton targetType="profile" targetId={data.id} label="Report this profile" />
+          </div>
+        )}
+      </div>
+
+      {/* Rate card sidebar */}
+      <aside>
+        <Card className="md:sticky md:top-20">
+          <CardBody>
+            <p className="text-xs text-ink-3">Starting at</p>
+            <p className="font-display text-3xl font-bold text-ink">
+              {data.startingRate ? formatNaira(data.startingRate) : ", "}
+            </p>
+
+            <Link href={`/${data.handle}/hire`} className="mt-5 block">
+              <Button className="w-full">Make an offer <ArrowRight className="size-4" /></Button>
+            </Link>
+            <div className="mt-2">
+              <ShareCard url={data.url} name={data.name} handle={data.handle} />
+            </div>
+
+            <ul className="mt-5 space-y-2 border-t border-line pt-4 text-sm text-ink-2">
+              <li className="flex items-center gap-2"><ShieldCheck className="size-4 text-success" /> Escrow-protected, pay on approval</li>
+              {data.verified && <li className="flex items-center gap-2"><Check className="size-4 text-success" /> Identity-verified human</li>}
+            </ul>
+          </CardBody>
+        </Card>
+      </aside>
+    </div>
+  );
+}

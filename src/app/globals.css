@@ -1,0 +1,209 @@
+@import "tailwindcss";
+
+/* ============================================================
+   UGCOrigin — Design tokens (light-only, premium)
+   Powder-white / matte-black / Origin Amber.
+   Tailwind v4 CSS-first. New color tokens are var-backed (required for
+   @theme inline to emit utilities).
+   ============================================================ */
+
+@theme inline {
+  /* Surfaces & ink */
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  /* Accent — Origin Pink */
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-bright: var(--accent-bright);
+  --color-accent-tint: var(--accent-tint);
+  --color-accent-ink: var(--accent-ink);
+
+  /* Soft pastels (color-wheel harmonious with pink) for team/feature cards */
+  --color-peach: var(--peach);
+  --color-lavender: var(--lavender);
+  --color-mint: var(--mint);
+
+  /* Fixed brand constants (always-dark panels, e.g. hero) */
+  --color-obsidian: var(--obsidian);
+  --color-chalk: var(--chalk);
+
+  /* Functional status (muted, never decorative) */
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
+
+  /* Type */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+  /* Radii — generous, Apple-ish */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.375rem;
+  --radius-2xl: 1.75rem;
+  --radius-3xl: 2.25rem;
+
+  /* Elevation — soft, diffuse */
+  --shadow-xs: var(--elev-xs);
+  --shadow-sm: var(--elev-sm);
+  --shadow-md: var(--elev-md);
+  --shadow-lg: var(--elev-lg);
+  --shadow-xl: var(--elev-xl);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --default-transition-duration: 240ms;
+  --default-transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-reveal: reveal 0.6s var(--ease-out) both;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+}
+
+:root {
+  --paper: #f7f7f5;
+  --surface: #ffffff;
+  --surface-2: #f3f3f0;
+  --ink: #15161a;
+  --ink-2: #44464d;
+  --ink-3: #85868d;
+  --line: color-mix(in srgb, #15161a 8%, transparent);
+  --line-strong: color-mix(in srgb, #15161a 15%, transparent);
+
+  /* Origin Pink */
+  --accent: #db2777;        /* buttons, links (white text, AA) */
+  --accent-hover: #be185d;
+  --accent-bright: #ec4899;  /* highlights on dark, icon accents */
+  --accent-tint: #fce7f3;    /* soft pink wash */
+  --accent-ink: #ffffff;     /* text on pink */
+
+  /* Soft pastels */
+  --peach: #ffe3d3;
+  --lavender: #ece9fe;
+  --mint: #d8f5e6;
+
+  /* Fixed constants */
+  --obsidian: #141519;
+  --chalk: #f8f8f6;
+
+  --success: #2e9e6b;
+  --warning: #c8861b;
+  --error: #c0392b;
+  --info: #4a6fa5;
+
+  --elev-xs: 0 1px 2px color-mix(in srgb, #15161a 6%, transparent);
+  --elev-sm: 0 2px 10px color-mix(in srgb, #15161a 6%, transparent);
+  --elev-md: 0 8px 26px color-mix(in srgb, #15161a 8%, transparent);
+  --elev-lg: 0 16px 48px color-mix(in srgb, #15161a 11%, transparent);
+  --elev-xl: 0 30px 72px color-mix(in srgb, #15161a 15%, transparent);
+
+  color-scheme: light;
+}
+
+/* ---------- Base ---------- */
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1, h2, h3, h4, h5 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  ::selection {
+    background: var(--accent-tint);
+    color: var(--ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+/* ---------- Utilities: motion & texture ---------- */
+@layer utilities {
+  .u-reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+      opacity 0.6s var(--ease-out),
+      transform 0.6s var(--ease-out);
+    will-change: opacity, transform;
+  }
+  .u-reveal[data-visible="true"] {
+    opacity: 1;
+    transform: none;
+  }
+  .u-press {
+    transition: transform 0.14s var(--ease-out), box-shadow 0.24s var(--ease-out);
+  }
+  .u-press:active {
+    transform: scale(0.97);
+  }
+  .u-lift {
+    transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+  }
+  .u-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--elev-lg);
+  }
+  .u-grain {
+    background-image: radial-gradient(
+      color-mix(in srgb, #ffffff 8%, transparent) 0.5px,
+      transparent 0.5px
+    );
+    background-size: 22px 22px;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .u-reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
