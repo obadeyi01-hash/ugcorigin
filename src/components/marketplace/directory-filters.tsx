@@ -3,17 +3,9 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Search, X } from "lucide-react";
-import { Chip } from "@/components/ui/chip";
 import { Select } from "@/components/ui/input";
 import { PillRow } from "@/components/ui/pill-row";
-import { NICHES } from "@/lib/sample-data";
-
-const PRICE_OPTIONS = [
-  { label: "Any price", value: "" },
-  { label: "Under ₦50k", value: "50000" },
-  { label: "Under ₦100k", value: "100000" },
-  { label: "Under ₦200k", value: "200000" },
-];
+import { CATEGORIES, REGIONS, PLATFORM_FILTERS, BUDGET_FILTERS, SORT_FILTERS } from "@/lib/categories";
 
 export function DirectoryFilters() {
   const router = useRouter();
@@ -22,9 +14,11 @@ export function DirectoryFilters() {
 
   const [q, setQ] = useState(params.get("q") ?? "");
   const niche = params.get("niche") ?? "";
+  const region = params.get("region") ?? "";
   const max = params.get("max") ?? "";
+  const platform = params.get("platform") ?? "";
+  const sort = params.get("sort") ?? "";
 
-  // keep the input in sync if the URL changes elsewhere
   useEffect(() => {
     setQ(params.get("q") ?? "");
   }, [params]);
@@ -38,10 +32,10 @@ export function DirectoryFilters() {
     router.push(`${pathname}?${sp.toString()}`);
   }
 
-  const hasFilters = q || niche || max;
+  const hasFilters = q || niche || region || max || platform || sort;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex flex-col gap-2 sm:flex-row">
         <form
           onSubmit={(e) => {
@@ -58,26 +52,37 @@ export function DirectoryFilters() {
             className="h-11 w-full rounded-full border border-line bg-surface pl-10 pr-4 text-sm text-ink placeholder:text-ink-3 focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent-tint"
           />
         </form>
-        <Select
-          value={max}
-          onChange={(e) => push({ max: e.target.value })}
-          className="sm:w-44"
-        >
-          {PRICE_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
+        <Select value={niche} onChange={(e) => push({ niche: e.target.value })} className="sm:w-56">
+          <option value="">All services</option>
+          {CATEGORIES.map((c) => (
+            <option key={c} value={c}>{c}</option>
           ))}
         </Select>
       </div>
 
-      <PillRow>
-        <button onClick={() => push({ niche: "" })}>
-          <Chip active={!niche}>All</Chip>
-        </button>
-        {NICHES.map((n) => (
-          <button key={n} onClick={() => push({ niche: niche === n ? "" : n })}>
-            <Chip active={niche === n}>{n}</Chip>
-          </button>
-        ))}
+      <PillRow className="gap-2">
+        <Select value={region} onChange={(e) => push({ region: e.target.value })} className="w-40">
+          <option value="">All regions</option>
+          {REGIONS.map((r) => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </Select>
+        <Select value={max} onChange={(e) => push({ max: e.target.value })} className="w-40">
+          {BUDGET_FILTERS.map((b) => (
+            <option key={b.value} value={b.value}>{b.label}</option>
+          ))}
+        </Select>
+        <Select value={platform} onChange={(e) => push({ platform: e.target.value })} className="w-40">
+          <option value="">All platforms</option>
+          {PLATFORM_FILTERS.map((p) => (
+            <option key={p.value} value={p.value}>{p.label}</option>
+          ))}
+        </Select>
+        <Select value={sort} onChange={(e) => push({ sort: e.target.value })} className="w-44">
+          {SORT_FILTERS.map((s) => (
+            <option key={s.value} value={s.value}>{s.label}</option>
+          ))}
+        </Select>
         {hasFilters && (
           <button
             onClick={() => router.push(pathname)}

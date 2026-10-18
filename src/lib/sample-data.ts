@@ -1,17 +1,8 @@
 import type { Creator } from "@/components/marketplace/creator-card";
 
-export const NICHES = [
-  "Beauty & Skincare",
-  "Fintech",
-  "Food & Cooking",
-  "Fashion",
-  "SaaS / Tech",
-  "Lifestyle",
-  "Unboxing",
-  "Testimonials",
-  "Product Demo",
-  "Skits",
-];
+// The full service taxonomy lives in categories.ts; re-exported as NICHES for
+// the existing call sites (onboarding, filters, brief/campaign forms).
+export { CATEGORIES as NICHES } from "./categories";
 
 // Pexels portrait (free, commercial use). Real African/Nigerian creators.
 const img = (id: number) =>

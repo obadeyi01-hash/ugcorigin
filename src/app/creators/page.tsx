@@ -9,13 +9,14 @@ import { Button } from "@/components/ui/button";
 import { CreatorCard, type Creator } from "@/components/marketplace/creator-card";
 import { DirectoryFilters } from "@/components/marketplace/directory-filters";
 import { createClient } from "@/lib/supabase/server";
+import { rankCreators, type RankCreator } from "@/lib/ranking";
 
 export const metadata: Metadata = {
   title: "Find creators",
-  description: "Browse verified Nigerian UGC creators by niche, budget and location.",
+  description: "Browse verified Nigerian UGC creators by category, region, budget and platform.",
 };
 
-type SP = { q?: string; niche?: string; max?: string };
+type SP = { q?: string; niche?: string; region?: string; max?: string; platform?: string; sort?: string };
 
 function GridSkeleton() {
   return (
@@ -37,48 +38,93 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
   const q = (sp.q ?? "").replace(/[,()%*]/g, "").trim();
   const niche = sp.niche ?? "";
+  const region = sp.region ?? "";
+  const platform = sp.platform ?? "";
+  const sort = sp.sort ?? "";
   const max = sp.max ? Number(sp.max) : undefined;
 
   const configured = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
 
   let creators: Creator[] = [];
+  let noPlatformMatch = false;
   if (configured) {
     const supabase = await createClient();
-    let query = supabase
-      .from("creator_profiles")
-      .select("id, handle, display_name, location, niches, starting_rate_naira, featured, verification_status")
-      .eq("is_live", true)
-      .order("featured", { ascending: false })
-      .limit(48);
 
-    if (niche) query = query.contains("niches", [niche]);
-    if (max) query = query.lte("starting_rate_naira", max);
-    if (q) query = query.or(`display_name.ilike.%${q}%,handle.ilike.%${q}%,location.ilike.%${q}%`);
+    // Platform filter: pre-resolve the creator ids that have that platform
+    // linked (indexed), then constrain the main query.
+    let platformIds: string[] | null = null;
+    if (platform) {
+      const { data: pa } = await supabase.from("social_accounts").select("creator_id").eq("platform", platform).limit(3000);
+      platformIds = [...new Set((pa ?? []).map((x) => x.creator_id))];
+      if (platformIds.length === 0) noPlatformMatch = true;
+    }
 
-    const [{ data }, { data: boostIds }] = await Promise.all([
-      query,
-      supabase.rpc("active_boost_target_ids", { ttype: "creator" }),
-    ]);
-    const boosted = new Set<string>((boostIds ?? []).map((x: unknown) => String(x)));
+    if (!noPlatformMatch) {
+      let query = supabase
+        .from("creator_profiles")
+        .select(
+          "id, handle, display_name, location, niches, starting_rate_naira, featured, verification_status, tier, earned_reputation, updated_at, avatar_url, metrics:creator_metrics(avg_rating, review_count)",
+        )
+        .eq("is_live", true)
+        .limit(120);
 
-    creators = (data ?? [])
-      .map((c) => ({
-        name: c.display_name || c.handle,
-        handle: c.handle,
+      if (niche) query = query.contains("niches", [niche]);
+      if (max) query = query.lte("starting_rate_naira", max);
+      if (region && region !== "Remote") query = query.ilike("location", `%${region}%`);
+      if (q) query = query.or(`display_name.ilike.%${q}%,handle.ilike.%${q}%,location.ilike.%${q}%`);
+      if (platformIds) query = query.in("id", platformIds);
+
+      const [{ data }, { data: boostIds }] = await Promise.all([
+        query,
+        supabase.rpc("active_boost_target_ids", { ttype: "creator" }),
+      ]);
+      const boosted = new Set<string>((boostIds ?? []).map((x: unknown) => String(x)));
+
+      // Flatten + attach boost flag + review metrics.
+      let rows: RankCreator[] = (data ?? []).map((c) => {
+        const m = (Array.isArray(c.metrics) ? c.metrics[0] : c.metrics) as { avg_rating?: number | null; review_count?: number } | null;
+        return {
+          id: c.id,
+          handle: c.handle,
+          display_name: c.display_name,
+          location: c.location,
+          niches: c.niches ?? [],
+          starting_rate_naira: c.starting_rate_naira,
+          featured: !!c.featured,
+          verification_status: c.verification_status,
+          tier: c.tier ?? "origin",
+          earned_reputation: c.earned_reputation,
+          updated_at: c.updated_at,
+          avg_rating: m?.avg_rating ?? null,
+          review_count: m?.review_count ?? 0,
+          boosted: boosted.has(c.id),
+          avatar_url: c.avatar_url as string | null,
+        } as RankCreator & { avatar_url: string | null };
+      });
+
+      // Sort: Recommended (default) uses the ranking engine; the rest are explicit.
+      if (sort === "price_asc") rows.sort((a, b) => (a.starting_rate_naira ?? 1e12) - (b.starting_rate_naira ?? 1e12));
+      else if (sort === "price_desc") rows.sort((a, b) => (b.starting_rate_naira ?? 0) - (a.starting_rate_naira ?? 0));
+      else if (sort === "recent") rows.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+      else if (sort === "rating") rows.sort((a, b) => (b.avg_rating ?? 0) - (a.avg_rating ?? 0));
+      else rows = rankCreators(rows, { niche, q });
+
+      creators = rows.map((c) => ({
+        name: c.display_name || c.handle || "Creator",
+        handle: c.handle ?? undefined,
+        image: (c as RankCreator & { avatar_url?: string | null }).avatar_url || undefined,
         location: c.location ?? "Nigeria",
         niches: c.niches ?? [],
         startingRate: c.starting_rate_naira ?? 0,
-        // Featured = editorially featured (admin) OR an active paid boost. This only
-        // floats them into the labelled band; it never touches ranking/tier.
-        featured: !!c.featured || boosted.has(c.id),
+        featured: c.featured || !!c.boosted,
         verified: c.verification_status === "verified",
-      }))
-      // Featured band first (bounded + labelled on the card), organic below.
-      .sort((a, b) => Number(b.featured) - Number(a.featured));
+        ...(c.review_count && c.avg_rating ? { rating: c.avg_rating, reviews: c.review_count } : {}),
+      }));
+    }
   }
 
   if (creators.length === 0) {
-    const filtered = !!(q || niche || max);
+    const filtered = !!(q || niche || region || max || platform);
     return (
       <div className="mt-10 rounded-3xl border border-line bg-surface px-6 py-16 text-center">
         <div className="mx-auto grid size-12 place-items-center rounded-full bg-accent-tint text-accent">
@@ -102,10 +148,17 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
   }
 
   return (
-    <div className="mt-8 grid grid-cols-2 gap-5 lg:grid-cols-3">
-      {creators.map((c) => (
-        <CreatorCard key={c.handle ?? c.name} creator={c} />
-      ))}
+    <div className="mt-6">
+      <p className="text-sm text-ink-3">
+        {creators.length} creator{creators.length === 1 ? "" : "s"}
+        {niche ? ` in ${niche}` : ""}
+        {sort === "" ? " · recommended for you" : ""}
+      </p>
+      <div className="mt-4 grid grid-cols-2 gap-5 lg:grid-cols-3">
+        {creators.map((c) => (
+          <CreatorCard key={c.handle ?? c.name} creator={c} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -121,7 +174,7 @@ export default function CreatorsPage({ searchParams }: { searchParams: Promise<S
               Find creators
             </h1>
             <p className="mt-2 text-ink-2">
-              Verified Nigerian creators across beauty, food, fashion, fintech and more. Filter by niche, budget and location.
+              Verified Nigerian creators across beauty, food, fashion, fintech and more. Filter by service, region, budget and platform, sorted by what fits best.
             </p>
           </div>
 
