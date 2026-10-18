@@ -1,0 +1,146 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { redactContact } from "@/lib/chat/redact";
+
+type Res = { error?: string };
+
+async function me() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return { supabase, user };
+}
+
+/**
+ * Find or create the 1:1 conversation between the current user and `otherUserId`.
+ * One party must be a brand, the other a creator.
+ */
+export async function getOrCreateConversation(otherUserId: string): Promise<{ id?: string; error?: string }> {
+  const { user } = await me();
+  if (!user) return { error: "Please sign in." };
+  if (otherUserId === user.id) return { error: "You can't message yourself." };
+
+  const admin = createAdminClient();
+  const ids = [user.id, otherUserId];
+  const [{ data: brands }, { data: creators }] = await Promise.all([
+    admin.from("brand_profiles").select("id").in("id", ids),
+    admin.from("creator_profiles").select("id").in("id", ids),
+  ]);
+  const brandIds = new Set((brands ?? []).map((b) => b.id));
+  const creatorIds = new Set((creators ?? []).map((c) => c.id));
+
+  const brandId = ids.find((i) => brandIds.has(i));
+  const creatorId = ids.find((i) => creatorIds.has(i) && i !== brandId);
+  if (!brandId || !creatorId) return { error: "Conversations are between a brand and a creator." };
+
+  const { data: existing } = await admin
+    .from("conversations")
+    .select("id")
+    .eq("brand_id", brandId)
+    .eq("creator_id", creatorId)
+    .maybeSingle();
+  if (existing) return { id: existing.id };
+
+  const { data, error } = await admin
+    .from("conversations")
+    .insert({ brand_id: brandId, creator_id: creatorId })
+    .select("id")
+    .single();
+  if (error || !data) return { error: error?.message ?? "Could not start the conversation." };
+  return { id: data.id };
+}
+
+export async function sendMessage(input: {
+  conversationId: string;
+  body: string;
+  attachmentUrl?: string | null;
+  attachmentName?: string | null;
+}): Promise<Res & { redacted?: boolean; message?: ChatMessage }> {
+  const { user } = await me();
+  if (!user) return { error: "Please sign in." };
+  const body = (input.body ?? "").trim();
+  if (!body && !input.attachmentUrl) return { error: "Write a message." };
+
+  const admin = createAdminClient();
+  const { data: conv } = await admin
+    .from("conversations")
+    .select("id, brand_id, creator_id")
+    .eq("id", input.conversationId)
+    .maybeSingle();
+  if (!conv) return { error: "Conversation not found." };
+  if (conv.brand_id !== user.id && conv.creator_id !== user.id) return { error: "Not your conversation." };
+
+  // Contact-detail blocking until a funded contract exists between the two.
+  const { data: contract } = await admin
+    .from("gigs")
+    .select("id")
+    .eq("brand_id", conv.brand_id)
+    .eq("creator_id", conv.creator_id)
+    .in("status", ["funded", "in_progress", "in_review", "revision", "approved", "released", "completed"])
+    .limit(1)
+    .maybeSingle();
+
+  let text = body;
+  let flagged = false;
+  if (!contract && body) {
+    const r = redactContact(body);
+    text = r.text;
+    flagged = r.redacted;
+  }
+
+  const { data: msg, error } = await admin
+    .from("messages")
+    .insert({
+      conversation_id: conv.id,
+      sender_id: user.id,
+      body: text,
+      attachment_url: input.attachmentUrl ?? null,
+      attachment_name: input.attachmentName ?? null,
+      flagged,
+    })
+    .select("id, sender_id, body, attachment_url, attachment_name, flagged, created_at")
+    .single();
+  if (error) return { error: error.message };
+
+  await admin.from("conversations").update({ last_message_at: new Date().toISOString() }).eq("id", conv.id);
+
+  const recipient = conv.brand_id === user.id ? conv.creator_id : conv.brand_id;
+  await admin.from("notifications").insert({
+    user_id: recipient,
+    type: "message",
+    title: "New message",
+    body: text.slice(0, 80) || "Sent an attachment",
+    href: `/messages/${conv.id}`,
+  });
+
+  revalidatePath(`/messages/${conv.id}`);
+  revalidatePath("/messages");
+  return { redacted: flagged, message: msg };
+}
+
+export type ChatMessage = {
+  id: string;
+  sender_id: string;
+  body: string;
+  attachment_url: string | null;
+  attachment_name: string | null;
+  flagged: boolean;
+  created_at: string;
+};
+
+/** Sign a chat attachment path for the current participant (private bucket). */
+export async function signAttachment(path: string): Promise<{ url?: string; error?: string }> {
+  const { user } = await me();
+  if (!user) return { error: "Please sign in." };
+  const convId = path.split("/")[0];
+  const admin = createAdminClient();
+  const { data: conv } = await admin.from("conversations").select("brand_id, creator_id").eq("id", convId).maybeSingle();
+  if (!conv || (conv.brand_id !== user.id && conv.creator_id !== user.id)) return { error: "Not allowed." };
+  const { data, error } = await admin.storage.from("chat").createSignedUrl(path, 300);
+  if (error || !data) return { error: error?.message ?? "Could not open attachment." };
+  return { url: data.signedUrl };
+}

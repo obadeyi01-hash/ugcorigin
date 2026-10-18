@@ -20,16 +20,17 @@ export type Section =
   | "boosts"
   | "docs"
   | "moderation"
+  | "messages"
   | "roles";
 
 // Which sections each role can see.
 const ACCESS: Record<AdminRole, Section[]> = {
-  super_admin: ["overview", "verification", "users", "gigs", "finance", "disputes", "tiers", "boosts", "docs", "moderation", "roles"],
+  super_admin: ["overview", "verification", "users", "gigs", "finance", "disputes", "tiers", "boosts", "docs", "moderation", "messages", "roles"],
   finance: ["overview", "gigs", "finance", "boosts"],
-  trust_safety: ["overview", "verification", "users", "gigs", "disputes", "tiers", "docs", "moderation"],
-  support: ["overview", "users", "gigs", "moderation"],
+  trust_safety: ["overview", "verification", "users", "gigs", "disputes", "tiers", "docs", "moderation", "messages"],
+  support: ["overview", "users", "gigs", "moderation", "messages"],
   growth: ["overview", "users", "tiers", "boosts", "docs"],
-  analyst: ["overview", "users", "gigs", "finance", "disputes", "tiers", "boosts", "docs", "moderation"], // read-only
+  analyst: ["overview", "users", "gigs", "finance", "disputes", "tiers", "boosts", "docs", "moderation", "messages"], // read-only
 };
 
 const READONLY = new Set<AdminRole>(["analyst"]);

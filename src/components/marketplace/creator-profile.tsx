@@ -8,6 +8,7 @@ import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { TierBadge } from "@/components/ui/tier-badge";
 import { SocialIcon, socialUrl } from "@/components/ui/social-icons";
 import { ShareCard } from "@/components/marketplace/share-card";
+import { StartConversationButton } from "@/components/messages/start-conversation-button";
 import { Reviews, type ReviewItem } from "@/components/marketplace/reviews";
 import { SocialEmbeds, type EmbedLink } from "@/components/marketplace/social-embeds";
 import { ReportButton } from "@/components/moderation/report-button";
@@ -128,6 +129,11 @@ export function CreatorProfile({ data }: { data: ProfileData }) {
             <Link href={`/${data.handle}/hire`} className="mt-5 block">
               <Button className="w-full">Make an offer <ArrowRight className="size-4" /></Button>
             </Link>
+            {data.id && (
+              <div className="mt-2">
+                <StartConversationButton otherUserId={data.id} label="Message" className="w-full" />
+              </div>
+            )}
             <div className="mt-2">
               <ShareCard url={data.url} name={data.name} handle={data.handle} />
             </div>

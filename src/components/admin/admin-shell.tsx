@@ -1,6 +1,6 @@
 import type { ElementType, ReactNode } from "react";
 import Link from "next/link";
-import { LayoutDashboard, BadgeCheck, Users, Briefcase, Banknote, Scale, Shield, Layers, Rocket, BookOpen, Flag } from "lucide-react";
+import { LayoutDashboard, BadgeCheck, Users, Briefcase, Banknote, Scale, Shield, Layers, Rocket, BookOpen, Flag, MessageSquare } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { Container } from "@/components/ui/container";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ const NAV: { section: Section; label: string; href: string; icon: ElementType }[
   { section: "finance", label: "Finance", href: "/admin/finance", icon: Banknote },
   { section: "disputes", label: "Disputes", href: "/admin/disputes", icon: Scale },
   { section: "moderation", label: "Moderation", href: "/admin/moderation", icon: Flag },
+  { section: "messages", label: "Messages", href: "/admin/messages", icon: MessageSquare },
   { section: "tiers", label: "Tiers", href: "/admin/tiers", icon: Layers },
   { section: "boosts", label: "Boosts", href: "/admin/boosts", icon: Rocket },
   { section: "docs", label: "Docs", href: "/admin/docs", icon: BookOpen },

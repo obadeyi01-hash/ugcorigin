@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronDown, LayoutDashboard, IdCard, Inbox, BadgeCheck, Settings, LogOut, Megaphone, FileText } from "lucide-react";
+import { ChevronDown, LayoutDashboard, IdCard, Inbox, BadgeCheck, Settings, LogOut, Megaphone, FileText, MessageSquare } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
@@ -143,6 +143,7 @@ export function HeaderClient({ nav }: { nav: NavItem[] }) {
                     </div>
                     <div className="py-1">
                       <MenuLink href="/dashboard" icon={LayoutDashboard} onClick={() => setOpen(false)}>Dashboard</MenuLink>
+                      <MenuLink href="/messages" icon={MessageSquare} onClick={() => setOpen(false)}>Messages</MenuLink>
                       {account!.role === "creator" && account!.handle && (
                         <MenuLink href={`/${account!.handle}`} icon={IdCard} onClick={() => setOpen(false)}>View my card</MenuLink>
                       )}
