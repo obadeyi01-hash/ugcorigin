@@ -37,6 +37,7 @@ export async function sendOfferAction(input: SendOfferInput): Promise<{ error?: 
     .eq("handle", handle)
     .maybeSingle();
   if (!creator) return { error: "That creator could not be found." };
+  if (creator.id === user.id) return { error: "You can't hire your own creator profile." };
 
   if (!input.title.trim()) return { error: "Add a short title." };
   if (!(input.price > 0)) return { error: "Enter a valid budget." };

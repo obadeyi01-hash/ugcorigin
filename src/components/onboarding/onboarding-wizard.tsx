@@ -4,10 +4,11 @@ import { useState, useTransition } from "react";
 import { ArrowRight, ArrowLeft, Video, Store, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PillRow } from "@/components/ui/pill-row";
-import { Input, Textarea, Field } from "@/components/ui/input";
+import { Input, Textarea, Field, Select } from "@/components/ui/input";
 import { Chip } from "@/components/ui/chip";
 import { cn } from "@/lib/utils";
 import { NICHES } from "@/lib/sample-data";
+import { REGIONS } from "@/lib/categories";
 import {
   createCreatorProfile,
   createBrandProfile,
@@ -141,8 +142,13 @@ export function OnboardingWizard({
               <Input value={c.handle} onChange={(e) => setC({ ...c, handle: e.target.value })} placeholder="amara.ugc" />
             </div>
           </Field>
-          <Field label="Location">
-            <Input value={c.location} onChange={(e) => setC({ ...c, location: e.target.value })} placeholder="e.g. Lagos, NG" />
+          <Field label="Region">
+            <Select value={c.location} onChange={(e) => setC({ ...c, location: e.target.value })}>
+              <option value="">Select your region</option>
+              {REGIONS.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </Select>
           </Field>
           <Button onClick={() => setStep(2)} disabled={!canNext1}>
             Continue <ArrowRight className="size-4" />

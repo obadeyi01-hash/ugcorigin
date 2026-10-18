@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { detectAiClaim } from "@/lib/ai-detect";
 
 const configured = () => !!process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-export type ActionResult = { error?: string; ok?: boolean };
+export type ActionResult = { error?: string; ok?: boolean; aiFlagged?: boolean };
 
 async function requireUser() {
   const supabase = await createClient();
@@ -67,10 +69,24 @@ export async function updateCreatorSettings(input: CreatorSettingsInput): Promis
     return { error: error.message };
   }
 
+  // Anti-AI: flag + warn if the bio claims AI-generated / not-the-real-creator work.
+  const aiClaim = detectAiClaim(input.bio);
+  const admin = createAdminClient();
+  await admin.from("creator_profiles").update({ ai_flagged: aiClaim }).eq("id", user.id);
+  if (aiClaim) {
+    await admin.from("notifications").insert({
+      user_id: user.id,
+      type: "ai_warning",
+      title: "Please remove AI references",
+      body: "Your profile mentions AI-generated content. UGCOrigin is human-only, remove it to stay visible in search.",
+      href: "/settings",
+    });
+  }
+
   revalidatePath("/settings");
   revalidatePath("/dashboard");
   revalidatePath(`/${handle}`);
-  return { ok: true };
+  return { ok: true, aiFlagged: aiClaim };
 }
 
 export type BrandSettingsInput = {

@@ -11,7 +11,7 @@ export function PillRow({ children, className }: { children: ReactNode; classNam
   return (
     <div
       className={cn(
-        "flex flex-nowrap items-center gap-2 overflow-x-auto overscroll-x-contain scroll-smooth",
+        "flex w-full min-w-0 max-w-full flex-nowrap items-center gap-2 overflow-x-auto overscroll-x-contain scroll-smooth",
         "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         "[&>*]:shrink-0 [&>*]:whitespace-nowrap",
         "-mx-1 px-1 py-0.5",

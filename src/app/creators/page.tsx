@@ -66,6 +66,7 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
           "id, handle, display_name, location, niches, starting_rate_naira, featured, verification_status, tier, earned_reputation, updated_at, avatar_url, metrics:creator_metrics(avg_rating, review_count)",
         )
         .eq("is_live", true)
+        .eq("shadowbanned", false)
         .limit(120);
 
       if (niche) query = query.contains("niches", [niche]);

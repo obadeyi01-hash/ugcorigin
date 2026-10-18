@@ -37,10 +37,6 @@ export const metadata: Metadata = {
     "escrow creator payments",
   ],
   alternates: { canonical: "/" },
-  icons: {
-    icon: "/brand/favicon.png",
-    apple: "/brand/favicon.png",
-  },
   openGraph: {
     title: "UGCOrigin, Hire real creators for original UGC",
     description:
