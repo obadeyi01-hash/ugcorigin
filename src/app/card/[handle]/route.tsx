@@ -1,8 +1,24 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "fs/promises";
+import path from "path";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/server";
 import { tierMeta } from "@/lib/tiers";
 import { SITE_URL } from "@/components/seo/json-ld";
+
+// The brand symbol, inlined as a data URL so Satori can render it without a
+// network fetch. Cached across requests.
+let symbolDataUrl: string | null | undefined;
+async function loadSymbol(): Promise<string | null> {
+  if (symbolDataUrl !== undefined) return symbolDataUrl;
+  try {
+    const buf = await readFile(path.join(process.cwd(), "public", "brand", "symbol.png"));
+    symbolDataUrl = `data:image/png;base64,${buf.toString("base64")}`;
+  } catch {
+    symbolDataUrl = null;
+  }
+  return symbolDataUrl;
+}
 
 // The default OG font has no ₦ (U+20A6) glyph, so spell the currency out.
 function rateLabel(n: number | null): string {
@@ -112,6 +128,7 @@ export async function GET(
   }
 
   const tier = tierMeta(card.tier);
+  const symbol = await loadSymbol();
   const qr = await QRCode.toDataURL(`${SITE_URL}/@${card.handle}`, {
     margin: 1,
     width: 240,
@@ -136,6 +153,10 @@ export async function GET(
         {/* Details */}
         <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between", padding: "52px 56px" }}>
           <div style={{ display: "flex", alignItems: "center", fontSize: 30, fontWeight: 800, letterSpacing: -0.5 }}>
+            {symbol && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={symbol} width={40} height={40} style={{ marginRight: 12 }} alt="" />
+            )}
             <span style={{ color: "#ec4899" }}>UGC</span>
             <span>ORIGIN</span>
           </div>

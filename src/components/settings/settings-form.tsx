@@ -11,6 +11,7 @@ import { TierBadge } from "@/components/ui/tier-badge";
 import { cn, formatNaira } from "@/lib/utils";
 import { tierMeta } from "@/lib/tiers";
 import { createClient, supabaseConfigured } from "@/lib/supabase/client";
+import { resizeToWebp } from "@/lib/image-resize";
 import { NICHES } from "@/lib/sample-data";
 import {
   updateCreatorSettings,
@@ -124,14 +125,19 @@ function ImageUploader({
     if (!file) return;
     setErr(null);
     if (!file.type.startsWith("image/")) return setErr("Please choose an image file.");
-    if (file.size > 3 * 1024 * 1024) return setErr("Image must be under 3MB.");
+    if (file.size > 10 * 1024 * 1024) return setErr("Image must be under 10MB.");
     if (!supabaseConfigured) return setErr("Backend not connected.");
 
     setBusy(true);
+    // Downscale + convert to WebP in the browser: a ~512px WebP is a fraction of
+    // the original size and loads fast. Avatars are cover-cropped square.
+    const optimized = await resizeToWebp(file, { maxSize: 512, square: round, quality: 0.82 });
     const supabase = createClient();
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const ext = optimized.type === "image/webp" ? "webp" : (optimized.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
     const path = `${userId}/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, cacheControl: "3600" });
+    const { error } = await supabase.storage
+      .from("avatars")
+      .upload(path, optimized, { upsert: true, cacheControl: "3600", contentType: optimized.type });
     if (error) {
       setErr(error.message);
       setBusy(false);
@@ -171,7 +177,7 @@ function ImageUploader({
             </Button>
           )}
         </div>
-        <p className="mt-1.5 text-xs text-ink-3">JPG, PNG or WebP · under 3MB.</p>
+        <p className="mt-1.5 text-xs text-ink-3">JPG, PNG or WebP · we optimize it automatically.</p>
         {err && <p className="mt-1 text-xs font-medium text-error">{err}</p>}
       </div>
     </div>
