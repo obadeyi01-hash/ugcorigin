@@ -56,12 +56,52 @@ async function ModerationInner() {
 
   const openCount = reports.filter((r) => r.status === "open").length;
 
+  // AI / false-media review queue (flagged or unscored-pending).
+  const { data: mediaRaw } = await supabase
+    .from("media_reviews")
+    .select("id, creator_id, media_url, kind, ai_score, status, created_at")
+    .in("status", ["flagged", "pending"])
+    .order("created_at", { ascending: false })
+    .limit(50);
+  const mediaReviews = (mediaRaw ?? []) as { id: string; creator_id: string; media_url: string; kind: string; ai_score: number | null; status: string; created_at: string }[];
+  const mediaHandles = new Map<string, string>();
+  if (mediaReviews.length) {
+    const ids = [...new Set(mediaReviews.map((m) => m.creator_id))];
+    const { data: cs } = await supabase.from("creator_profiles").select("id, handle").in("id", ids);
+    (cs ?? []).forEach((c) => c.handle && mediaHandles.set(c.id, c.handle));
+  }
+
   return (
     <AdminShell role={role} active="moderation">
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Moderation</h1>
       <p className="mt-1 text-sm text-ink-2">
         Reported profiles, reviews, campaign submissions and deliverables. <span className="font-medium text-ink">{openCount}</span> open.
       </p>
+
+      {mediaReviews.length > 0 && (
+        <Card className="mt-6">
+          <CardBody>
+            <h2 className="font-display font-semibold text-ink">Media review queue</h2>
+            <p className="mt-0.5 text-sm text-ink-3">Possible AI / false media. Scores from the detector, or unscored for manual review.</p>
+            <ul className="mt-3 divide-y divide-line">
+              {mediaReviews.map((m) => (
+                <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+                  <span className="flex items-center gap-2">
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${m.status === "flagged" ? "bg-error/12 text-error" : "bg-warning/14 text-warning"}`}>
+                      {m.ai_score != null ? `${m.ai_score}% AI` : "unscored"}
+                    </span>
+                    <span className="capitalize text-ink-2">{m.kind}</span>
+                    {mediaHandles.get(m.creator_id) && (
+                      <Link href={`/${mediaHandles.get(m.creator_id)}`} className="text-accent hover:underline">@{mediaHandles.get(m.creator_id)}</Link>
+                    )}
+                  </span>
+                  <a href={m.media_url} target="_blank" rel="noopener noreferrer" className="text-xs text-ink-3 hover:text-ink">open media</a>
+                </li>
+              ))}
+            </ul>
+          </CardBody>
+        </Card>
+      )}
 
       <Card className="mt-6">
         <CardBody className="p-0">

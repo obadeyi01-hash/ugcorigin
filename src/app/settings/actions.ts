@@ -27,6 +27,7 @@ export type CreatorSettingsInput = {
   phone: string | null;
   bio: string;
   niches: string[];
+  contentFormats: string[];
   startingRate: number;
   avatarUrl: string | null;
 };
@@ -111,6 +112,7 @@ export async function updateCreatorSettings(input: CreatorSettingsInput): Promis
       phone: input.phone || null,
       bio: input.bio.trim() || null,
       niches: input.niches,
+      content_formats: input.contentFormats,
       starting_rate_naira: input.startingRate > 0 ? Math.round(input.startingRate) : null,
       avatar_url: input.avatarUrl,
       ...(avatarChanged ? { avatar_changes: avatarChanges, avatar_last_changed_at: new Date().toISOString() } : {}),

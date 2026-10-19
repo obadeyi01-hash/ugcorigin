@@ -3,7 +3,9 @@
 import crypto from "crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { CLOUD_NAME, CLOUD_API_KEY, creatorVideoFolder, cloudinaryUrl, videoPoster } from "@/lib/cloudinary";
+import { queueMediaReview } from "@/lib/ai-media";
 
 const MAX_VIDEOS = 6;
 
@@ -50,17 +52,19 @@ export async function saveProfileVideo(publicId: string): Promise<{ ok?: boolean
     .eq("verified", false);
   if ((count ?? 0) >= MAX_VIDEOS) return { error: `You can show up to ${MAX_VIDEOS} free clips. Verified gig work is unlimited.` };
 
+  const url = cloudinaryUrl(publicId, "video", "c_limit,w_1080");
   const { error } = await supabase.from("profile_videos").insert({
     creator_id: creatorId,
     public_id: publicId,
     // f_auto,q_auto serves a lighter web codec; cap the long edge so a 4K phone
     // clip never streams at full size (vertical UGC needs at most ~1080 wide).
-    url: cloudinaryUrl(publicId, "video", "c_limit,w_1080"),
+    url,
     poster_url: videoPoster(publicId),
     position: count ?? 0,
   });
   if (error) return { error: error.message };
 
+  await queueMediaReview(createAdminClient(), creatorId, url, "video");
   revalidatePath("/dashboard");
   const { data: me } = await supabase.from("creator_profiles").select("handle").eq("id", creatorId).maybeSingle();
   if (me?.handle) revalidatePath(`/${me.handle}`);
@@ -89,10 +93,11 @@ export async function saveVerifiedWork(
   if (!gig || gig.creator_id !== creatorId) return { error: "Not allowed." };
   if (gig.status !== "completed") return { error: "You can feature a gig once it's completed." };
 
+  const url = cloudinaryUrl(publicId, "video", "c_limit,w_1080");
   const { error } = await supabase.from("profile_videos").insert({
     creator_id: creatorId,
     public_id: publicId,
-    url: cloudinaryUrl(publicId, "video", "c_limit,w_1080"),
+    url,
     poster_url: videoPoster(publicId),
     position: 0,
     verified: true,
@@ -104,6 +109,7 @@ export async function saveVerifiedWork(
     return { error: error.message };
   }
 
+  await queueMediaReview(createAdminClient(), creatorId, url, "video");
   revalidatePath("/dashboard");
   revalidatePath(`/gigs/${gigId}`);
   const { data: me } = await supabase.from("creator_profiles").select("handle").eq("id", creatorId).maybeSingle();

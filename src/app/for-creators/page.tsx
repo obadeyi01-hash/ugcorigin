@@ -144,6 +144,28 @@ export default function ForCreatorsPage() {
           </Reveal>
         </Container>
 
+        {/* Volume beats one take */}
+        <Container className="py-12">
+          <Reveal>
+            <div className="rounded-3xl border border-line bg-surface p-8 sm:p-12">
+              <div className="grid gap-8 md:grid-cols-[1fr_1.2fr] md:items-center">
+                <div>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-tint px-3 py-1 text-xs font-semibold text-accent">Grow faster</span>
+                  <h2 className="mt-4 font-display text-2xl font-semibold text-ink sm:text-3xl">Volume beats one take</h2>
+                  <p className="mt-3 text-ink-2">
+                    The creators who earn most aren&apos;t chasing one perfect video, they ship often. Offer more formats, say yes to more briefs, and deliver quickly. Every completed gig lifts your ranking, your tier and your repeat hires, all on-platform where you&apos;re protected.
+                  </p>
+                </div>
+                <ul className="grid gap-2.5 text-sm sm:grid-cols-2">
+                  {["On-camera video", "Voice-over", "Text & scripts", "Photo", "More gigs, higher tier", "Verified work on your profile"].map((t) => (
+                    <li key={t} className="flex items-center gap-2.5 rounded-xl border border-line bg-paper p-3 text-ink"><Check className="size-4 text-success" /> {t}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </Reveal>
+        </Container>
+
         {/* FAQ */}
         <Container className="py-6">
           <div className="mx-auto max-w-3xl">

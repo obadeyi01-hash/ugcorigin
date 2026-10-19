@@ -153,7 +153,7 @@ async function ProfileInner({ params }: { params: Promise<{ handle: string }> })
     } = await supabase.auth.getUser();
     const { data: creator } = await supabase
       .from("creator_profiles")
-      .select("id, handle, display_name, first_name, middle_name, last_name, bio, location, niches, starting_rate_naira, verification_status, tier, is_influencer")
+      .select("id, handle, display_name, first_name, middle_name, last_name, bio, location, niches, content_formats, starting_rate_naira, verification_status, tier, is_influencer")
       .eq("handle", handle)
       .maybeSingle();
 
@@ -204,6 +204,7 @@ async function ProfileInner({ params }: { params: Promise<{ handle: string }> })
         bio: creator.bio,
         location: creator.location,
         niches: creator.niches ?? [],
+        contentFormats: creator.content_formats ?? [],
         verified: creator.verification_status === "verified",
         tier: creator.tier,
         influencer: isInfluencer(creator.tier, creator.is_influencer),

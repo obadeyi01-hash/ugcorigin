@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea, Field, Select } from "@/components/ui/input";
 import { PhoneField } from "@/components/ui/phone-field";
 import { NG_STATES } from "@/lib/categories";
+import { CONTENT_FORMATS } from "@/lib/content-formats";
 import { Chip } from "@/components/ui/chip";
 import { PillRow } from "@/components/ui/pill-row";
 import { TierBadge } from "@/components/ui/tier-badge";
@@ -29,6 +30,7 @@ type Creator = {
   bio: string | null;
   location: string | null;
   niches: string[] | null;
+  content_formats: string[] | null;
   starting_rate_naira: number | null;
   avatar_url: string | null;
   tier: string | null;
@@ -208,6 +210,7 @@ function CreatorSettings({ userId, creator }: { userId: string; creator: Creator
   const [bio, setBio] = useState(creator.bio ?? "");
   const [rate, setRate] = useState(creator.starting_rate_naira ? String(creator.starting_rate_naira) : "");
   const [niches, setNiches] = useState<string[]>(creator.niches ?? []);
+  const [formats, setFormats] = useState<string[]>(creator.content_formats ?? []);
   const [pending, start] = useTransition();
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -232,6 +235,7 @@ function CreatorSettings({ userId, creator }: { userId: string; creator: Creator
         phone,
         bio,
         niches,
+        contentFormats: formats,
         startingRate: Number(rate) || 0,
         avatarUrl,
       });
@@ -318,6 +322,19 @@ function CreatorSettings({ userId, creator }: { userId: string; creator: Creator
                 </button>
               ))}
             </PillRow>
+          </Field>
+          <Field label="What you offer" hint="The formats you deliver, so brands know what to ask for.">
+            <div className="flex flex-wrap gap-2">
+              {CONTENT_FORMATS.map((f) => (
+                <button
+                  key={f.value}
+                  type="button"
+                  onClick={() => setFormats((prev) => (prev.includes(f.value) ? prev.filter((x) => x !== f.value) : [...prev, f.value]))}
+                >
+                  <Chip active={formats.includes(f.value)}>{f.label}</Chip>
+                </button>
+              ))}
+            </div>
           </Field>
         </div>
         {error && <p className="mt-3 text-sm font-medium text-error">{error}</p>}

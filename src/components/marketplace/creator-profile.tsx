@@ -14,6 +14,7 @@ import { SocialEmbeds, type EmbedLink } from "@/components/marketplace/social-em
 import { CreatorSnapshot, type CreatorMetrics } from "@/components/marketplace/creator-snapshot";
 import { ReportButton } from "@/components/moderation/report-button";
 import { formatNaira } from "@/lib/utils";
+import { formatLabel } from "@/lib/content-formats";
 
 export type ProfileData = {
   id?: string;
@@ -22,6 +23,7 @@ export type ProfileData = {
   bio?: string | null;
   location?: string | null;
   niches: string[];
+  contentFormats?: string[];
   verified: boolean;
   tier?: string | null;
   influencer?: boolean;
@@ -109,6 +111,15 @@ export function CreatorProfile({ data }: { data: ProfileData }) {
         <PillRow className="mt-6">
           {data.niches.map((n) => <Chip key={n}>{n}</Chip>)}
         </PillRow>
+
+        {data.contentFormats && data.contentFormats.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-ink-3">Offers:</span>
+            {data.contentFormats.map((f) => (
+              <span key={f} className="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-medium text-ink-2">{formatLabel(f)}</span>
+            ))}
+          </div>
+        )}
 
         {/* Packages */}
         {hasPackages && (
