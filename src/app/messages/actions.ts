@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { redactContact } from "@/lib/chat/redact";
 import { chatFolder, attachmentKindFromRef, type AttachmentKind } from "@/lib/cloudinary";
 import { signedUpload, privateUrlFromRef, privateDownloadUrlFromRef, type SignedUpload } from "@/lib/cloudinary-server";
+import { notifyUser } from "@/lib/notify";
 
 type Res = { error?: string };
 
@@ -113,12 +114,12 @@ export async function sendMessage(input: {
   await admin.from("conversations").update({ last_message_at: new Date().toISOString() }).eq("id", conv.id);
 
   const recipient = conv.brand_id === user.id ? conv.creator_id : conv.brand_id;
-  await admin.from("notifications").insert({
-    user_id: recipient,
+  await notifyUser(admin, recipient, {
     type: "message",
     title: "New message",
-    body: text.slice(0, 80) || "Sent an attachment",
+    body: text.slice(0, 120) || "Sent an attachment",
     href: `/messages/${conv.id}`,
+    ctaLabel: "Open the chat",
   });
 
   revalidatePath(`/messages/${conv.id}`);

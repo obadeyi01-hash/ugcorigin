@@ -42,6 +42,8 @@ type Brand = {
   store_url: string | null;
   logo_url: string | null;
   phone?: string | null;
+  contact_first_name?: string | null;
+  contact_last_name?: string | null;
 };
 
 function initials(name: string) {
@@ -330,6 +332,8 @@ function CreatorSettings({ userId, creator }: { userId: string; creator: Creator
 function BrandSettings({ userId, brand }: { userId: string; brand: Brand }) {
   const [logoUrl, setLogoUrl] = useState<string | null>(brand.logo_url);
   const [companyName, setCompanyName] = useState(brand.company_name ?? "");
+  const [contactFirstName, setContactFirstName] = useState(brand.contact_first_name ?? "");
+  const [contactLastName, setContactLastName] = useState(brand.contact_last_name ?? "");
   const [website, setWebsite] = useState(brand.website ?? "");
   const [storeUrl, setStoreUrl] = useState(brand.store_url ?? "");
   const [phone, setPhone] = useState<string | null>(brand.phone ?? null);
@@ -341,7 +345,7 @@ function BrandSettings({ userId, brand }: { userId: string; brand: Brand }) {
     e.preventDefault();
     setError(null);
     start(async () => {
-      const res = await updateBrandSettings({ companyName, website, storeUrl, phone, logoUrl });
+      const res = await updateBrandSettings({ companyName, contactFirstName, contactLastName, website, storeUrl, phone, logoUrl });
       if (res.error) {
         setError(res.error);
         setStatus("error");
@@ -363,6 +367,14 @@ function BrandSettings({ userId, brand }: { userId: string; brand: Brand }) {
           <Field label="Company / store name">
             <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Your brand" />
           </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Contact first name" hint="Shared with a creator after you book.">
+              <Input value={contactFirstName} onChange={(e) => setContactFirstName(e.target.value)} placeholder="Chidi" />
+            </Field>
+            <Field label="Contact last name" hint="Optional">
+              <Input value={contactLastName} onChange={(e) => setContactLastName(e.target.value)} placeholder="Okafor" />
+            </Field>
+          </div>
           <Field label="Website">
             <Input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://yourbrand.com" />
           </Field>

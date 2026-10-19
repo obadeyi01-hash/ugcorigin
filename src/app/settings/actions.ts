@@ -140,6 +140,8 @@ export async function updateCreatorSettings(input: CreatorSettingsInput): Promis
 
 export type BrandSettingsInput = {
   companyName: string;
+  contactFirstName: string;
+  contactLastName: string;
   website: string;
   storeUrl: string;
   phone: string | null;
@@ -157,6 +159,8 @@ export async function updateBrandSettings(input: BrandSettingsInput): Promise<Ac
     .from("brand_profiles")
     .update({
       company_name: input.companyName.trim(),
+      contact_first_name: input.contactFirstName.trim() || null,
+      contact_last_name: input.contactLastName.trim() || null,
       website: input.website.trim() || null,
       store_url: input.storeUrl.trim() || null,
       phone: input.phone || null,

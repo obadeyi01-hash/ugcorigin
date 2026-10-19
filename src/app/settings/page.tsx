@@ -40,7 +40,7 @@ async function SettingsInner() {
       .maybeSingle(),
     supabase
       .from("brand_profiles")
-      .select("company_name, website, store_url, phone, logo_url")
+      .select("company_name, contact_first_name, contact_last_name, website, store_url, phone, logo_url")
       .eq("id", user.id)
       .maybeSingle(),
     supabase

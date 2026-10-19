@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { paystackConfigured, initiateTransfer } from "@/lib/payments/paystack";
 import { deliverableFolder } from "@/lib/cloudinary";
 import { signedUpload, type SignedUpload } from "@/lib/cloudinary-server";
+import { notifyUser, notifyMany } from "@/lib/notify";
 
 async function auth() {
   const supabase = await createClient();
@@ -56,12 +57,12 @@ export async function recordDeliverableAction(
   if (error) return { error: error.message };
 
   await admin.from("gigs").update({ status: "in_review" }).eq("id", gigId);
-  await admin.from("notifications").insert({
-    user_id: gig.brand_id,
+  await notifyUser(admin, gig.brand_id, {
     type: "draft_submitted",
     title: "A draft is ready to review",
     body: `"${gig.title}" has a new draft for your feedback.`,
     href: `/gigs/${gigId}`,
+    ctaLabel: "Review the draft",
   });
 
   revalidatePath(`/gigs/${gigId}`);
@@ -99,12 +100,12 @@ export async function requestRevisionAction(gigId: string, deliverableId: string
   const admin = createAdminClient();
   await admin.from("deliverables").update({ status: "revision_requested" }).eq("id", deliverableId);
   await admin.from("gigs").update({ status: "revision" }).eq("id", gigId);
-  await admin.from("notifications").insert({
-    user_id: gig.creator_id,
+  await notifyUser(admin, gig.creator_id, {
     type: "revision_requested",
     title: "Revision requested",
     body: `The brand asked for changes on "${gig.title}".`,
     href: `/gigs/${gigId}`,
+    ctaLabel: "See the feedback",
   });
   revalidatePath(`/gigs/${gigId}`);
   return {};
@@ -173,9 +174,9 @@ export async function approveReleaseAction(
     }
   }
 
-  await admin.from("notifications").insert([
-    { user_id: gig.creator_id, type: "approved", title: "Your work was approved", body: `"${gig.title}" was approved, your payout is on the way.`, href: `/gigs/${gigId}` },
-    { user_id: gig.brand_id, type: "approved", title: "Content approved", body: `You approved "${gig.title}". Final files are unlocked.`, href: `/gigs/${gigId}` },
+  await notifyMany(admin, [
+    { userId: gig.creator_id, payload: { type: "payout", title: "Your work was approved", body: `"${gig.title}" was approved, your payout is on the way.`, href: `/gigs/${gigId}`, ctaLabel: "View the gig" } },
+    { userId: gig.brand_id, payload: { type: "gig_update", title: "Content approved", body: `You approved "${gig.title}". Final files are unlocked.`, href: `/gigs/${gigId}`, ctaLabel: "View the gig" } },
   ]);
 
   revalidatePath(`/gigs/${gigId}`);

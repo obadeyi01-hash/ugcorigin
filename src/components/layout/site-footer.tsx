@@ -31,6 +31,7 @@ const columns = [
     links: [
       ["About", "/about"],
       ["Trust & Safety", "/trust"],
+      ["Help & Support", "/support"],
       ["Documentation", "/docs"],
       ["Services", "/services"],
     ],

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyWebhookSignature } from "@/lib/payments/paystack";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { feeFor } from "@/lib/fees";
+import { notifyMany } from "@/lib/notify";
 
 /**
  * Paystack webhook. On `charge.success` for an escrow-funding payment, create the
@@ -116,9 +117,9 @@ export async function POST(request: Request) {
     { gig_id: gig.id, escrow_id: esc?.id, entry_type: "hold", amount_naira: offer.price_naira, memo: "Held for creator" },
   ]);
 
-  await admin.from("notifications").insert([
-    { user_id: offer.creator_id, type: "gig_funded", title: "You've been hired", body: `"${offer.title}" is funded and ready to start.`, href: `/gigs/${gig.id}` },
-    { user_id: offer.brand_id, type: "gig_funded", title: "Escrow funded", body: `"${offer.title}" is funded. The creator can start now.`, href: `/gigs/${gig.id}` },
+  await notifyMany(admin, [
+    { userId: offer.creator_id, payload: { type: "gig_update", title: "You've been hired", body: `"${offer.title}" is funded and ready to start.`, href: `/gigs/${gig.id}`, ctaLabel: "Start the gig" } },
+    { userId: offer.brand_id, payload: { type: "gig_update", title: "Escrow funded", body: `"${offer.title}" is funded. The creator can start now.`, href: `/gigs/${gig.id}`, ctaLabel: "View the gig" } },
   ]);
 
   return NextResponse.json({ received: true });

@@ -45,7 +45,7 @@ export function OnboardingWizard({
   const [step, setStep] = useState(1);
 
   // brand fields
-  const [b, setB] = useState<BrandInput>({ companyName: "", website: "", storeUrl: "", phone: null });
+  const [b, setB] = useState<BrandInput>({ companyName: "", contactFirstName: "", contactLastName: "", website: "", storeUrl: "", phone: null });
 
   function toggleNiche(n: string) {
     setC((prev) => ({
@@ -107,6 +107,14 @@ export function OnboardingWizard({
           <Field label="Company / store name">
             <Input value={b.companyName} onChange={(e) => setB({ ...b, companyName: e.target.value })} placeholder="e.g. Zuri Skincare" />
           </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Contact first name" hint="Optional">
+              <Input value={b.contactFirstName} onChange={(e) => setB({ ...b, contactFirstName: e.target.value })} placeholder="Chidi" />
+            </Field>
+            <Field label="Contact last name" hint="Optional">
+              <Input value={b.contactLastName} onChange={(e) => setB({ ...b, contactLastName: e.target.value })} placeholder="Okafor" />
+            </Field>
+          </div>
           <Field label="Website" hint="Optional">
             <Input value={b.website} onChange={(e) => setB({ ...b, website: e.target.value })} placeholder="https://" />
           </Field>

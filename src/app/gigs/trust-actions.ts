@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { paystackConfigured, initiateTransfer } from "@/lib/payments/paystack";
+import { notifyUser, notifyMany } from "@/lib/notify";
 
 async function auth() {
   const supabase = await createClient();
@@ -97,9 +98,13 @@ export async function openDisputeAction(gigId: string, reason: string): Promise<
   await admin.from("gigs").update({ status: "disputed" }).eq("id", gigId);
 
   const other = gig.brand_id === user.id ? gig.creator_id : gig.brand_id;
-  await admin.from("notifications").insert([
-    { user_id: other, type: "dispute_opened", title: "A dispute was opened", body: `A dispute was opened on "${gig.title}". Our team will review it.`, href: `/gigs/${gigId}` },
-  ]);
+  await notifyUser(admin, other, {
+    type: "dispute_opened",
+    title: "A dispute was opened",
+    body: `A dispute was opened on "${gig.title}". Our team will review it.`,
+    href: `/gigs/${gigId}`,
+    ctaLabel: "View the gig",
+  });
 
   revalidatePath(`/gigs/${gigId}`);
   return { ok: true };
@@ -169,9 +174,9 @@ export async function resolveDisputeAction(
   await admin.from("escrow_transactions").update({ status: toBrand === price ? "refunded" : "released" }).eq("gig_id", gig.id);
   await admin.from("gigs").update({ status: toBrand === price ? "cancelled" : "completed" }).eq("id", gig.id);
 
-  await admin.from("notifications").insert([
-    { user_id: gig.creator_id, type: "dispute_resolved", title: "Dispute resolved", body: `The dispute on "${gig.title}" was resolved.`, href: `/gigs/${gig.id}` },
-    { user_id: gig.brand_id, type: "dispute_resolved", title: "Dispute resolved", body: `The dispute on "${gig.title}" was resolved.`, href: `/gigs/${gig.id}` },
+  await notifyMany(admin, [
+    { userId: gig.creator_id, payload: { type: "dispute_resolved", title: "Dispute resolved", body: `The dispute on "${gig.title}" was resolved.`, href: `/gigs/${gig.id}` } },
+    { userId: gig.brand_id, payload: { type: "dispute_resolved", title: "Dispute resolved", body: `The dispute on "${gig.title}" was resolved.`, href: `/gigs/${gig.id}` } },
   ]);
 
   revalidatePath("/admin/disputes");
