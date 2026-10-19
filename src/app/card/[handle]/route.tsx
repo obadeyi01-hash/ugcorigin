@@ -13,7 +13,8 @@ let symbolDataUrl: string | null | undefined;
 async function loadSymbol(): Promise<string | null> {
   if (symbolDataUrl !== undefined) return symbolDataUrl;
   try {
-    const buf = await readFile(path.join(process.cwd(), "public", "brand", "symbol.png"));
+    // White variant: the card background is dark and the wordmark is white.
+    const buf = await readFile(path.join(process.cwd(), "public", "brand", "symbol-white.png"));
     symbolDataUrl = `data:image/png;base64,${buf.toString("base64")}`;
   } catch {
     symbolDataUrl = null;
