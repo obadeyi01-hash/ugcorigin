@@ -37,6 +37,7 @@ export type ProfileData = {
   reviews: ReviewItem[];
   averageRating: number;
   embeds: EmbedLink[];
+  videos?: { id: string; url: string; poster: string | null }[];
 };
 
 export function CreatorProfile({ data }: { data: ProfileData }) {
@@ -104,6 +105,25 @@ export function CreatorProfile({ data }: { data: ProfileData }) {
               ))}
             </div>
           </div>
+        )}
+
+        {data.videos && data.videos.length > 0 && (
+          <section className="mt-10">
+            <h2 className="font-display text-lg font-semibold text-ink">Showcase videos</h2>
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {data.videos.map((v) => (
+                <video
+                  key={v.id}
+                  src={v.url}
+                  poster={v.poster ?? undefined}
+                  controls
+                  preload="none"
+                  playsInline
+                  className="aspect-[9/16] w-full rounded-xl border border-line bg-obsidian object-cover"
+                />
+              ))}
+            </div>
+          </section>
         )}
 
         <SocialEmbeds links={data.embeds} />

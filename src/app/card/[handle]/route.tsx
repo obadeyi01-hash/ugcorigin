@@ -1,6 +1,8 @@
 import { ImageResponse } from "next/og";
+import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/server";
 import { tierMeta } from "@/lib/tiers";
+import { SITE_URL } from "@/components/seo/json-ld";
 
 // The default OG font has no ₦ (U+20A6) glyph, so spell the currency out.
 function rateLabel(n: number | null): string {
@@ -110,6 +112,11 @@ export async function GET(
   }
 
   const tier = tierMeta(card.tier);
+  const qr = await QRCode.toDataURL(`${SITE_URL}/@${card.handle}`, {
+    margin: 1,
+    width: 240,
+    color: { dark: "#141519", light: "#ffffff" },
+  });
 
   return new ImageResponse(
     (
@@ -164,8 +171,15 @@ export async function GET(
             <div style={{ display: "flex", flexDirection: "column" }}>
               <span style={{ fontSize: 22, color: "#9a9a95" }}>Starting at</span>
               <span style={{ fontSize: 44, fontWeight: 800 }}>{rateLabel(card.startingRate)}</span>
+              <span style={{ fontSize: 24, color: "#b9b9b4", marginTop: 14 }}>ugcorigin.com/@{card.handle}</span>
             </div>
-            <span style={{ fontSize: 23, color: "#9a9a95" }}>ugcorigin.com/@{card.handle}</span>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <div style={{ display: "flex", padding: 10, background: "#ffffff", borderRadius: 14 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={qr} width={120} height={120} alt="" />
+              </div>
+              <span style={{ fontSize: 18, color: "#9a9a95", marginTop: 8 }}>Scan to view</span>
+            </div>
           </div>
         </div>
       </div>

@@ -9,6 +9,7 @@ import { Container } from "@/components/ui/container";
 import { Card, CardBody } from "@/components/ui/card";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { PortfolioManager } from "@/components/dashboard/portfolio-manager";
+import { VideoManager } from "@/components/media/video-manager";
 import { TierBadge } from "@/components/ui/tier-badge";
 import { BoostButton } from "@/components/boost/boost-button";
 import { tierMeta } from "@/lib/tiers";
@@ -85,6 +86,10 @@ async function DashboardInner() {
   const { data: portfolio } = creator
     ? await supabase.from("portfolio_links").select("id, platform, url").eq("creator_id", user.id).order("position", { ascending: true })
     : { data: [] as { id: string; platform: string; url: string }[] };
+
+  const { data: videos } = creator
+    ? await supabase.from("profile_videos").select("id, url, poster_url").eq("creator_id", user.id).order("position", { ascending: true })
+    : { data: [] as { id: string; url: string; poster_url: string | null }[] };
 
   return (
     <>
@@ -174,6 +179,11 @@ async function DashboardInner() {
         {creator && (
           <div className="mt-6 max-w-2xl">
             <PortfolioManager links={portfolio ?? []} />
+            <div className="mt-6">
+              <Card><CardBody>
+                <VideoManager videos={videos ?? []} />
+              </CardBody></Card>
+            </div>
           </div>
         )}
 

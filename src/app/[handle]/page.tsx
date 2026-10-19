@@ -145,11 +145,12 @@ async function ProfileInner({ params }: { params: Promise<{ handle: string }> })
       .maybeSingle();
 
     if (creator) {
-      const [{ data: socials }, { data: packages }, { data: reviewRows }, { data: portfolio }] = await Promise.all([
+      const [{ data: socials }, { data: packages }, { data: reviewRows }, { data: portfolio }, { data: vids }] = await Promise.all([
         supabase.from("social_accounts").select("platform, handle, url").eq("creator_id", creator.id),
         supabase.from("packages").select("id, title, type, price_naira, revisions, format").eq("creator_id", creator.id).eq("active", true),
         supabase.from("reviews").select("id, rating_speed, rating_comms, rating_quality, body").eq("subject_id", creator.id).order("created_at", { ascending: false }).limit(12),
         supabase.from("portfolio_links").select("id, platform, url").eq("creator_id", creator.id).order("position", { ascending: true }),
+        supabase.from("profile_videos").select("id, url, poster_url").eq("creator_id", creator.id).order("position", { ascending: true }),
       ]);
       const reviews = (reviewRows ?? []).map((r) => ({
         id: r.id,
@@ -174,6 +175,7 @@ async function ProfileInner({ params }: { params: Promise<{ handle: string }> })
         reviews,
         averageRating,
         embeds: (portfolio ?? []).map((p) => ({ id: p.id, platform: p.platform, url: p.url })),
+        videos: (vids ?? []).map((v) => ({ id: v.id, url: v.url, poster: v.poster_url })),
       };
     }
   }
