@@ -30,6 +30,8 @@ type Creator = {
   starting_rate_naira: number | null;
   avatar_url: string | null;
   tier: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
 };
 type Brand = {
   company_name: string | null;
@@ -192,7 +194,9 @@ function ImageUploader({
 function CreatorSettings({ userId, creator }: { userId: string; creator: Creator }) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(creator.avatar_url);
   const [handle, setHandle] = useState(creator.handle ?? "");
-  const [displayName, setDisplayName] = useState(creator.display_name ?? "");
+  const [firstName, setFirstName] = useState(creator.first_name ?? "");
+  const [lastName, setLastName] = useState(creator.last_name ?? "");
+  const displayName = `${firstName} ${lastName}`.trim() || creator.display_name || "";
   const [location, setLocation] = useState(creator.location ?? "");
   const [bio, setBio] = useState(creator.bio ?? "");
   const [rate, setRate] = useState(creator.starting_rate_naira ? String(creator.starting_rate_naira) : "");
@@ -214,6 +218,8 @@ function CreatorSettings({ userId, creator }: { userId: string; creator: Creator
     start(async () => {
       const res = await updateCreatorSettings({
         handle,
+        firstName,
+        lastName,
         displayName,
         location,
         bio,
@@ -255,9 +261,17 @@ function CreatorSettings({ userId, creator }: { userId: string; creator: Creator
               <Input value={handle} onChange={(e) => setHandle(e.target.value)} placeholder="yourname" />
             </div>
           </Field>
-          <Field label="Display name">
-            <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your name" />
-          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="First name">
+              <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Amara" />
+            </Field>
+            <Field label="Last name" hint="Public shows initial only">
+              <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Obi" />
+            </Field>
+          </div>
+          <p className="-mt-1 text-xs text-ink-3">
+            Brands see &ldquo;{firstName.trim() || "First"} {lastName.trim() ? lastName.trim()[0].toUpperCase() + "." : "L."}&rdquo; until you both agree on a booking, then your full name and socials unlock.
+          </p>
           <Field label="Location">
             <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Lagos, Nigeria" />
           </Field>

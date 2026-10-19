@@ -27,6 +27,7 @@ export type ProfileData = {
   startingRate?: number | null;
   url: string;
   socials: { platform: string; handle: string; url?: string | null }[];
+  socialsLocked?: boolean;
   packages: {
     id: string;
     title: string;
@@ -38,7 +39,7 @@ export type ProfileData = {
   reviews: ReviewItem[];
   averageRating: number;
   embeds: EmbedLink[];
-  videos?: { id: string; url: string; poster: string | null }[];
+  videos?: { id: string; url: string; poster: string | null; verified?: boolean; caption?: string | null }[];
   metrics?: CreatorMetrics;
 };
 
@@ -59,19 +60,35 @@ export function CreatorProfile({ data }: { data: ProfileData }) {
         </p>
 
         {data.socials.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {data.socials.map((s) => (
-              <a
-                key={s.platform}
-                href={socialUrl(s.platform, s.handle, s.url)}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={s.platform}
-                className="u-press grid size-10 place-items-center rounded-full border border-line bg-surface text-ink-2 transition-colors hover:border-accent hover:text-accent"
-              >
-                <SocialIcon platform={s.platform} className="size-4" />
-              </a>
-            ))}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {data.socials.map((s) =>
+              data.socialsLocked ? (
+                <span
+                  key={s.platform}
+                  aria-label={`${s.platform} (unlocks after you book)`}
+                  title="Unlocks after you book"
+                  className="grid size-10 cursor-default place-items-center rounded-full border border-line bg-surface-2 text-ink-3"
+                >
+                  <SocialIcon platform={s.platform} className="size-4" />
+                </span>
+              ) : (
+                <a
+                  key={s.platform}
+                  href={socialUrl(s.platform, s.handle, s.url)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={s.platform}
+                  className="u-press grid size-10 place-items-center rounded-full border border-line bg-surface text-ink-2 transition-colors hover:border-accent hover:text-accent"
+                >
+                  <SocialIcon platform={s.platform} className="size-4" />
+                </a>
+              ),
+            )}
+            {data.socialsLocked && (
+              <span className="inline-flex items-center gap-1 text-xs text-ink-3">
+                <ShieldCheck className="size-3.5" /> Socials unlock after you book
+              </span>
+            )}
           </div>
         )}
 
@@ -120,17 +137,28 @@ export function CreatorProfile({ data }: { data: ProfileData }) {
             <h2 className="font-display text-lg font-semibold text-ink">Showcase videos</h2>
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {data.videos.map((v) => (
-                <video
-                  key={v.id}
-                  src={v.url}
-                  poster={v.poster ?? undefined}
-                  controls
-                  preload="none"
-                  playsInline
-                  className="aspect-[9/16] w-full rounded-xl border border-line bg-obsidian object-cover"
-                />
+                <figure key={v.id} className="relative">
+                  <video
+                    src={v.url}
+                    poster={v.poster ?? undefined}
+                    controls
+                    preload="none"
+                    playsInline
+                    className="aspect-[9/16] w-full rounded-xl border border-line bg-obsidian object-cover"
+                  />
+                  {v.verified && (
+                    <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-success/90 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+                      <ShieldCheck className="size-3" /> Verified
+                    </span>
+                  )}
+                  {v.caption && <figcaption className="mt-1.5 text-xs text-ink-2">{v.caption}</figcaption>}
+                </figure>
               ))}
             </div>
+            <p className="mt-2 text-xs text-ink-3">
+              <ShieldCheck className="mr-1 inline size-3 text-success" />
+              Verified clips are real work delivered through UGCOrigin.
+            </p>
           </section>
         )}
 

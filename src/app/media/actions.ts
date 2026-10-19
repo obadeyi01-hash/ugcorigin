@@ -41,8 +41,14 @@ export async function saveProfileVideo(publicId: string): Promise<{ ok?: boolean
   if (!creatorId) return { error: "Set up a creator profile first." };
   if (!/^[\w/-]{3,200}$/.test(publicId)) return { error: "Invalid upload reference." };
 
-  const { count } = await supabase.from("profile_videos").select("id", { count: "exact", head: true }).eq("creator_id", creatorId);
-  if ((count ?? 0) >= MAX_VIDEOS) return { error: `You can show up to ${MAX_VIDEOS} videos.` };
+  // Only free, off-platform showcase clips count toward the cap. Verified works
+  // (tied to completed gigs) are uncapped.
+  const { count } = await supabase
+    .from("profile_videos")
+    .select("id", { count: "exact", head: true })
+    .eq("creator_id", creatorId)
+    .eq("verified", false);
+  if ((count ?? 0) >= MAX_VIDEOS) return { error: `You can show up to ${MAX_VIDEOS} free clips. Verified gig work is unlimited.` };
 
   const { error } = await supabase.from("profile_videos").insert({
     creator_id: creatorId,
@@ -56,6 +62,50 @@ export async function saveProfileVideo(publicId: string): Promise<{ ok?: boolean
   if (error) return { error: error.message };
 
   revalidatePath("/dashboard");
+  const { data: me } = await supabase.from("creator_profiles").select("handle").eq("id", creatorId).maybeSingle();
+  if (me?.handle) revalidatePath(`/${me.handle}`);
+  return { ok: true };
+}
+
+/**
+ * Add a VERIFIED showcase clip tied to a completed gig. Uncapped, badged
+ * "Verified on UGCOrigin". The creator uploads the public cut they want shown;
+ * it counts as verified because the gig was really completed on-platform.
+ */
+export async function saveVerifiedWork(
+  gigId: string,
+  publicId: string,
+  caption: string,
+): Promise<{ ok?: boolean; error?: string }> {
+  const { supabase, creatorId } = await creator();
+  if (!creatorId) return { error: "Set up a creator profile first." };
+  if (!/^[\w/-]{3,200}$/.test(publicId)) return { error: "Invalid upload reference." };
+
+  const { data: gig } = await supabase
+    .from("gigs")
+    .select("id, creator_id, status")
+    .eq("id", gigId)
+    .maybeSingle();
+  if (!gig || gig.creator_id !== creatorId) return { error: "Not allowed." };
+  if (gig.status !== "completed") return { error: "You can feature a gig once it's completed." };
+
+  const { error } = await supabase.from("profile_videos").insert({
+    creator_id: creatorId,
+    public_id: publicId,
+    url: cloudinaryUrl(publicId, "video", "c_limit,w_1080"),
+    poster_url: videoPoster(publicId),
+    position: 0,
+    verified: true,
+    gig_id: gigId,
+    caption: caption.trim().slice(0, 200) || null,
+  });
+  if (error) {
+    if (error.code === "23505") return { error: "This gig is already on your showcase." };
+    return { error: error.message };
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath(`/gigs/${gigId}`);
   const { data: me } = await supabase.from("creator_profiles").select("handle").eq("id", creatorId).maybeSingle();
   if (me?.handle) revalidatePath(`/${me.handle}`);
   return { ok: true };

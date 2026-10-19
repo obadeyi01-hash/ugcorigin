@@ -7,6 +7,7 @@ import { Logo } from "@/components/ui/logo";
 import { Container } from "@/components/ui/container";
 import { GigWorkspace, type Comment } from "@/components/gigs/gig-workspace";
 import { ReviewForm } from "@/components/gigs/review-form";
+import { AddVerifiedWork } from "@/components/gigs/add-verified-work";
 import { OpenDispute } from "@/components/gigs/open-dispute";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -91,9 +92,12 @@ async function GigInner({ params }: { params: Promise<{ id: string }> }) {
     }));
   }
 
-  const [{ data: myReview }, { data: dispute }] = await Promise.all([
+  const [{ data: myReview }, { data: dispute }, { data: featured }] = await Promise.all([
     supabase.from("reviews").select("id").eq("gig_id", id).eq("author_id", user.id).maybeSingle(),
     supabase.from("disputes").select("id, reason, status").eq("gig_id", id).maybeSingle(),
+    role === "creator"
+      ? supabase.from("profile_videos").select("id").eq("gig_id", id).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
   const disputeOpen = dispute && dispute.status === "open";
@@ -121,6 +125,12 @@ async function GigInner({ params }: { params: Promise<{ id: string }> }) {
 
         {!dispute && gig.status === "completed" && !myReview && (
           <ReviewForm gigId={id} subjectLabel={role === "brand" ? "the creator" : "the brand"} />
+        )}
+
+        {!dispute && gig.status === "completed" && role === "creator" && (
+          <div className="mt-6">
+            <AddVerifiedWork gigId={id} alreadyFeatured={!!featured} />
+          </div>
         )}
 
         {!dispute && !["completed", "cancelled", "disputed"].includes(gig.status) && (

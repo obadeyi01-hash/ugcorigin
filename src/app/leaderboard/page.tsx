@@ -9,6 +9,7 @@ import { TierBadge } from "@/components/ui/tier-badge";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { createClient } from "@/lib/supabase/server";
 import { tierMeta } from "@/lib/tiers";
+import { publicName } from "@/lib/names";
 
 export const metadata: Metadata = {
   title: "Weekly creator leaderboard",
@@ -60,7 +61,7 @@ async function Board() {
   // sit near the top by reputation (so the board is never empty in week one).
   const { data: creators } = await supabase
     .from("creator_profiles")
-    .select("id, handle, display_name, tier, verification_status, earned_reputation, metrics:creator_metrics(avg_rating, review_count)")
+    .select("id, handle, display_name, first_name, last_name, tier, verification_status, earned_reputation, metrics:creator_metrics(avg_rating, review_count)")
     .eq("is_live", true)
     .eq("shadowbanned", false)
     .order("earned_reputation", { ascending: false, nullsFirst: false })
@@ -73,7 +74,7 @@ async function Board() {
     return {
       id: c.id,
       handle: c.handle,
-      name: c.display_name || c.handle || "Creator",
+      name: publicName({ first: c.first_name, last: c.last_name, display: c.display_name, handle: c.handle }),
       tier: c.tier ?? "origin",
       verified: c.verification_status === "verified",
       weeklyGigs: weekly.get(c.id) ?? 0,

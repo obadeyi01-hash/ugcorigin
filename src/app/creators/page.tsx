@@ -10,6 +10,7 @@ import { CreatorCard, type Creator } from "@/components/marketplace/creator-card
 import { DirectoryFilters } from "@/components/marketplace/directory-filters";
 import { createClient } from "@/lib/supabase/server";
 import { rankCreators, type RankCreator } from "@/lib/ranking";
+import { publicName } from "@/lib/names";
 
 export const metadata: Metadata = {
   title: "Find creators",
@@ -67,7 +68,7 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
       let query = supabase
         .from("creator_profiles")
         .select(
-          "id, handle, display_name, location, niches, starting_rate_naira, featured, verification_status, tier, earned_reputation, updated_at, avatar_url, metrics:creator_metrics(avg_rating, review_count, gigs_completed)",
+          "id, handle, display_name, first_name, last_name, location, niches, starting_rate_naira, featured, verification_status, tier, earned_reputation, updated_at, avatar_url, metrics:creator_metrics(avg_rating, review_count, gigs_completed)",
         )
         .eq("is_live", true)
         .eq("shadowbanned", false)
@@ -105,7 +106,9 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
           boosted: boosted.has(c.id),
           avatar_url: c.avatar_url as string | null,
           gigs_completed: m?.gigs_completed ?? 0,
-        } as RankCreator & { avatar_url: string | null; gigs_completed: number };
+          first_name: c.first_name as string | null,
+          last_name: c.last_name as string | null,
+        } as RankCreator & { avatar_url: string | null; gigs_completed: number; first_name: string | null; last_name: string | null };
       });
 
       // Sort: Recommended (default) uses the ranking engine; the rest are explicit.
@@ -122,7 +125,12 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
       rows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
       creators = rows.map((c) => ({
-        name: c.display_name || c.handle || "Creator",
+        name: publicName({
+          first: (c as RankCreator & { first_name?: string | null }).first_name,
+          last: (c as RankCreator & { last_name?: string | null }).last_name,
+          display: c.display_name,
+          handle: c.handle,
+        }),
         handle: c.handle ?? undefined,
         image: (c as RankCreator & { avatar_url?: string | null }).avatar_url || undefined,
         location: c.location ?? "Nigeria",

@@ -11,6 +11,8 @@ export type ActionResult = { error?: string };
 
 export type CreatorInput = {
   handle: string;
+  firstName: string;
+  lastName: string;
   displayName: string;
   location: string;
   bio: string;
@@ -27,7 +29,7 @@ export type BrandInput = {
 function creatorCompleteness(i: CreatorInput) {
   let n = 0;
   if (i.handle) n += 20;
-  if (i.displayName) n += 15;
+  if (i.firstName) n += 15;
   if (i.location) n += 10;
   if (i.bio && i.bio.length > 20) n += 15;
   if (i.niches.length > 0) n += 20;
@@ -43,14 +45,23 @@ export async function createCreatorProfile(input: CreatorInput): Promise<ActionR
     return { error: "Username must be 3 to 30 characters: letters, numbers, dot, dash or underscore." };
   }
 
+  const first = input.firstName.trim();
+  const last = input.lastName.trim();
+  if (!first) return { error: "Please enter your first name." };
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Your session expired, please sign in again." };
 
+  // display_name is derived from the real name (full name stored privately).
+  const display = `${first} ${last}`.trim() || input.displayName.trim();
+
   const { error } = await supabase.from("creator_profiles").insert({
     id: user.id,
     handle,
-    display_name: input.displayName.trim(),
+    first_name: first,
+    last_name: last || null,
+    display_name: display,
     location: input.location.trim(),
     bio: input.bio.trim(),
     niches: input.niches,

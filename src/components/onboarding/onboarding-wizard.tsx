@@ -32,6 +32,8 @@ export function OnboardingWizard({
   // creator fields
   const [c, setC] = useState<CreatorInput>({
     handle: "",
+    firstName: "",
+    lastName: "",
     displayName: "",
     location: "",
     bio: "",
@@ -119,7 +121,7 @@ export function OnboardingWizard({
   }
 
   // ---- Creator wizard ----
-  const canNext1 = c.displayName.trim() && c.handle.trim() && c.location.trim();
+  const canNext1 = c.firstName.trim() && c.handle.trim() && c.location.trim();
   const canNext2 = c.niches.length > 0;
   const canSubmit = c.startingRate > 0;
 
@@ -133,9 +135,17 @@ export function OnboardingWizard({
     >
       {step === 1 && (
         <div className="grid gap-4">
-          <Field label="Display name">
-            <Input value={c.displayName} onChange={(e) => setC({ ...c, displayName: e.target.value })} placeholder="e.g. Amara O." />
-          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="First name">
+              <Input value={c.firstName} onChange={(e) => setC({ ...c, firstName: e.target.value })} placeholder="Amara" />
+            </Field>
+            <Field label="Last name" hint="Shown publicly as initial only">
+              <Input value={c.lastName} onChange={(e) => setC({ ...c, lastName: e.target.value })} placeholder="Obi" />
+            </Field>
+          </div>
+          <p className="-mt-1 text-xs text-ink-3">
+            Brands see &ldquo;{c.firstName.trim() || "First"} {c.lastName.trim() ? c.lastName.trim()[0].toUpperCase() + "." : "L."}&rdquo; until you both agree on a booking, then your full name unlocks.
+          </p>
           <Field label="Username" hint="Your shareable profile: ugcorigin.com/@username">
             <div className="flex items-center gap-2">
               <span className="text-ink-3">@</span>

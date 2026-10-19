@@ -4,6 +4,7 @@ import path from "path";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/server";
 import { tierMeta } from "@/lib/tiers";
+import { publicName } from "@/lib/names";
 import { SITE_URL } from "@/components/seo/json-ld";
 
 // The brand symbol, inlined as a data URL so Satori can render it without a
@@ -72,13 +73,13 @@ async function loadCard(handleRaw: string): Promise<Card | null> {
   const supabase = await createClient();
   const { data: c } = await supabase
     .from("creator_profiles")
-    .select("handle, display_name, location, niches, starting_rate_naira, verification_status, tier, avatar_url, is_live")
+    .select("handle, display_name, first_name, last_name, location, niches, starting_rate_naira, verification_status, tier, avatar_url, is_live")
     .eq("handle", handle)
     .maybeSingle();
   if (!c || !c.is_live) return null;
 
   return {
-    name: c.display_name || `@${c.handle}`,
+    name: publicName({ first: c.first_name, last: c.last_name, display: c.display_name, handle: c.handle }),
     handle: c.handle,
     location: c.location,
     niches: c.niches ?? [],

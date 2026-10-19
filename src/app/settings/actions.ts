@@ -20,6 +20,8 @@ async function requireUser() {
 
 export type CreatorSettingsInput = {
   handle: string;
+  firstName: string;
+  lastName: string;
   displayName: string;
   location: string;
   bio: string;
@@ -31,7 +33,7 @@ export type CreatorSettingsInput = {
 function creatorCompleteness(i: CreatorSettingsInput) {
   let n = 0;
   if (i.handle) n += 15;
-  if (i.displayName) n += 15;
+  if (i.firstName) n += 15;
   if (i.avatarUrl) n += 10;
   if (i.location) n += 10;
   if (i.bio && i.bio.length > 20) n += 15;
@@ -49,7 +51,6 @@ export async function updateCreatorSettings(input: CreatorSettingsInput): Promis
   if (!isValidHandle(handle)) {
     return { error: "Username must be 3 to 30 characters: letters, numbers, dot, dash or underscore." };
   }
-  if (!input.displayName.trim()) return { error: "Display name can’t be empty." };
 
   // Username governance: the onboarding handle is assigned; after that a creator
   // gets FREE_USERNAME_CHANGES free change(s), then it's a paid (subscription)
@@ -84,12 +85,19 @@ export async function updateCreatorSettings(input: CreatorSettingsInput): Promis
     if (avatarChanges >= 3 && within30d) mediaFlag = true;
   }
 
+  const first = input.firstName.trim();
+  const last = input.lastName.trim();
+  if (!first) return { error: "First name can’t be empty." };
+  const display = `${first} ${last}`.trim() || input.displayName.trim();
+
   const { error } = await supabase
     .from("creator_profiles")
     .update({
       handle,
       username_changes: nextChanges,
-      display_name: input.displayName.trim(),
+      first_name: first,
+      last_name: last || null,
+      display_name: display,
       location: input.location.trim() || null,
       bio: input.bio.trim() || null,
       niches: input.niches,

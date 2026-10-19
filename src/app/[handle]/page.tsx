@@ -7,6 +7,7 @@ import { Container } from "@/components/ui/container";
 import { CreatorProfile, type ProfileData } from "@/components/marketplace/creator-profile";
 import { JsonLd, SITE_URL } from "@/components/seo/json-ld";
 import { tierMeta } from "@/lib/tiers";
+import { displayNameFor, publicName } from "@/lib/names";
 import { createClient } from "@/lib/supabase/server";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
@@ -26,11 +27,12 @@ export async function generateMetadata({ params }: { params: Promise<{ handle: s
     const supabase = await createClient();
     const { data } = await supabase
       .from("creator_profiles")
-      .select("display_name, bio, niches, is_live")
+      .select("display_name, first_name, last_name, bio, niches, is_live")
       .eq("handle", handle)
       .maybeSingle();
     if (!data || !data.is_live) return { title: "Creator not found", robots: { index: false } };
-    name = data.display_name || `@${handle}`;
+    // SEO is public, so use the privacy-preserving "First L." name.
+    name = publicName({ first: data.first_name, last: data.last_name, display: data.display_name, handle });
     bio = data.bio;
     niches = data.niches ?? [];
   }
@@ -146,19 +148,37 @@ async function ProfileInner({ params }: { params: Promise<{ handle: string }> })
 
   if (configured && /^[a-z0-9._-]{3,30}$/.test(handle)) {
     const supabase = await createClient();
+    const {
+      data: { user: viewer },
+    } = await supabase.auth.getUser();
     const { data: creator } = await supabase
       .from("creator_profiles")
-      .select("id, handle, display_name, bio, location, niches, starting_rate_naira, verification_status, tier")
+      .select("id, handle, display_name, first_name, middle_name, last_name, bio, location, niches, starting_rate_naira, verification_status, tier")
       .eq("handle", handle)
       .maybeSingle();
 
     if (creator) {
+      // Privacy gate: the full name + social handles are revealed to the creator
+      // themselves, and to a brand once a funded contract exists between them.
+      let revealed = !!viewer && viewer.id === creator.id;
+      if (viewer && !revealed) {
+        const { data: contract } = await supabase
+          .from("gigs")
+          .select("id")
+          .eq("brand_id", viewer.id)
+          .eq("creator_id", creator.id)
+          .in("status", ["funded", "in_progress", "in_review", "revision", "approved", "released", "completed"])
+          .limit(1)
+          .maybeSingle();
+        revealed = !!contract;
+      }
+
       const [{ data: socials }, { data: packages }, { data: reviewRows }, { data: portfolio }, { data: vids }, { data: metricsRow }] = await Promise.all([
         supabase.from("social_accounts").select("platform, handle, url").eq("creator_id", creator.id),
         supabase.from("packages").select("id, title, type, price_naira, revisions, format").eq("creator_id", creator.id).eq("active", true),
         supabase.from("reviews").select("id, rating_speed, rating_comms, rating_quality, body").eq("subject_id", creator.id).order("created_at", { ascending: false }).limit(12),
         supabase.from("portfolio_links").select("id, platform, url").eq("creator_id", creator.id).order("position", { ascending: true }),
-        supabase.from("profile_videos").select("id, url, poster_url").eq("creator_id", creator.id).order("position", { ascending: true }),
+        supabase.from("profile_videos").select("id, url, poster_url, verified, caption").eq("creator_id", creator.id).order("verified", { ascending: false }).order("position", { ascending: true }),
         supabase.from("creator_metrics").select("gigs_completed, on_time_rate, avg_rating, review_count, repeat_hire_rate, response_time_mins").eq("creator_id", creator.id).maybeSingle(),
       ]);
       const reviews = (reviewRows ?? []).map((r) => ({
@@ -168,10 +188,19 @@ async function ProfileInner({ params }: { params: Promise<{ handle: string }> })
         reviewer: "Verified brand",
       }));
       const averageRating = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
+
+      // When not revealed, expose platform presence but not the handles/links.
+      const socialList = (socials ?? []).map((s) =>
+        revealed ? s : { platform: s.platform, handle: "", url: null },
+      );
+
       data = {
         id: creator.id,
         handle: creator.handle,
-        name: creator.display_name || `@${creator.handle}`,
+        name: displayNameFor(
+          { first: creator.first_name, middle: creator.middle_name, last: creator.last_name, display: creator.display_name, handle: creator.handle },
+          revealed,
+        ),
         bio: creator.bio,
         location: creator.location,
         niches: creator.niches ?? [],
@@ -179,12 +208,13 @@ async function ProfileInner({ params }: { params: Promise<{ handle: string }> })
         tier: creator.tier,
         startingRate: creator.starting_rate_naira,
         url: `${SITE}/@${creator.handle}`,
-        socials: socials ?? [],
+        socials: socialList,
+        socialsLocked: !revealed && (socials ?? []).length > 0,
         packages: packages ?? [],
         reviews,
         averageRating,
-        embeds: (portfolio ?? []).map((p) => ({ id: p.id, platform: p.platform, url: p.url })),
-        videos: (vids ?? []).map((v) => ({ id: v.id, url: v.url, poster: v.poster_url })),
+        embeds: revealed ? (portfolio ?? []).map((p) => ({ id: p.id, platform: p.platform, url: p.url })) : [],
+        videos: (vids ?? []).map((v) => ({ id: v.id, url: v.url, poster: v.poster_url, verified: v.verified, caption: v.caption })),
         metrics: metricsRow ?? undefined,
       };
     }
