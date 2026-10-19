@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
-import { LegalNotice } from "@/components/layout/simple-page";
+import { Suspense } from "react";
+import { LegalDoc } from "@/components/layout/legal-doc";
 
-export const metadata: Metadata = { title: "Privacy Policy" };
+export const metadata: Metadata = { title: "Privacy Policy", alternates: { canonical: "/privacy" } };
 
 export default function PrivacyPage() {
-  return <LegalNotice title="Privacy Policy" />;
+  return (
+    <Suspense fallback={<div className="min-h-dvh" />}>
+      <LegalDoc slug="privacy" fallbackTitle="Privacy Policy" />
+    </Suspense>
+  );
 }

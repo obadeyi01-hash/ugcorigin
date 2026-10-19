@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
-import { LegalNotice } from "@/components/layout/simple-page";
+import { Suspense } from "react";
+import { LegalDoc } from "@/components/layout/legal-doc";
 
-export const metadata: Metadata = { title: "Brand Agreement" };
+export const metadata: Metadata = { title: "Brand Agreement", alternates: { canonical: "/brand-agreement" } };
 
 export default function BrandAgreementPage() {
-  return <LegalNotice title="Brand Agreement" />;
+  return (
+    <Suspense fallback={<div className="min-h-dvh" />}>
+      <LegalDoc slug="brand-agreement" fallbackTitle="Brand Agreement" />
+    </Suspense>
+  );
 }
