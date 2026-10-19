@@ -30,7 +30,12 @@ async function OnboardingInner({ searchParams }: { searchParams: Promise<{ role?
       supabase.from("creator_profiles").select("id").eq("id", user.id).maybeSingle(),
       supabase.from("brand_profiles").select("id").eq("id", user.id).maybeSingle(),
     ]);
-    if (creator || brand) redirect("/dashboard");
+    // One email can run both personas as distinct profiles. Only block if the
+    // user already has the persona they're trying to create (or both, with no
+    // specific role requested).
+    if (initialRole === "creator" && creator) redirect("/dashboard");
+    if (initialRole === "brand" && brand) redirect("/dashboard");
+    if (!initialRole && (creator || brand)) redirect("/dashboard");
   }
 
   return <OnboardingWizard initialRole={initialRole} preview={!configured} />;

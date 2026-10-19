@@ -64,15 +64,23 @@ export async function updateCreatorSettings(input: CreatorSettingsInput): Promis
 
   const changingHandle = !!current && current.handle !== handle;
   let nextChanges = current?.username_changes ?? 0;
-  if (changingHandle) {
-    if (nextChanges >= FREE_USERNAME_CHANGES) {
+  if (changingHandle && nextChanges >= FREE_USERNAME_CHANGES) {
+    // Extra username changes are a Creator Pro perk.
+    const { data: subRows } = await supabase
+      .from("subscriptions")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .gt("current_period_end", new Date().toISOString())
+      .limit(1);
+    if (!subRows || subRows.length === 0) {
       return {
         error:
-          "You've used your free username change. Changing it again is a paid perk, coming soon. Your current username stays active.",
+          "You've used your free username change. Extra changes are a Creator Pro perk, subscribe at /pro to change it again. Your current username stays active.",
       };
     }
-    nextChanges += 1;
   }
+  if (changingHandle) nextChanges += 1;
 
   // Media monitoring: track avatar swaps; frequent changes raise a review flag.
   const avatarChanged = !!current && !!input.avatarUrl && current.avatar_url !== input.avatarUrl;

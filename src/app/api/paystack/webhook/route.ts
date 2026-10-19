@@ -18,7 +18,7 @@ export async function POST(request: Request) {
 
   let event: {
     event?: string;
-    data?: { reference?: string; metadata?: { offerId?: string; campaignId?: string; boostId?: string } };
+    data?: { reference?: string; metadata?: { offerId?: string; campaignId?: string; boostId?: string; subscriptionId?: string } };
   };
   try {
     event = JSON.parse(raw);
@@ -34,8 +34,29 @@ export async function POST(request: Request) {
   const campaignId = event.data?.metadata?.campaignId;
   const offerId = event.data?.metadata?.offerId;
   const boostId = event.data?.metadata?.boostId;
+  const subscriptionId = event.data?.metadata?.subscriptionId;
 
   const admin = createAdminClient();
+
+  // Creator Pro subscription: activate for 30 days from now (idempotent).
+  if (subscriptionId) {
+    const { data: s } = await admin.from("subscriptions").select("id, user_id, status").eq("id", subscriptionId).maybeSingle();
+    if (s && s.status === "pending") {
+      const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      await admin
+        .from("subscriptions")
+        .update({ status: "active", current_period_end: periodEnd, provider_ref: reference, updated_at: new Date().toISOString() })
+        .eq("id", subscriptionId);
+      await admin.from("notifications").insert({
+        user_id: s.user_id,
+        type: "product",
+        title: "Welcome to Creator Pro",
+        body: "Your Pro membership is active. Enjoy your perks for the next 30 days.",
+        href: "/pro",
+      });
+    }
+    return NextResponse.json({ received: true });
+  }
 
   // Featured boost, activate for `days` from now (idempotent).
   if (boostId) {

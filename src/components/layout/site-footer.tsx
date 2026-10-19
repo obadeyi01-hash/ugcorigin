@@ -21,6 +21,7 @@ const columns = [
       ["Why UGCOrigin", "/for-creators"],
       ["Become a creator", "/signup?role=creator"],
       ["Find briefs", "/briefs"],
+      ["Creator Pro", "/pro"],
       ["Leaderboard", "/leaderboard"],
       ["Browse services", "/services"],
       ["Pricing", "/pricing"],

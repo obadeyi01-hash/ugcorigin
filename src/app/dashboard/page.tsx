@@ -176,6 +176,28 @@ async function DashboardInner() {
           </Card>
         )}
 
+        {(!creator || !brand) && (
+          <Card variant="outline" className="mt-6 max-w-2xl border-dashed">
+            <CardBody className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="font-semibold text-ink">
+                  {creator ? "Also want to hire creators?" : "Also want to earn as a creator?"}
+                </p>
+                <p className="text-sm text-ink-2">
+                  {creator
+                    ? "Add a brand account on this same email, kept separate from your creator profile."
+                    : "Set up a creator profile on this same email, kept separate from your brand account."}
+                </p>
+              </div>
+              <Link href={creator ? "/onboarding?role=brand" : "/onboarding?role=creator"}>
+                <Button size="sm" variant="secondary">
+                  {creator ? "Add a brand account" : "Become a creator"} <ArrowRight className="size-4" />
+                </Button>
+              </Link>
+            </CardBody>
+          </Card>
+        )}
+
         {creator && (
           <div className="mt-6 max-w-2xl">
             <PortfolioManager links={portfolio ?? []} />
