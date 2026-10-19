@@ -68,6 +68,34 @@ export function privateUrlFromRef(ref: string | null | undefined): string | null
   return privateUrl(r.publicId, r.resourceType, r.format || undefined);
 }
 
+/**
+ * A signed URL with a repeating "UGCOrigin preview" watermark burned in. Used
+ * for deliverable previews shown to the brand BEFORE they approve and release
+ * payment — the clean, un-watermarked file unlocks only on approval. Only
+ * images/videos are watermarked; other types fall back to the plain URL.
+ */
+export function watermarkedUrlFromRef(ref: string | null | undefined): string | null {
+  if (!ref) return null;
+  const r = decodeCloudRef(ref);
+  if (!r) return null;
+  if (!ensure()) return "";
+  if (r.resourceType !== "video" && r.resourceType !== "image") {
+    return privateUrl(r.publicId, r.resourceType, r.format || undefined);
+  }
+  return cloudinary.url(r.publicId, {
+    resource_type: r.resourceType,
+    type: "authenticated",
+    sign_url: true,
+    secure: true,
+    ...(r.format ? { format: r.format } : {}),
+    transformation: [
+      r.resourceType === "video" ? { width: 1080, crop: "limit", quality: "auto" } : { width: 1200, crop: "limit", quality: "auto" },
+      { overlay: { font_family: "Arial", font_size: 48, font_weight: "bold", text: "UGCOrigin preview" }, color: "#ffffff", opacity: 35 },
+      { flags: "layer_apply", gravity: "south_east", x: 24, y: 24 },
+    ],
+  });
+}
+
 /** A signed URL that forces a download (Content-Disposition: attachment). */
 export function privateDownloadUrl(publicId: string, resourceType: "image" | "video" | "raw", format?: string): string {
   if (!ensure()) return "";

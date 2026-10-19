@@ -113,6 +113,34 @@ export async function sendMessage(input: {
 
   await admin.from("conversations").update({ last_message_at: new Date().toISOString() }).eq("id", conv.id);
 
+  // Auto-moderation: a creator repeatedly trying to share contact details before
+  // a contract is trying to take the deal off-platform. Warn, then auto-strike.
+  if (flagged && user.id === conv.creator_id && !contract) {
+    const { data: cp } = await admin.from("creator_profiles").select("contact_flags, strikes").eq("id", user.id).maybeSingle();
+    const flags = (cp?.contact_flags ?? 0) + 1;
+    await admin.from("creator_profiles").update({ contact_flags: flags }).eq("id", user.id);
+    if (flags === 3) {
+      await notifyUser(admin, user.id, {
+        type: "ai_warning",
+        title: "Keep deals on UGCOrigin",
+        body: "Sharing contact details before a contract is funded breaks our rules and risks a strike. You're protected by escrow only on-platform.",
+        href: "/support",
+      });
+    } else if (flags >= 6) {
+      const strikes = (cp?.strikes ?? 0) + 1;
+      await admin
+        .from("creator_profiles")
+        .update({ strikes, benched: strikes >= 3, strike_note: "Repeated pre-contract contact-sharing (auto)." })
+        .eq("id", user.id);
+      await notifyUser(admin, user.id, {
+        type: "ai_warning",
+        title: "You received a trust strike",
+        body: "Repeatedly sharing contact details before a contract added a strike and lowers your search ranking. Keep deals on-platform to recover.",
+        href: "/dashboard",
+      });
+    }
+  }
+
   const recipient = conv.brand_id === user.id ? conv.creator_id : conv.brand_id;
   await notifyUser(admin, recipient, {
     type: "message",

@@ -13,7 +13,7 @@ import { MeetingScheduler, type Meeting } from "@/components/gigs/meeting-schedu
 import { OpenDispute } from "@/components/gigs/open-dispute";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { privateUrlFromRef } from "@/lib/cloudinary-server";
+import { privateUrlFromRef, watermarkedUrlFromRef } from "@/lib/cloudinary-server";
 import { fullName } from "@/lib/names";
 import { formatPhone } from "@/lib/phone";
 
@@ -97,7 +97,10 @@ async function GigInner({ params }: { params: Promise<{ id: string }> }) {
     if (del.file_url) {
       // New deliverables are Cloudinary authenticated assets ("cld:" ref);
       // legacy ones are paths in the private Supabase "deliverables" bucket.
-      videoUrl = privateUrlFromRef(del.file_url);
+      // Before approval the brand sees a watermarked preview; the clean file
+      // unlocks once the gig is approved/completed.
+      const unlocked = del.status === "approved" || ["approved", "released", "completed"].includes(gig.status);
+      videoUrl = unlocked ? privateUrlFromRef(del.file_url) : watermarkedUrlFromRef(del.file_url);
       if (!videoUrl) {
         const admin = createAdminClient();
         const { data: signed } = await admin.storage.from("deliverables").createSignedUrl(del.file_url, 3600);

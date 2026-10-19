@@ -93,6 +93,7 @@ export async function POST(request: Request) {
       fee_naira: fee,
       status: "funded",
       review_window_days: 7,
+      deadline: offer.deadline ?? null,
       needs_product: !!offer.needs_product,
       shipping_status: offer.needs_product ? "awaiting_address" : null,
     })
