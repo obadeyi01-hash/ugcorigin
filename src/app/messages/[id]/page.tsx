@@ -45,7 +45,7 @@ async function ThreadInner({ params }: { params: Promise<{ id: string }> }) {
       .maybeSingle(),
     supabase
       .from("messages")
-      .select("id, sender_id, body, attachment_url, attachment_name, flagged, created_at")
+      .select("id, sender_id, body, attachment_url, attachment_name, attachment_kind, flagged, created_at")
       .eq("conversation_id", id)
       .order("created_at", { ascending: true })
       .limit(200),

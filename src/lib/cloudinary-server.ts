@@ -67,3 +67,40 @@ export function privateUrlFromRef(ref: string | null | undefined): string | null
   if (!r) return null; // legacy (non-Cloudinary) reference, caller falls back
   return privateUrl(r.publicId, r.resourceType, r.format || undefined);
 }
+
+/** A signed URL that forces a download (Content-Disposition: attachment). */
+export function privateDownloadUrl(publicId: string, resourceType: "image" | "video" | "raw", format?: string): string {
+  if (!ensure()) return "";
+  return cloudinary.url(publicId, {
+    resource_type: resourceType,
+    type: "authenticated",
+    sign_url: true,
+    secure: true,
+    flags: "attachment",
+    ...(format ? { format } : {}),
+  });
+}
+
+export function privateDownloadUrlFromRef(ref: string | null | undefined): string | null {
+  if (!ref) return null;
+  const r = decodeCloudRef(ref);
+  if (!r) return null;
+  return privateDownloadUrl(r.publicId, r.resourceType, r.format || undefined);
+}
+
+/** Permanently delete an authenticated asset by its stored ref. */
+export async function destroyAsset(ref: string): Promise<boolean> {
+  if (!ensure()) return false;
+  const r = decodeCloudRef(ref);
+  if (!r) return false;
+  try {
+    const res = await cloudinary.uploader.destroy(r.publicId, {
+      resource_type: r.resourceType,
+      type: "authenticated",
+      invalidate: true,
+    });
+    return res.result === "ok" || res.result === "not found";
+  } catch {
+    return false;
+  }
+}

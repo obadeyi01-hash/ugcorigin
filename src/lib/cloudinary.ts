@@ -40,6 +40,36 @@ export function encodeCloudRef(r: CloudRef): string {
   return `cld:${r.resourceType}:${r.format}:${r.publicId}`;
 }
 
+export type AttachmentKind = "image" | "video" | "audio" | "file";
+
+const AUDIO_EXT = new Set(["webm", "mp3", "m4a", "aac", "ogg", "oga", "wav", "opus"]);
+const VIDEO_EXT = new Set(["mp4", "mov", "webm", "m4v", "avi", "mkv"]);
+const IMAGE_EXT = new Set(["jpg", "jpeg", "png", "webp", "gif", "avif", "heic", "heif"]);
+
+/**
+ * Best-effort attachment kind from a stored ref or filename. The DB column
+ * `attachment_kind` is the source of truth for new messages; this is the
+ * fallback for legacy rows (and disambiguates webm audio vs video by filename).
+ */
+export function attachmentKindFromRef(ref: string, name?: string | null): AttachmentKind {
+  const ext = (name?.split(".").pop() || "").toLowerCase();
+  const cr = decodeCloudRef(ref);
+  // Cloudinary stores audio under resource_type "video", so trust the extension
+  // first when it clearly names an audio/image/video format.
+  if (ext) {
+    if (AUDIO_EXT.has(ext)) return "audio";
+    if (IMAGE_EXT.has(ext)) return "image";
+    if (VIDEO_EXT.has(ext)) return "video";
+    if (ext === "pdf") return "file";
+  }
+  if (cr) {
+    if (cr.resourceType === "image") return "image";
+    if (cr.resourceType === "video") return AUDIO_EXT.has(cr.format) ? "audio" : "video";
+    return "file";
+  }
+  return "file";
+}
+
 export function decodeCloudRef(ref: string): CloudRef | null {
   if (!ref.startsWith("cld:")) return null;
   const rest = ref.slice(4);

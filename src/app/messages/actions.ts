@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redactContact } from "@/lib/chat/redact";
-import { chatFolder } from "@/lib/cloudinary";
-import { signedUpload, privateUrlFromRef, type SignedUpload } from "@/lib/cloudinary-server";
+import { chatFolder, attachmentKindFromRef, type AttachmentKind } from "@/lib/cloudinary";
+import { signedUpload, privateUrlFromRef, privateDownloadUrlFromRef, type SignedUpload } from "@/lib/cloudinary-server";
 
 type Res = { error?: string };
 
@@ -61,6 +61,7 @@ export async function sendMessage(input: {
   body: string;
   attachmentUrl?: string | null;
   attachmentName?: string | null;
+  attachmentKind?: AttachmentKind | null;
 }): Promise<Res & { redacted?: boolean; message?: ChatMessage }> {
   const { user } = await me();
   if (!user) return { error: "Please sign in." };
@@ -102,9 +103,10 @@ export async function sendMessage(input: {
       body: text,
       attachment_url: input.attachmentUrl ?? null,
       attachment_name: input.attachmentName ?? null,
+      attachment_kind: input.attachmentKind ?? null,
       flagged,
     })
-    .select("id, sender_id, body, attachment_url, attachment_name, flagged, created_at")
+    .select("id, sender_id, body, attachment_url, attachment_name, attachment_kind, flagged, created_at")
     .single();
   if (error) return { error: error.message };
 
@@ -130,9 +132,53 @@ export type ChatMessage = {
   body: string;
   attachment_url: string | null;
   attachment_name: string | null;
+  attachment_kind: AttachmentKind | null;
   flagged: boolean;
   created_at: string;
 };
+
+export type ResolvedAttachment = { url: string; downloadUrl: string; kind: AttachmentKind };
+
+/**
+ * Participant-gated batch resolve: turn stored attachment refs into signed
+ * inline + download URLs (and their kind) for a whole thread in one round-trip.
+ */
+export async function resolveChatAttachments(
+  conversationId: string,
+  items: { ref: string; name: string | null; kind: AttachmentKind | null }[],
+): Promise<{ map?: Record<string, ResolvedAttachment>; error?: string }> {
+  const { user } = await me();
+  if (!user) return { error: "Please sign in." };
+  const admin = createAdminClient();
+  const { data: conv } = await admin
+    .from("conversations")
+    .select("brand_id, creator_id")
+    .eq("id", conversationId)
+    .maybeSingle();
+  if (!conv || (conv.brand_id !== user.id && conv.creator_id !== user.id)) return { error: "Not allowed." };
+
+  const map: Record<string, ResolvedAttachment> = {};
+  for (const it of items) {
+    const ref = it.ref;
+    if (!ref || map[ref]) continue;
+    const kind = it.kind ?? attachmentKindFromRef(ref, it.name);
+
+    if (ref.startsWith("cld:")) {
+      // Folder must belong to this conversation (defense in depth).
+      if (!ref.includes(`ugcorigin/chat/${conversationId}`)) continue;
+      const url = privateUrlFromRef(ref);
+      const downloadUrl = privateDownloadUrlFromRef(ref) ?? url ?? "";
+      if (url) map[ref] = { url, downloadUrl, kind };
+      continue;
+    }
+
+    // Legacy Supabase private-bucket path "<convId>/<file>".
+    if (ref.split("/")[0] !== conversationId) continue;
+    const { data } = await admin.storage.from("chat").createSignedUrl(ref, 600);
+    if (data?.signedUrl) map[ref] = { url: data.signedUrl, downloadUrl: data.signedUrl, kind };
+  }
+  return { map };
+}
 
 /** Participant-gated: sign a Cloudinary upload for a chat attachment. */
 export async function signChatUpload(
