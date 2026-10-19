@@ -13,15 +13,20 @@ export function OfferForm({
   handle,
   creatorName,
   startingRate,
+  initialTitle,
+  initialPrice,
 }: {
   handle: string;
   creatorName: string;
   startingRate: number;
+  initialTitle?: string;
+  initialPrice?: number;
 }) {
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(initialTitle ?? "");
   const [brief, setBrief] = useState("");
-  const [price, setPrice] = useState(startingRate || 0);
+  const [price, setPrice] = useState(initialPrice || startingRate || 0);
   const [deadline, setDeadline] = useState("");
+  const [needsProduct, setNeedsProduct] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [needsBrand, setNeedsBrand] = useState(false);
   const [pending, start] = useTransition();
@@ -33,7 +38,7 @@ export function OfferForm({
     setError(null);
     setNeedsBrand(false);
     start(async () => {
-      const res = await sendOfferAction({ handle, title, brief, price, deadline });
+      const res = await sendOfferAction({ handle, title, brief, price, deadline, needsProduct });
       if (res?.needsBrand) setNeedsBrand(true);
       if (res?.error) setError(res.error);
       // success redirects server-side
@@ -56,6 +61,19 @@ export function OfferForm({
           <Input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
         </Field>
       </div>
+
+      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-surface p-3">
+        <input
+          type="checkbox"
+          checked={needsProduct}
+          onChange={(e) => setNeedsProduct(e.target.checked)}
+          className="mt-0.5 size-4 accent-[var(--accent,#ec4899)]"
+        />
+        <span className="text-sm">
+          <span className="font-medium text-ink">I&rsquo;ll ship a physical product</span>
+          <span className="block text-xs text-ink-3">The creator will share a delivery address after booking so you can send the item via a courier.</span>
+        </span>
+      </label>
 
       <div className="rounded-xl border border-line bg-surface-2 p-4 text-sm">
         <div className="flex justify-between text-ink-2"><span>Creator rate</span><span>{formatNaira(price || 0)}</span></div>

@@ -124,7 +124,12 @@ export function CreatorProfile({ data }: { data: ProfileData }) {
                         <li className="flex items-center gap-1.5"><Check className="size-3.5 text-success" /> {p.revisions} revision{p.revisions === 1 ? "" : "s"} included</li>
                       )}
                     </ul>
-                    <p className="mt-4 font-display text-xl font-bold text-ink">{formatNaira(p.price_naira)}</p>
+                    <div className="mt-4 flex items-center justify-between gap-2">
+                      <p className="font-display text-xl font-bold text-ink">{formatNaira(p.price_naira)}</p>
+                      <Link href={`/${data.handle}/hire?title=${encodeURIComponent(p.title)}&price=${p.price_naira}`}>
+                        <Button size="sm" variant="secondary">Book</Button>
+                      </Link>
+                    </div>
                   </CardBody>
                 </Card>
               ))}

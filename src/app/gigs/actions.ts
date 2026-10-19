@@ -182,3 +182,58 @@ export async function approveReleaseAction(
   revalidatePath(`/gigs/${gigId}`);
   return { ok: true, payoutQueued };
 }
+
+// ---- Physical-product logistics --------------------------------------------
+
+/** Creator sets the delivery address for a physical-product gig. */
+export async function setShippingAddressAction(gigId: string, address: string): Promise<{ error?: string; ok?: boolean }> {
+  const { supabase, user } = await auth();
+  if (!user) return { error: "Please sign in again." };
+  const addr = address.trim();
+  if (addr.length < 8) return { error: "Please enter a complete delivery address." };
+
+  const { data: gig } = await supabase.from("gigs").select("id, creator_id, brand_id, title, needs_product").eq("id", gigId).maybeSingle();
+  if (!gig || gig.creator_id !== user.id) return { error: "Not allowed." };
+  if (!gig.needs_product) return { error: "This gig doesn't involve a physical product." };
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("gigs").update({ shipping_address: addr, shipping_status: "address_set" }).eq("id", gigId);
+  if (error) return { error: error.message };
+
+  await notifyUser(admin, gig.brand_id, {
+    type: "gig_update",
+    title: "Delivery address ready",
+    body: `The creator shared where to send the product for "${gig.title}".`,
+    href: `/gigs/${gigId}`,
+    ctaLabel: "Arrange delivery",
+  });
+  revalidatePath(`/gigs/${gigId}`);
+  return { ok: true };
+}
+
+/** Advance the shipping status: brand marks 'sent', creator marks 'received'. */
+export async function setShippingStatusAction(gigId: string, status: "sent" | "received"): Promise<{ error?: string; ok?: boolean }> {
+  const { supabase, user } = await auth();
+  if (!user) return { error: "Please sign in again." };
+
+  const { data: gig } = await supabase.from("gigs").select("id, creator_id, brand_id, title, needs_product").eq("id", gigId).maybeSingle();
+  if (!gig || (gig.brand_id !== user.id && gig.creator_id !== user.id)) return { error: "Not allowed." };
+  if (!gig.needs_product) return { error: "This gig doesn't involve a physical product." };
+  if (status === "sent" && gig.brand_id !== user.id) return { error: "Only the brand marks it sent." };
+  if (status === "received" && gig.creator_id !== user.id) return { error: "Only the creator marks it received." };
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("gigs").update({ shipping_status: status }).eq("id", gigId);
+  if (error) return { error: error.message };
+
+  const other = status === "sent" ? gig.creator_id : gig.brand_id;
+  await notifyUser(admin, other, {
+    type: "gig_update",
+    title: status === "sent" ? "Your product is on the way" : "The creator received the product",
+    body: `"${gig.title}" — ${status === "sent" ? "the brand marked the product as sent." : "the creator confirmed delivery."}`,
+    href: `/gigs/${gigId}`,
+    ctaLabel: "View the gig",
+  });
+  revalidatePath(`/gigs/${gigId}`);
+  return { ok: true };
+}

@@ -21,6 +21,7 @@ export type SendOfferInput = {
   brief: string;
   price: number;
   deadline: string; // YYYY-MM-DD
+  needsProduct?: boolean;
 };
 
 export async function sendOfferAction(input: SendOfferInput): Promise<{ error?: string; needsBrand?: boolean }> {
@@ -53,6 +54,7 @@ export async function sendOfferAction(input: SendOfferInput): Promise<{ error?: 
     price_naira: Math.round(input.price),
     deadline: input.deadline || null,
     status: "pending",
+    needs_product: !!input.needsProduct,
     expires_at: expires.toISOString(),
   });
   if (error) return { error: error.message };

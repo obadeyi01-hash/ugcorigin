@@ -8,6 +8,7 @@ import { Container } from "@/components/ui/container";
 import { GigWorkspace, type Comment } from "@/components/gigs/gig-workspace";
 import { ReviewForm } from "@/components/gigs/review-form";
 import { AddVerifiedWork } from "@/components/gigs/add-verified-work";
+import { ProductLogistics } from "@/components/gigs/product-logistics";
 import { OpenDispute } from "@/components/gigs/open-dispute";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -48,7 +49,7 @@ async function GigInner({ params }: { params: Promise<{ id: string }> }) {
 
   const { data: gig } = await supabase
     .from("gigs")
-    .select("id, title, status, price_naira, fee_naira, brand_id, creator_id")
+    .select("id, title, status, price_naira, fee_naira, brand_id, creator_id, needs_product, shipping_address, shipping_status")
     .eq("id", id)
     .maybeSingle();
   if (!gig) return <div className="py-20 text-center text-ink-2">Gig not found.</div>;
@@ -138,6 +139,9 @@ async function GigInner({ params }: { params: Promise<{ id: string }> }) {
       />
 
       <div className="max-w-2xl pb-14">
+        {gig.needs_product && ["funded", "in_progress", "in_review", "revision", "approved", "released", "completed"].includes(gig.status) && (
+          <ProductLogistics gigId={gig.id} role={role} address={gig.shipping_address} status={gig.shipping_status} />
+        )}
         {contact && (contact.phone || contact.name) && (
           <div className="mb-6 rounded-2xl border border-line bg-surface p-5">
             <p className="flex items-center gap-2 font-semibold text-ink">

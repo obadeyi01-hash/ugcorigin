@@ -11,8 +11,9 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Make an offer" };
 
-async function HireInner({ params }: { params: Promise<{ handle: string }> }) {
+async function HireInner({ params, searchParams }: { params: Promise<{ handle: string }>; searchParams: Promise<{ title?: string; price?: string }> }) {
   const { handle: raw } = await params;
+  const { title: spTitle, price: spPrice } = await searchParams;
   const handle = decodeURIComponent(raw).replace(/^@/, "").toLowerCase();
 
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) redirect("/dashboard");
@@ -48,20 +49,26 @@ async function HireInner({ params }: { params: Promise<{ handle: string }> }) {
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Make an offer to {name}</h1>
       <p className="mt-1.5 text-sm text-ink-2">Send a clear brief and budget. They have 48 hours to accept.</p>
       <div className="mt-7">
-        <OfferForm handle={creator.handle} creatorName={name} startingRate={creator.starting_rate_naira ?? 0} />
+        <OfferForm
+          handle={creator.handle}
+          creatorName={name}
+          startingRate={creator.starting_rate_naira ?? 0}
+          initialTitle={spTitle ? spTitle.slice(0, 120) : undefined}
+          initialPrice={spPrice ? Number(spPrice) || undefined : undefined}
+        />
       </div>
     </div>
   );
 }
 
-export default function HirePage({ params }: { params: Promise<{ handle: string }> }) {
+export default function HirePage({ params, searchParams }: { params: Promise<{ handle: string }>; searchParams: Promise<{ title?: string; price?: string }> }) {
   return (
     <>
       <SiteHeader />
       <main className="flex-1">
         <Container>
           <Suspense fallback={<div className="py-20" />}>
-            <HireInner params={params} />
+            <HireInner params={params} searchParams={searchParams} />
           </Suspense>
         </Container>
       </main>
