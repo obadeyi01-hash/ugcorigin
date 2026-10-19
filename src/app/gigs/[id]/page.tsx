@@ -9,6 +9,7 @@ import { GigWorkspace, type Comment } from "@/components/gigs/gig-workspace";
 import { ReviewForm } from "@/components/gigs/review-form";
 import { AddVerifiedWork } from "@/components/gigs/add-verified-work";
 import { ProductLogistics } from "@/components/gigs/product-logistics";
+import { MeetingScheduler, type Meeting } from "@/components/gigs/meeting-scheduler";
 import { OpenDispute } from "@/components/gigs/open-dispute";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -119,6 +120,15 @@ async function GigInner({ params }: { params: Promise<{ id: string }> }) {
     }));
   }
 
+  const funded = ["funded", "in_progress", "in_review", "revision", "approved", "released", "completed"].includes(gig.status);
+  const { data: meetings } = funded
+    ? await supabase
+        .from("meetings")
+        .select("id, kind, title, scheduled_at, link, notes, status, proposed_by")
+        .eq("gig_id", id)
+        .order("scheduled_at", { ascending: true })
+    : { data: null };
+
   const [{ data: myReview }, { data: dispute }, { data: featured }] = await Promise.all([
     supabase.from("reviews").select("id").eq("gig_id", id).eq("author_id", user.id).maybeSingle(),
     supabase.from("disputes").select("id, reason, status").eq("gig_id", id).maybeSingle(),
@@ -139,7 +149,10 @@ async function GigInner({ params }: { params: Promise<{ id: string }> }) {
       />
 
       <div className="max-w-2xl pb-14">
-        {gig.needs_product && ["funded", "in_progress", "in_review", "revision", "approved", "released", "completed"].includes(gig.status) && (
+        {funded && (
+          <MeetingScheduler gigId={gig.id} currentUserId={user.id} meetings={(meetings ?? []) as Meeting[]} />
+        )}
+        {gig.needs_product && funded && (
           <ProductLogistics gigId={gig.id} role={role} address={gig.shipping_address} status={gig.shipping_status} />
         )}
         {contact && (contact.phone || contact.name) && (

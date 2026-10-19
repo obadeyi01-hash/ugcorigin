@@ -19,7 +19,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://ugcorigin.com"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://ugcorigin.com"),
   title: {
     default: "UGCOrigin, Hire real creators for original UGC",
     template: "%s · UGCOrigin",
@@ -49,6 +49,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
+    site: "@ugcorigin",
+    creator: "@ugcorigin",
     title: "UGCOrigin, Hire real creators for original UGC",
     description: "Identity-verified human creators. Escrow-protected. Nigeria-first.",
   },

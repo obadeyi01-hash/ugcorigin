@@ -6,7 +6,7 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { Container } from "@/components/ui/container";
 import { CreatorProfile, type ProfileData } from "@/components/marketplace/creator-profile";
 import { JsonLd, SITE_URL } from "@/components/seo/json-ld";
-import { tierMeta } from "@/lib/tiers";
+import { tierMeta, isInfluencer } from "@/lib/tiers";
 import { displayNameFor, publicName } from "@/lib/names";
 import { createClient } from "@/lib/supabase/server";
 
@@ -153,7 +153,7 @@ async function ProfileInner({ params }: { params: Promise<{ handle: string }> })
     } = await supabase.auth.getUser();
     const { data: creator } = await supabase
       .from("creator_profiles")
-      .select("id, handle, display_name, first_name, middle_name, last_name, bio, location, niches, starting_rate_naira, verification_status, tier")
+      .select("id, handle, display_name, first_name, middle_name, last_name, bio, location, niches, starting_rate_naira, verification_status, tier, is_influencer")
       .eq("handle", handle)
       .maybeSingle();
 
@@ -206,6 +206,7 @@ async function ProfileInner({ params }: { params: Promise<{ handle: string }> })
         niches: creator.niches ?? [],
         verified: creator.verification_status === "verified",
         tier: creator.tier,
+        influencer: isInfluencer(creator.tier, creator.is_influencer),
         startingRate: creator.starting_rate_naira,
         url: `${SITE}/@${creator.handle}`,
         socials: socialList,

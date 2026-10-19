@@ -20,6 +20,7 @@ type CreatorRow = {
   display_name: string | null;
   tier: string;
   is_live: boolean;
+  is_influencer: boolean;
   starting_rate_naira: number | null;
   earned_reputation: number | null;
   metrics: { gigs_completed: number; review_count: number; avg_rating: number | null } | null;
@@ -35,7 +36,7 @@ async function TiersInner() {
     supabase
       .from("creator_profiles")
       .select(
-        "id, handle, display_name, tier, is_live, starting_rate_naira, earned_reputation, metrics:creator_metrics(gigs_completed, review_count, avg_rating)",
+        "id, handle, display_name, tier, is_live, is_influencer, starting_rate_naira, earned_reputation, metrics:creator_metrics(gigs_completed, review_count, avg_rating)",
       )
       .order("earned_reputation", { ascending: false })
       .limit(80),
@@ -82,7 +83,7 @@ async function TiersInner() {
                       {c.starting_rate_naira ? ` · rate ${formatNaira(c.starting_rate_naira)}` : ""}
                     </p>
                   </div>
-                  <CreatorTierControls creatorId={c.id} currentTier={c.tier} readonly={readonly} />
+                  <CreatorTierControls creatorId={c.id} currentTier={c.tier} isInfluencer={c.is_influencer} readonly={readonly} />
                 </li>
               );
             })}

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, ArrowRight, ShieldCheck, Check } from "lucide-react";
+import { MapPin, ArrowRight, ShieldCheck, Check, Sparkles } from "lucide-react";
 import { Chip } from "@/components/ui/chip";
 import { PillRow } from "@/components/ui/pill-row";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ export type ProfileData = {
   niches: string[];
   verified: boolean;
   tier?: string | null;
+  influencer?: boolean;
   startingRate?: number | null;
   url: string;
   socials: { platform: string; handle: string; url?: string | null }[];
@@ -54,6 +55,11 @@ export function CreatorProfile({ data }: { data: ProfileData }) {
           <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{data.name}</h1>
           {data.verified && <VerifiedBadge />}
           {data.tier && <TierBadge tier={data.tier} />}
+          {data.influencer && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-accent to-[#a855f7] px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm">
+              <Sparkles className="size-3" /> Influencer
+            </span>
+          )}
         </div>
         <p className="mt-1.5 flex items-center gap-1.5 text-ink-3">
           <MapPin className="size-4" /> {data.location || "Nigeria"} · @{data.handle}

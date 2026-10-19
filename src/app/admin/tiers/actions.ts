@@ -57,6 +57,18 @@ export async function adminSetTier(creatorId: string, tier: TierKey): Promise<Re
   return { ok: true };
 }
 
+/** Toggle a creator's Influencer designation (audited). */
+export async function adminSetInfluencer(creatorId: string, value: boolean): Promise<Res> {
+  const { ctx, error } = await guardWrite("tiers");
+  if (error || !ctx) return { error: error ?? "Not permitted." };
+  const admin = createAdminClient();
+  const { error: e } = await admin.from("creator_profiles").update({ is_influencer: value }).eq("id", creatorId);
+  if (e) return { error: e.message };
+  await audit(admin, ctx.userId, "influencer.set", creatorId, null, { is_influencer: value });
+  revalidatePath("/admin/tiers");
+  return { ok: true };
+}
+
 /** Re-run the scoring engine for one creator (metrics → ERS → tier, ±1 step). */
 export async function adminRecomputeTier(creatorId: string): Promise<Res> {
   const { ctx, error } = await guardWrite("tiers");

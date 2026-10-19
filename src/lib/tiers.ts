@@ -42,3 +42,11 @@ export function tierMeta(key: string | null | undefined): TierMeta {
 export function tierFloor(key: string | null | undefined): number {
   return tierMeta(key).floorNaira;
 }
+
+/** Tier at which creators are considered "Influencer" level (Signature+). */
+export const INFLUENCER_MIN_RANK = 6;
+
+/** Whether to show the Influencer badge: admin-set flag OR a top tier. */
+export function isInfluencer(tier: string | null | undefined, flag?: boolean | null): boolean {
+  return !!flag || tierMeta(tier).rank >= INFLUENCER_MIN_RANK;
+}

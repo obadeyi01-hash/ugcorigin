@@ -1,10 +1,25 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "fs/promises";
+import path from "path";
 
 export const alt = "UGCOrigin, the creator network for original, human content";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export default function OgImage() {
+let symbolDataUrl: string | null | undefined;
+async function loadSymbol(): Promise<string | null> {
+  if (symbolDataUrl !== undefined) return symbolDataUrl;
+  try {
+    const buf = await readFile(path.join(process.cwd(), "public", "brand", "symbol.png"));
+    symbolDataUrl = `data:image/png;base64,${buf.toString("base64")}`;
+  } catch {
+    symbolDataUrl = null;
+  }
+  return symbolDataUrl;
+}
+
+export default async function OgImage() {
+  const symbol = await loadSymbol();
   return new ImageResponse(
     (
       <div
@@ -21,6 +36,10 @@ export default function OgImage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", fontSize: 40, fontWeight: 800, letterSpacing: -0.5 }}>
+          {symbol && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={symbol} width={52} height={52} style={{ marginRight: 16 }} alt="" />
+          )}
           <span style={{ color: "#ec4899" }}>UGC</span>
           <span>ORIGIN</span>
         </div>
