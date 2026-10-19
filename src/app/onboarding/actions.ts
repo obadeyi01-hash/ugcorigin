@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { normalizeHandle, isValidHandle } from "@/lib/username";
 
 const configured = () => !!process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -37,8 +38,8 @@ function creatorCompleteness(i: CreatorInput) {
 export async function createCreatorProfile(input: CreatorInput): Promise<ActionResult> {
   if (!configured()) return { error: "Backend not connected yet, add your Supabase keys to .env.local to save." };
 
-  const handle = input.handle.trim().toLowerCase().replace(/^@/, "");
-  if (!/^[a-z0-9._-]{3,30}$/.test(handle)) {
+  const handle = normalizeHandle(input.handle);
+  if (!isValidHandle(handle)) {
     return { error: "Username must be 3 to 30 characters: letters, numbers, dot, dash or underscore." };
   }
 

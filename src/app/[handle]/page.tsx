@@ -83,6 +83,14 @@ const DEMO: ProfileData = {
     { id: "e1", platform: "youtube", url: "https://www.youtube.com/watch?v=aqz-KE-bpKQ" },
     { id: "e2", platform: "x", url: "https://twitter.com/Interior/status/463440424141459456" },
   ],
+  metrics: {
+    gigs_completed: 48,
+    on_time_rate: 98,
+    avg_rating: 4.9,
+    review_count: 37,
+    repeat_hire_rate: 42,
+    response_time_mins: 35,
+  },
 };
 
 function profileLd(data: ProfileData) {
@@ -145,12 +153,13 @@ async function ProfileInner({ params }: { params: Promise<{ handle: string }> })
       .maybeSingle();
 
     if (creator) {
-      const [{ data: socials }, { data: packages }, { data: reviewRows }, { data: portfolio }, { data: vids }] = await Promise.all([
+      const [{ data: socials }, { data: packages }, { data: reviewRows }, { data: portfolio }, { data: vids }, { data: metricsRow }] = await Promise.all([
         supabase.from("social_accounts").select("platform, handle, url").eq("creator_id", creator.id),
         supabase.from("packages").select("id, title, type, price_naira, revisions, format").eq("creator_id", creator.id).eq("active", true),
         supabase.from("reviews").select("id, rating_speed, rating_comms, rating_quality, body").eq("subject_id", creator.id).order("created_at", { ascending: false }).limit(12),
         supabase.from("portfolio_links").select("id, platform, url").eq("creator_id", creator.id).order("position", { ascending: true }),
         supabase.from("profile_videos").select("id, url, poster_url").eq("creator_id", creator.id).order("position", { ascending: true }),
+        supabase.from("creator_metrics").select("gigs_completed, on_time_rate, avg_rating, review_count, repeat_hire_rate, response_time_mins").eq("creator_id", creator.id).maybeSingle(),
       ]);
       const reviews = (reviewRows ?? []).map((r) => ({
         id: r.id,
@@ -176,6 +185,7 @@ async function ProfileInner({ params }: { params: Promise<{ handle: string }> })
         averageRating,
         embeds: (portfolio ?? []).map((p) => ({ id: p.id, platform: p.platform, url: p.url })),
         videos: (vids ?? []).map((v) => ({ id: v.id, url: v.url, poster: v.poster_url })),
+        metrics: metricsRow ?? undefined,
       };
     }
   }

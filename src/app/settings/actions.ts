@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { detectAiClaim } from "@/lib/ai-detect";
+import { normalizeHandle, isValidHandle, FREE_USERNAME_CHANGES } from "@/lib/username";
 
 const configured = () => !!process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -44,22 +45,57 @@ export async function updateCreatorSettings(input: CreatorSettingsInput): Promis
   const { supabase, user } = await requireUser();
   if (!user) return { error: "Your session expired, please sign in again." };
 
-  const handle = input.handle.trim().toLowerCase().replace(/^@/, "");
-  if (!/^[a-z0-9._-]{3,30}$/.test(handle)) {
+  const handle = normalizeHandle(input.handle);
+  if (!isValidHandle(handle)) {
     return { error: "Username must be 3 to 30 characters: letters, numbers, dot, dash or underscore." };
   }
   if (!input.displayName.trim()) return { error: "Display name can’t be empty." };
+
+  // Username governance: the onboarding handle is assigned; after that a creator
+  // gets FREE_USERNAME_CHANGES free change(s), then it's a paid (subscription)
+  // perk. Enforce before writing.
+  const { data: current } = await supabase
+    .from("creator_profiles")
+    .select("handle, username_changes, avatar_url, avatar_changes, avatar_last_changed_at")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const changingHandle = !!current && current.handle !== handle;
+  let nextChanges = current?.username_changes ?? 0;
+  if (changingHandle) {
+    if (nextChanges >= FREE_USERNAME_CHANGES) {
+      return {
+        error:
+          "You've used your free username change. Changing it again is a paid perk, coming soon. Your current username stays active.",
+      };
+    }
+    nextChanges += 1;
+  }
+
+  // Media monitoring: track avatar swaps; frequent changes raise a review flag.
+  const avatarChanged = !!current && !!input.avatarUrl && current.avatar_url !== input.avatarUrl;
+  let avatarChanges = current?.avatar_changes ?? 0;
+  let mediaFlag = false;
+  if (avatarChanged) {
+    avatarChanges += 1;
+    // 3+ changes in a rolling 30 days is suspicious for a genuine creator.
+    const last = current?.avatar_last_changed_at ? new Date(current.avatar_last_changed_at).getTime() : 0;
+    const within30d = Date.now() - last < 30 * 24 * 60 * 60 * 1000;
+    if (avatarChanges >= 3 && within30d) mediaFlag = true;
+  }
 
   const { error } = await supabase
     .from("creator_profiles")
     .update({
       handle,
+      username_changes: nextChanges,
       display_name: input.displayName.trim(),
       location: input.location.trim() || null,
       bio: input.bio.trim() || null,
       niches: input.niches,
       starting_rate_naira: input.startingRate > 0 ? Math.round(input.startingRate) : null,
       avatar_url: input.avatarUrl,
+      ...(avatarChanged ? { avatar_changes: avatarChanges, avatar_last_changed_at: new Date().toISOString() } : {}),
       completeness: creatorCompleteness(input),
     })
     .eq("id", user.id);
@@ -73,6 +109,9 @@ export async function updateCreatorSettings(input: CreatorSettingsInput): Promis
   const aiClaim = detectAiClaim(input.bio);
   const admin = createAdminClient();
   await admin.from("creator_profiles").update({ ai_flagged: aiClaim }).eq("id", user.id);
+  if (mediaFlag) {
+    await admin.from("creator_profiles").update({ media_flagged: true }).eq("id", user.id);
+  }
   if (aiClaim) {
     await admin.from("notifications").insert({
       user_id: user.id,

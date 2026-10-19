@@ -16,7 +16,9 @@ export const metadata: Metadata = {
   description: "Browse verified Nigerian UGC creators by category, region, budget and platform.",
 };
 
-type SP = { q?: string; niche?: string; region?: string; max?: string; platform?: string; sort?: string };
+type SP = { q?: string; niche?: string; region?: string; max?: string; platform?: string; sort?: string; page?: string };
+
+const PAGE_SIZE = 24;
 
 function GridSkeleton() {
   return (
@@ -42,6 +44,8 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
   const platform = sp.platform ?? "";
   const sort = sp.sort ?? "";
   const max = sp.max ? Number(sp.max) : undefined;
+  let page = Math.max(1, Number(sp.page) || 1);
+  let total = 0;
 
   const configured = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -63,7 +67,7 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
       let query = supabase
         .from("creator_profiles")
         .select(
-          "id, handle, display_name, location, niches, starting_rate_naira, featured, verification_status, tier, earned_reputation, updated_at, avatar_url, metrics:creator_metrics(avg_rating, review_count)",
+          "id, handle, display_name, location, niches, starting_rate_naira, featured, verification_status, tier, earned_reputation, updated_at, avatar_url, metrics:creator_metrics(avg_rating, review_count, gigs_completed)",
         )
         .eq("is_live", true)
         .eq("shadowbanned", false)
@@ -83,7 +87,7 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
 
       // Flatten + attach boost flag + review metrics.
       let rows: RankCreator[] = (data ?? []).map((c) => {
-        const m = (Array.isArray(c.metrics) ? c.metrics[0] : c.metrics) as { avg_rating?: number | null; review_count?: number } | null;
+        const m = (Array.isArray(c.metrics) ? c.metrics[0] : c.metrics) as { avg_rating?: number | null; review_count?: number; gigs_completed?: number } | null;
         return {
           id: c.id,
           handle: c.handle,
@@ -100,7 +104,8 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
           review_count: m?.review_count ?? 0,
           boosted: boosted.has(c.id),
           avatar_url: c.avatar_url as string | null,
-        } as RankCreator & { avatar_url: string | null };
+          gigs_completed: m?.gigs_completed ?? 0,
+        } as RankCreator & { avatar_url: string | null; gigs_completed: number };
       });
 
       // Sort: Recommended (default) uses the ranking engine; the rest are explicit.
@@ -109,6 +114,12 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
       else if (sort === "recent") rows.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
       else if (sort === "rating") rows.sort((a, b) => (b.avg_rating ?? 0) - (a.avg_rating ?? 0));
       else rows = rankCreators(rows, { niche, q });
+
+      // Paginate the ranked set (bounded candidate window ranked in memory).
+      total = rows.length;
+      const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+      if (page > totalPages) page = totalPages;
+      rows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
       creators = rows.map((c) => ({
         name: c.display_name || c.handle || "Creator",
@@ -120,6 +131,7 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
         featured: c.featured || !!c.boosted,
         verified: c.verification_status === "verified",
         ...(c.review_count && c.avg_rating ? { rating: c.avg_rating, reviews: c.review_count } : {}),
+        ...((c as RankCreator & { gigs_completed?: number }).gigs_completed ? { gigsCompleted: (c as RankCreator & { gigs_completed?: number }).gigs_completed } : {}),
       }));
     }
   }
@@ -148,18 +160,49 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
     );
   }
 
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const qs = (p: number) => {
+    const u = new URLSearchParams();
+    if (q) u.set("q", q);
+    if (niche) u.set("niche", niche);
+    if (region) u.set("region", region);
+    if (max) u.set("max", String(max));
+    if (platform) u.set("platform", platform);
+    if (sort) u.set("sort", sort);
+    if (p > 1) u.set("page", String(p));
+    const s = u.toString();
+    return s ? `/creators?${s}` : "/creators";
+  };
+
   return (
     <div className="mt-6">
       <p className="text-sm text-ink-3">
-        {creators.length} creator{creators.length === 1 ? "" : "s"}
+        {total} creator{total === 1 ? "" : "s"}
         {niche ? ` in ${niche}` : ""}
         {sort === "" ? " · recommended for you" : ""}
+        {totalPages > 1 ? ` · page ${page} of ${totalPages}` : ""}
       </p>
       <div className="mt-4 grid grid-cols-2 gap-5 lg:grid-cols-3">
         {creators.map((c) => (
           <CreatorCard key={c.handle ?? c.name} creator={c} />
         ))}
       </div>
+
+      {totalPages > 1 && (
+        <nav className="mt-10 flex items-center justify-center gap-2" aria-label="Pagination">
+          {page > 1 && (
+            <Link href={qs(page - 1)} className="rounded-full border border-line px-4 py-2 text-sm font-medium text-ink-2 transition-colors hover:border-accent hover:text-accent">
+              Previous
+            </Link>
+          )}
+          <span className="px-2 text-sm text-ink-3">{page} / {totalPages}</span>
+          {page < totalPages && (
+            <Link href={qs(page + 1)} className="rounded-full border border-line px-4 py-2 text-sm font-medium text-ink-2 transition-colors hover:border-accent hover:text-accent">
+              Next
+            </Link>
+          )}
+        </nav>
+      )}
     </div>
   );
 }

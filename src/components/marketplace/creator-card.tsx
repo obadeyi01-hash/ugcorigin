@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { MapPin } from "lucide-react";
+import { MapPin, CheckCircle2 } from "lucide-react";
 import { Chip } from "@/components/ui/chip";
 import { PillRow } from "@/components/ui/pill-row";
 import { Rating } from "@/components/ui/rating";
@@ -19,6 +19,7 @@ export type Creator = {
   /** Server-truth only, rendered when real data exists. Never fabricated. */
   rating?: number;
   reviews?: number;
+  gigsCompleted?: number;
 };
 
 function initials(name: string) {
@@ -75,6 +76,13 @@ export function CreatorCard({ creator }: { creator: Creator }) {
               <Chip key={n}>{n}</Chip>
             ))}
           </PillRow>
+
+          {creator.gigsCompleted ? (
+            <p className="mt-2.5 flex items-center gap-1 text-xs text-ink-3">
+              <CheckCircle2 className="size-3.5 text-success" aria-hidden />
+              <span className="font-semibold text-ink-2">{creator.gigsCompleted}</span> gig{creator.gigsCompleted === 1 ? "" : "s"} delivered
+            </p>
+          ) : null}
 
           <div className="mt-4 flex items-center justify-between border-t border-line pt-3">
             <span className="text-xs text-ink-3">Starting at</span>

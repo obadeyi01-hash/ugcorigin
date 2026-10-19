@@ -11,6 +11,7 @@ import { ShareCard } from "@/components/marketplace/share-card";
 import { StartConversationButton } from "@/components/messages/start-conversation-button";
 import { Reviews, type ReviewItem } from "@/components/marketplace/reviews";
 import { SocialEmbeds, type EmbedLink } from "@/components/marketplace/social-embeds";
+import { CreatorSnapshot, type CreatorMetrics } from "@/components/marketplace/creator-snapshot";
 import { ReportButton } from "@/components/moderation/report-button";
 import { formatNaira } from "@/lib/utils";
 
@@ -38,6 +39,7 @@ export type ProfileData = {
   averageRating: number;
   embeds: EmbedLink[];
   videos?: { id: string; url: string; poster: string | null }[];
+  metrics?: CreatorMetrics;
 };
 
 export function CreatorProfile({ data }: { data: ProfileData }) {
@@ -74,6 +76,12 @@ export function CreatorProfile({ data }: { data: ProfileData }) {
         )}
 
         {data.bio && <p className="mt-6 max-w-prose leading-relaxed text-ink-2">{data.bio}</p>}
+
+        {data.metrics && (
+          <div className="mt-6">
+            <CreatorSnapshot metrics={data.metrics} />
+          </div>
+        )}
 
         <PillRow className="mt-6">
           {data.niches.map((n) => <Chip key={n}>{n}</Chip>)}
