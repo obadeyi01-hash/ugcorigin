@@ -1,62 +1,19 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { canAccess, isReadonly, type AdminRole, type Section, type AdminContext } from "./roles";
 
-export type AdminRole =
-  | "super_admin"
-  | "finance"
-  | "trust_safety"
-  | "support"
-  | "growth"
-  | "analyst";
-
-export type Section =
-  | "overview"
-  | "verification"
-  | "users"
-  | "gigs"
-  | "finance"
-  | "disputes"
-  | "tiers"
-  | "boosts"
-  | "docs"
-  | "moderation"
-  | "messages"
-  | "roles";
-
-// Which sections each role can see.
-const ACCESS: Record<AdminRole, Section[]> = {
-  super_admin: ["overview", "verification", "users", "gigs", "finance", "disputes", "tiers", "boosts", "docs", "moderation", "messages", "roles"],
-  finance: ["overview", "gigs", "finance", "boosts"],
-  trust_safety: ["overview", "verification", "users", "gigs", "disputes", "tiers", "docs", "moderation", "messages"],
-  support: ["overview", "users", "gigs", "moderation", "messages"],
-  growth: ["overview", "users", "tiers", "boosts", "docs"],
-  analyst: ["overview", "users", "gigs", "finance", "disputes", "tiers", "boosts", "docs", "moderation", "messages"], // read-only
-};
-
-const READONLY = new Set<AdminRole>(["analyst"]);
-
-export const ROLES: AdminRole[] = ["super_admin", "finance", "trust_safety", "support", "growth", "analyst"];
-
-export const ROLE_LABEL: Record<AdminRole, string> = {
-  super_admin: "Super Admin",
-  finance: "Finance",
-  trust_safety: "Trust & Safety",
-  support: "Support",
-  growth: "Growth",
-  analyst: "Analyst",
-};
-
-export function canAccess(role: AdminRole, s: Section) {
-  return ACCESS[role]?.includes(s) ?? false;
-}
-export function isReadonly(role: AdminRole) {
-  return READONLY.has(role);
-}
-export function sectionsFor(role: AdminRole): Section[] {
-  return ACCESS[role] ?? [];
-}
-
-export type AdminContext = { userId: string; role: AdminRole };
+// Re-export the pure model so existing server imports from "@/lib/admin/rbac"
+// keep working. Client components should import from "@/lib/admin/roles".
+export {
+  ROLES,
+  ROLE_LABEL,
+  canAccess,
+  isReadonly,
+  sectionsFor,
+  type AdminRole,
+  type Section,
+  type AdminContext,
+} from "./roles";
 
 export async function getAdminContext(): Promise<AdminContext | null> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return null;

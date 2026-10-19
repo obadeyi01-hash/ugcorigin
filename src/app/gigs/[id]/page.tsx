@@ -10,6 +10,7 @@ import { ReviewForm } from "@/components/gigs/review-form";
 import { OpenDispute } from "@/components/gigs/open-dispute";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { privateUrlFromRef } from "@/lib/cloudinary-server";
 
 export const metadata: Metadata = { title: "Gig" };
 
@@ -65,9 +66,14 @@ async function GigInner({ params }: { params: Promise<{ id: string }> }) {
   if (del) {
     let videoUrl: string | null = null;
     if (del.file_url) {
-      const admin = createAdminClient();
-      const { data: signed } = await admin.storage.from("deliverables").createSignedUrl(del.file_url, 3600);
-      videoUrl = signed?.signedUrl ?? null;
+      // New deliverables are Cloudinary authenticated assets ("cld:" ref);
+      // legacy ones are paths in the private Supabase "deliverables" bucket.
+      videoUrl = privateUrlFromRef(del.file_url);
+      if (!videoUrl) {
+        const admin = createAdminClient();
+        const { data: signed } = await admin.storage.from("deliverables").createSignedUrl(del.file_url, 3600);
+        videoUrl = signed?.signedUrl ?? null;
+      }
     }
     deliverable = { id: del.id, status: del.status, note: del.note, videoUrl };
 

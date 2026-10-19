@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { paystackConfigured, initiateTransfer } from "@/lib/payments/paystack";
+import { deliverableFolder } from "@/lib/cloudinary";
+import { signedUpload, type SignedUpload } from "@/lib/cloudinary-server";
 
 async function auth() {
   const supabase = await createClient();
@@ -13,26 +15,19 @@ async function auth() {
   return { supabase, user };
 }
 
-function safeName(name: string) {
-  return name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
-}
-
-/** Creator-only: get a signed URL to upload a deliverable directly to storage. */
-export async function getUploadUrlAction(
+/** Creator-only: sign a Cloudinary upload for a deliverable (authenticated). */
+export async function signDeliverableUpload(
   gigId: string,
-  filename: string,
-): Promise<{ path?: string; token?: string; error?: string }> {
+): Promise<{ upload?: SignedUpload; error?: string }> {
   const { supabase, user } = await auth();
   if (!user) return { error: "Please sign in again." };
 
   const { data: gig } = await supabase.from("gigs").select("id, creator_id, status").eq("id", gigId).maybeSingle();
   if (!gig || gig.creator_id !== user.id) return { error: "Not allowed." };
 
-  const path = `${gigId}/${crypto.randomUUID()}-${safeName(filename)}`;
-  const admin = createAdminClient();
-  const { data, error } = await admin.storage.from("deliverables").createSignedUploadUrl(path);
-  if (error) return { error: error.message };
-  return { path: data.path, token: data.token };
+  const upload = signedUpload(deliverableFolder(gigId));
+  if (!upload) return { error: "Uploads aren’t configured yet." };
+  return { upload };
 }
 
 /** Creator-only: record a submitted deliverable (after the file is uploaded). */

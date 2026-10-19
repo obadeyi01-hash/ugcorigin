@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Card, CardBody } from "@/components/ui/card";
 import { cn, formatNaira } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
+import { uploadToCloudinary } from "@/lib/cloudinary-upload";
 import {
-  getUploadUrlAction,
+  signDeliverableUpload,
   recordDeliverableAction,
   addCommentAction,
   requestRevisionAction,
@@ -91,12 +91,10 @@ export function GigWorkspace({
     setErr(null);
     setUploading(true);
     try {
-      const up = await getUploadUrlAction(gig.id, file.name);
-      if (up.error || !up.path || !up.token) throw new Error(up.error || "Could not start upload.");
-      const supabase = createClient();
-      const { error: upErr } = await supabase.storage.from("deliverables").uploadToSignedUrl(up.path, up.token, file);
-      if (upErr) throw new Error(upErr.message);
-      const res = await recordDeliverableAction(gig.id, up.path, note);
+      const sig = await signDeliverableUpload(gig.id);
+      if (sig.error || !sig.upload) throw new Error(sig.error || "Could not start upload.");
+      const up = await uploadToCloudinary(file, sig.upload);
+      const res = await recordDeliverableAction(gig.id, up.ref, note);
       if (res.error) throw new Error(res.error);
       router.refresh();
     } catch (e) {

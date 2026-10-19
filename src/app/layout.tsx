@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Inter, Space_Grotesk } from "next/font/google";
 import { JsonLd, SITE_URL } from "@/components/seo/json-ld";
 import { Analytics } from "@/components/analytics/analytics";
@@ -92,7 +93,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col bg-paper text-ink">
         <JsonLd data={[orgLd, siteLd]} />
         {children}
-        <Analytics />
+        {/* usePathname() inside Analytics is runtime-only; stream it in so the
+            rest of each route can still be prerendered (Next 16 cacheComponents). */}
+        <Suspense fallback={null}>
+          <Analytics />
+        </Suspense>
       </body>
     </html>
   );

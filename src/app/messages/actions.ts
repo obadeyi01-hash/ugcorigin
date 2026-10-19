@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redactContact } from "@/lib/chat/redact";
+import { chatFolder } from "@/lib/cloudinary";
+import { signedUpload, privateUrlFromRef, type SignedUpload } from "@/lib/cloudinary-server";
 
 type Res = { error?: string };
 
@@ -132,15 +134,52 @@ export type ChatMessage = {
   created_at: string;
 };
 
-/** Sign a chat attachment path for the current participant (private bucket). */
-export async function signAttachment(path: string): Promise<{ url?: string; error?: string }> {
+/** Participant-gated: sign a Cloudinary upload for a chat attachment. */
+export async function signChatUpload(
+  conversationId: string,
+): Promise<{ upload?: SignedUpload; error?: string }> {
   const { user } = await me();
   if (!user) return { error: "Please sign in." };
-  const convId = path.split("/")[0];
+  const admin = createAdminClient();
+  const { data: conv } = await admin
+    .from("conversations")
+    .select("brand_id, creator_id")
+    .eq("id", conversationId)
+    .maybeSingle();
+  if (!conv || (conv.brand_id !== user.id && conv.creator_id !== user.id)) return { error: "Not allowed." };
+  const upload = signedUpload(chatFolder(conversationId));
+  if (!upload) return { error: "Attachments aren’t configured yet." };
+  return { upload };
+}
+
+/**
+ * Open a chat attachment for the current participant. New attachments are
+ * Cloudinary authenticated assets (a "cld:" ref) delivered via a signed URL;
+ * legacy attachments are paths in the private Supabase "chat" bucket.
+ */
+export async function signAttachment(ref: string): Promise<{ url?: string; error?: string }> {
+  const { user } = await me();
+  if (!user) return { error: "Please sign in." };
+
+  // Cloudinary ref: folder is ugcorigin/chat/<convId>/... — authorize on convId.
+  if (ref.startsWith("cld:")) {
+    const marker = "ugcorigin/chat/";
+    const i = ref.indexOf(marker);
+    const convId = i >= 0 ? ref.slice(i + marker.length).split("/")[0] : "";
+    const admin = createAdminClient();
+    const { data: conv } = await admin.from("conversations").select("brand_id, creator_id").eq("id", convId).maybeSingle();
+    if (!conv || (conv.brand_id !== user.id && conv.creator_id !== user.id)) return { error: "Not allowed." };
+    const url = privateUrlFromRef(ref);
+    if (!url) return { error: "Could not open attachment." };
+    return { url };
+  }
+
+  // Legacy Supabase private-bucket path: "<convId>/<file>".
+  const convId = ref.split("/")[0];
   const admin = createAdminClient();
   const { data: conv } = await admin.from("conversations").select("brand_id, creator_id").eq("id", convId).maybeSingle();
   if (!conv || (conv.brand_id !== user.id && conv.creator_id !== user.id)) return { error: "Not allowed." };
-  const { data, error } = await admin.storage.from("chat").createSignedUrl(path, 300);
+  const { data, error } = await admin.storage.from("chat").createSignedUrl(ref, 300);
   if (error || !data) return { error: error?.message ?? "Could not open attachment." };
   return { url: data.signedUrl };
 }

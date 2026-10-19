@@ -22,6 +22,36 @@ export function creatorVideoFolder(creatorId: string) {
 export function creatorPortfolioFolder(creatorId: string) {
   return `ugcorigin/creators/${creatorId}/portfolio`;
 }
+export function chatFolder(conversationId: string) {
+  return `ugcorigin/chat/${conversationId}`;
+}
+export function deliverableFolder(gigId: string) {
+  return `ugcorigin/deliverables/${gigId}`;
+}
+
+// Private files (chat attachments, deliverables) are stored on Cloudinary as
+// `type=authenticated` and delivered only through server-signed URLs. We keep
+// everything needed to re-sign the URL in a single text column, so we need no
+// schema change and legacy Supabase paths (plain strings) still resolve via the
+// old code path. Format is "cld:<resourceType>:<format>:<publicId>".
+export type CloudRef = { resourceType: "image" | "video" | "raw"; format: string; publicId: string };
+
+export function encodeCloudRef(r: CloudRef): string {
+  return `cld:${r.resourceType}:${r.format}:${r.publicId}`;
+}
+
+export function decodeCloudRef(ref: string): CloudRef | null {
+  if (!ref.startsWith("cld:")) return null;
+  const rest = ref.slice(4);
+  const first = rest.indexOf(":");
+  const second = rest.indexOf(":", first + 1);
+  if (first < 0 || second < 0) return null;
+  const resourceType = rest.slice(0, first) as CloudRef["resourceType"];
+  const format = rest.slice(first + 1, second);
+  const publicId = rest.slice(second + 1);
+  if (!publicId) return null;
+  return { resourceType, format, publicId };
+}
 
 /** Optimized delivery URL. resourceType: "video" | "image". */
 export function cloudinaryUrl(

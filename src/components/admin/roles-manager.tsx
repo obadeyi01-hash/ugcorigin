@@ -6,7 +6,7 @@ import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { Card, CardBody } from "@/components/ui/card";
-import { ROLES, ROLE_LABEL, type AdminRole } from "@/lib/admin/rbac";
+import { ROLES, ROLE_LABEL, type AdminRole } from "@/lib/admin/roles";
 import { adminAddAdmin, adminSetRole, adminRemoveAdmin } from "@/app/admin/actions";
 
 export type AdminRow = { userId: string; role: AdminRole; email: string };

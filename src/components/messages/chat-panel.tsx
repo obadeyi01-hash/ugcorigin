@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Paperclip, Send, Loader2, FileText, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient, supabaseConfigured } from "@/lib/supabase/client";
-import { sendMessage, signAttachment, type ChatMessage } from "@/app/messages/actions";
+import { sendMessage, signAttachment, signChatUpload, type ChatMessage } from "@/app/messages/actions";
+import { uploadToCloudinary } from "@/lib/cloudinary-upload";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const OK_TYPES = /^(image\/|application\/pdf)/;
@@ -90,22 +91,20 @@ export function ChatPanel({
     setWarn(null);
     if (!OK_TYPES.test(file.type)) return setWarn("Only images and PDFs can be attached.");
     if (file.size > MAX_BYTES) return setWarn("Attachments must be under 10MB.");
-    if (!supabaseConfigured) return;
 
     setUploading(true);
-    const supabase = createClient();
-    const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-60);
-    const path = `${conversationId}/${Date.now()}_${safe}`;
-    const { error } = await supabase.storage.from("chat").upload(path, file, { cacheControl: "60" });
-    if (error) {
+    try {
+      const sig = await signChatUpload(conversationId);
+      if (sig.error || !sig.upload) throw new Error(sig.error || "Could not start upload.");
+      const up = await uploadToCloudinary(file, sig.upload);
+      const r = await sendMessage({ conversationId, body: "", attachmentUrl: up.ref, attachmentName: file.name });
+      if (r.error) setWarn(r.error);
+      else if (r.message) add(r.message);
+    } catch (e) {
+      setWarn(e instanceof Error ? e.message : "Upload failed.");
+    } finally {
       setUploading(false);
-      setWarn(error.message);
-      return;
     }
-    const r = await sendMessage({ conversationId, body: "", attachmentUrl: path, attachmentName: file.name });
-    setUploading(false);
-    if (r.error) setWarn(r.error);
-    else if (r.message) add(r.message);
   }
 
   async function openAttachment(path: string) {

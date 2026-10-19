@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
+  // The Cloudinary Node SDK is server-only; keep it out of the bundle.
+  serverExternalPackages: ["cloudinary"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.pexels.com" },
