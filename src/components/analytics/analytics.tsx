@@ -13,10 +13,11 @@ import { Cookie } from "lucide-react";
  * The footer's "Cookie preferences" link reopens the banner via a custom event.
  */
 
+const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID; // Google Tag Manager container (GTM-XXXX)
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 const CLARITY_ID = process.env.NEXT_PUBLIC_CLARITY_ID;
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
-const HAS_ANY = !!(GA_ID || CLARITY_ID || META_PIXEL_ID);
+const HAS_ANY = !!(GTM_ID || GA_ID || CLARITY_ID || META_PIXEL_ID);
 
 const KEY = "ugc:consent"; // "accepted" | "declined"
 type Consent = "accepted" | "declined" | null;
@@ -25,6 +26,7 @@ declare global {
   interface Window {
     gtag?: (...args: unknown[]) => void;
     fbq?: (...args: unknown[]) => void;
+    dataLayer?: unknown[];
   }
 }
 
@@ -58,6 +60,8 @@ export function Analytics() {
     }
     if (GA_ID && window.gtag) window.gtag("event", "page_view", { page_path: pathname });
     if (META_PIXEL_ID && window.fbq) window.fbq("track", "PageView");
+    // Let GTM-configured tags fire on SPA route changes.
+    if (GTM_ID && window.dataLayer) window.dataLayer.push({ event: "pageview", page_path: pathname });
   }, [pathname, consent]);
 
   function choose(v: Exclude<Consent, null>) {
@@ -74,6 +78,12 @@ export function Analytics() {
 
   return (
     <>
+      {loadScripts && GTM_ID && (
+        <Script id="gtm-init" strategy="afterInteractive">
+          {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${GTM_ID}');`}
+        </Script>
+      )}
+
       {loadScripts && GA_ID && (
         <>
           <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
