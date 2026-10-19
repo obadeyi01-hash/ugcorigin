@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { OfferList, type OfferRow } from "@/components/offers/offer-list";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { createClient } from "@/lib/supabase/server";
+import type { BrandMetrics } from "@/components/marketplace/brand-snapshot";
 
 export const metadata: Metadata = { title: "Offers" };
 
@@ -21,7 +22,7 @@ type OfferRecord = {
   creator_id: string;
   brand_id: string;
   creator: { handle: string; display_name: string | null } | null;
-  brand: { company_name: string | null } | null;
+  brand: { company_name: string | null; metrics: BrandMetrics | BrandMetrics[] | null } | null;
 };
 
 async function OffersInner() {
@@ -35,7 +36,7 @@ async function OffersInner() {
   const { data } = await supabase
     .from("offers")
     .select(
-      "id, title, brief, price_naira, deadline, status, creator_id, brand_id, creator:creator_profiles(handle,display_name), brand:brand_profiles(company_name)",
+      "id, title, brief, price_naira, deadline, status, creator_id, brand_id, creator:creator_profiles(handle,display_name), brand:brand_profiles(company_name, metrics:brand_metrics(gigs_posted,gigs_funded,gigs_completed,disputes,avg_rating,review_count))",
     )
     .or(`creator_id.eq.${user.id},brand_id.eq.${user.id}`)
     .order("created_at", { ascending: false });
@@ -46,6 +47,8 @@ async function OffersInner() {
       role === "creator"
         ? o.brand?.company_name || "A brand"
         : o.creator?.display_name || (o.creator?.handle ? `@${o.creator.handle}` : "A creator");
+    const bm = o.brand?.metrics;
+    const brandMetrics = role === "creator" ? (Array.isArray(bm) ? bm[0] : bm) ?? undefined : undefined;
     return {
       id: o.id,
       title: o.title,
@@ -55,6 +58,7 @@ async function OffersInner() {
       status: o.status,
       role,
       counterparty,
+      brandMetrics,
     };
   });
 

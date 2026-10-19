@@ -76,6 +76,49 @@ export async function removeReview(reportId: string): Promise<Res> {
   return { ok: true };
 }
 
+/** Issue a trust strike to a creator (auto-benches at 3+). Lowers ranking. */
+export async function issueStrike(creatorId: string, note: string): Promise<Res> {
+  const { ctx, error } = await guardWrite("moderation");
+  if (error || !ctx) return { error: error ?? "Not permitted." };
+  const admin = createAdminClient();
+  const { data: cur } = await admin.from("creator_profiles").select("strikes").eq("id", creatorId).maybeSingle();
+  if (!cur) return { error: "Creator not found." };
+  const strikes = (cur.strikes ?? 0) + 1;
+  const benched = strikes >= 3;
+  const { error: e } = await admin
+    .from("creator_profiles")
+    .update({ strikes, benched, strike_note: note.trim() || null })
+    .eq("id", creatorId);
+  if (e) return { error: e.message };
+  await admin.from("audit_log").insert({ actor_id: ctx.userId, action: "moderation.strike_issued", target_type: "creator_profile", target_id: creatorId, after: { strikes, benched } });
+  await admin.from("notifications").insert({
+    user_id: creatorId,
+    type: "ai_warning",
+    title: benched ? "Your profile has been benched" : "You received a trust strike",
+    body: benched
+      ? "Repeated trust issues have benched your profile, so it ranks last in search. Contact support to resolve it."
+      : "A trust strike was added to your account. It lowers your search ranking. Keep deals on-platform and honour agreements to recover.",
+    href: "/dashboard",
+  });
+  revalidatePath("/admin/moderation");
+  return { ok: true };
+}
+
+/** Clear a creator's strikes + un-bench them. */
+export async function clearStrikes(creatorId: string): Promise<Res> {
+  const { ctx, error } = await guardWrite("moderation");
+  if (error || !ctx) return { error: error ?? "Not permitted." };
+  const admin = createAdminClient();
+  const { error: e } = await admin
+    .from("creator_profiles")
+    .update({ strikes: 0, benched: false, strike_note: null })
+    .eq("id", creatorId);
+  if (e) return { error: e.message };
+  await admin.from("audit_log").insert({ actor_id: ctx.userId, action: "moderation.strikes_cleared", target_type: "creator_profile", target_id: creatorId, after: { strikes: 0, benched: false } });
+  revalidatePath("/admin/moderation");
+  return { ok: true };
+}
+
 /** Forfeit a reported campaign submission (removes it from payout + marks it). */
 export async function removeSubmission(reportId: string): Promise<Res> {
   const { ctx, error } = await guardWrite("moderation");

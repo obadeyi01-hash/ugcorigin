@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { formatNaira } from "@/lib/utils";
 import { feeFor } from "@/lib/fees";
 import { acceptOfferAction, declineOfferAction, fundOfferAction } from "@/app/offers/actions";
+import { BrandSnapshot, type BrandMetrics } from "@/components/marketplace/brand-snapshot";
 
 export type OfferRow = {
   id: string;
@@ -18,6 +19,7 @@ export type OfferRow = {
   status: string;
   role: "creator" | "brand";
   counterparty: string;
+  brandMetrics?: BrandMetrics;
 };
 
 const STATUS_STYLES: Record<string, string> = {
@@ -76,6 +78,12 @@ export function OfferList({ offers }: { offers: OfferRow[] }) {
               </div>
 
               {o.brief && <p className="mt-3 line-clamp-3 text-sm text-ink-2">{o.brief}</p>}
+
+              {o.role === "creator" && o.brandMetrics && (
+                <div className="mt-3">
+                  <BrandSnapshot metrics={o.brandMetrics} compact />
+                </div>
+              )}
 
               <div className="mt-4 flex items-center justify-between border-t border-line pt-3">
                 <div className="text-sm">

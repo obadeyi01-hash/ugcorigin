@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Phone } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { Container } from "@/components/ui/container";
 import { GigWorkspace, type Comment } from "@/components/gigs/gig-workspace";
@@ -12,6 +12,8 @@ import { OpenDispute } from "@/components/gigs/open-dispute";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { privateUrlFromRef } from "@/lib/cloudinary-server";
+import { fullName } from "@/lib/names";
+import { formatPhone } from "@/lib/phone";
 
 export const metadata: Metadata = { title: "Gig" };
 
@@ -52,6 +54,30 @@ async function GigInner({ params }: { params: Promise<{ id: string }> }) {
   if (!gig) return <div className="py-20 text-center text-ink-2">Gig not found.</div>;
 
   const role: "brand" | "creator" = gig.brand_id === user.id ? "brand" : "creator";
+
+  // A gig means a funded contract, so the two parties can see each other's
+  // real name + phone to coordinate (hidden everywhere else until this point).
+  const contact = await (async () => {
+    const funded = ["funded", "in_progress", "in_review", "revision", "approved", "released", "completed"].includes(gig.status);
+    if (!funded) return null;
+    if (role === "brand") {
+      const { data: c } = await supabase
+        .from("creator_profiles")
+        .select("display_name, first_name, last_name, phone")
+        .eq("id", gig.creator_id)
+        .maybeSingle();
+      if (!c) return null;
+      return { name: fullName({ first: c.first_name, last: c.last_name, display: c.display_name }), phone: c.phone as string | null, who: "creator" as const };
+    }
+    const { data: b } = await supabase
+      .from("brand_profiles")
+      .select("company_name, contact_first_name, contact_last_name, phone")
+      .eq("id", gig.brand_id)
+      .maybeSingle();
+    if (!b) return null;
+    const contactName = [b.contact_first_name, b.contact_last_name].filter(Boolean).join(" ").trim();
+    return { name: b.company_name || "Brand", phone: b.phone as string | null, who: "brand" as const, contactName };
+  })();
 
   const { data: del } = await supabase
     .from("deliverables")
@@ -112,6 +138,27 @@ async function GigInner({ params }: { params: Promise<{ id: string }> }) {
       />
 
       <div className="max-w-2xl pb-14">
+        {contact && (contact.phone || contact.name) && (
+          <div className="mb-6 rounded-2xl border border-line bg-surface p-5">
+            <p className="flex items-center gap-2 font-semibold text-ink">
+              <Phone className="size-4 text-accent" /> Direct contact
+            </p>
+            <p className="mt-1 text-sm text-ink-2">
+              You&rsquo;re booked, so you can coordinate directly.
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
+              <span className="text-ink">
+                <span className="text-ink-3">{contact.who === "creator" ? "Creator" : "Brand"}:</span> {contact.name}
+                {contact.who === "brand" && contact.contactName ? ` · ${contact.contactName}` : ""}
+              </span>
+              {contact.phone && (
+                <a href={`tel:${contact.phone}`} className="font-medium text-accent hover:underline">
+                  {formatPhone(contact.phone)}
+                </a>
+              )}
+            </div>
+          </div>
+        )}
         {dispute && (
           <div className="rounded-2xl border border-error/30 bg-error/5 p-5">
             <p className="flex items-center gap-2 font-semibold text-ink">

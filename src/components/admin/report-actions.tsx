@@ -2,12 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Ban, Trash2, XCircle, Check } from "lucide-react";
-import { dismissReport, takedownProfile, removeReview, removeSubmission } from "@/app/admin/moderation/actions";
+import { Loader2, Ban, Trash2, XCircle, Check, AlertTriangle } from "lucide-react";
+import { dismissReport, takedownProfile, removeReview, removeSubmission, issueStrike } from "@/app/admin/moderation/actions";
 
 type TargetType = "profile" | "review" | "campaign_submission" | "deliverable";
 
-export function ReportActions({ reportId, targetType }: { reportId: string; targetType: TargetType }) {
+export function ReportActions({ reportId, targetType, targetId }: { reportId: string; targetType: TargetType; targetId?: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
@@ -25,6 +25,11 @@ export function ReportActions({ reportId, targetType }: { reportId: string; targ
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      {targetType === "profile" && targetId && (
+        <button disabled={pending} onClick={() => run(() => issueStrike(targetId, "Issued from a moderation report."))} className={`${btn} border-warning/40 text-warning hover:bg-warning/5`}>
+          <AlertTriangle className="size-3.5" /> Issue strike
+        </button>
+      )}
       {targetType === "profile" && (
         <button disabled={pending} onClick={() => run(() => takedownProfile(reportId))} className={`${btn} border-error/30 text-error hover:bg-error/5`}>
           <Ban className="size-3.5" /> Take profile offline

@@ -90,7 +90,7 @@ async function ModerationInner() {
                         {r.resolution && <> · <span className="text-ink-2">{r.resolution}</span></>}
                       </p>
                     </div>
-                    {!readonly && r.status === "open" && <ReportActions reportId={r.id} targetType={r.target_type} />}
+                    {!readonly && r.status === "open" && <ReportActions reportId={r.id} targetType={r.target_type} targetId={r.target_id} />}
                   </div>
                 </li>
               );

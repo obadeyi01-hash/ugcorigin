@@ -73,6 +73,17 @@ export const REGIONS: string[] = [
   "Remote",
 ];
 
+// Full Nigeria landscape (36 states + FCT) for the profile location selector,
+// plus Remote. REGIONS above stays the curated shortlist for directory filters.
+export const NG_STATES: string[] = [
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
+  "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu",
+  "FCT - Abuja", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina",
+  "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo",
+  "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara",
+  "Remote",
+];
+
 export const PLATFORM_FILTERS: { label: string; value: string }[] = [
   { label: "Instagram", value: "instagram" },
   { label: "TikTok", value: "tiktok" },

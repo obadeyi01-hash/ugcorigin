@@ -4,7 +4,9 @@ import { useRef, useState, useTransition, type ReactNode, type ChangeEvent, type
 import { Camera, Check, Loader2, Trash2 } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input, Textarea, Field } from "@/components/ui/input";
+import { Input, Textarea, Field, Select } from "@/components/ui/input";
+import { PhoneField } from "@/components/ui/phone-field";
+import { NG_STATES } from "@/lib/categories";
 import { Chip } from "@/components/ui/chip";
 import { PillRow } from "@/components/ui/pill-row";
 import { TierBadge } from "@/components/ui/tier-badge";
@@ -32,12 +34,14 @@ type Creator = {
   tier: string | null;
   first_name?: string | null;
   last_name?: string | null;
+  phone?: string | null;
 };
 type Brand = {
   company_name: string | null;
   website: string | null;
   store_url: string | null;
   logo_url: string | null;
+  phone?: string | null;
 };
 
 function initials(name: string) {
@@ -198,6 +202,7 @@ function CreatorSettings({ userId, creator }: { userId: string; creator: Creator
   const [lastName, setLastName] = useState(creator.last_name ?? "");
   const displayName = `${firstName} ${lastName}`.trim() || creator.display_name || "";
   const [location, setLocation] = useState(creator.location ?? "");
+  const [phone, setPhone] = useState<string | null>(creator.phone ?? null);
   const [bio, setBio] = useState(creator.bio ?? "");
   const [rate, setRate] = useState(creator.starting_rate_naira ? String(creator.starting_rate_naira) : "");
   const [niches, setNiches] = useState<string[]>(creator.niches ?? []);
@@ -222,6 +227,7 @@ function CreatorSettings({ userId, creator }: { userId: string; creator: Creator
         lastName,
         displayName,
         location,
+        phone,
         bio,
         niches,
         startingRate: Number(rate) || 0,
@@ -272,8 +278,16 @@ function CreatorSettings({ userId, creator }: { userId: string; creator: Creator
           <p className="-mt-1 text-xs text-ink-3">
             Brands see &ldquo;{firstName.trim() || "First"} {lastName.trim() ? lastName.trim()[0].toUpperCase() + "." : "L."}&rdquo; until you both agree on a booking, then your full name and socials unlock.
           </p>
-          <Field label="Location">
-            <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Lagos, Nigeria" />
+          <Field label="Location" hint="Where you're based in Nigeria.">
+            <Select value={location} onChange={(e) => setLocation(e.target.value)}>
+              <option value="">Select your state</option>
+              {NG_STATES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Phone number" hint="For booking coordination. Hidden until you both agree on a gig.">
+            <PhoneField value={phone} onChange={setPhone} />
           </Field>
           <Field label="Bio" hint="A short line on what you make and who for.">
             <Textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="I make beauty & skincare UGC for Nigerian brands…" />
@@ -318,6 +332,7 @@ function BrandSettings({ userId, brand }: { userId: string; brand: Brand }) {
   const [companyName, setCompanyName] = useState(brand.company_name ?? "");
   const [website, setWebsite] = useState(brand.website ?? "");
   const [storeUrl, setStoreUrl] = useState(brand.store_url ?? "");
+  const [phone, setPhone] = useState<string | null>(brand.phone ?? null);
   const [pending, start] = useTransition();
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -326,7 +341,7 @@ function BrandSettings({ userId, brand }: { userId: string; brand: Brand }) {
     e.preventDefault();
     setError(null);
     start(async () => {
-      const res = await updateBrandSettings({ companyName, website, storeUrl, logoUrl });
+      const res = await updateBrandSettings({ companyName, website, storeUrl, phone, logoUrl });
       if (res.error) {
         setError(res.error);
         setStatus("error");
@@ -353,6 +368,9 @@ function BrandSettings({ userId, brand }: { userId: string; brand: Brand }) {
           </Field>
           <Field label="Store URL" hint="Where people buy, Instagram shop, Shopify, etc.">
             <Input value={storeUrl} onChange={(e) => setStoreUrl(e.target.value)} placeholder="https://instagram.com/yourbrand" />
+          </Field>
+          <Field label="Phone number" hint="For booking coordination. Shared with a creator only after you agree on a gig.">
+            <PhoneField value={phone} onChange={setPhone} />
           </Field>
         </div>
         {error && <p className="mt-3 text-sm font-medium text-error">{error}</p>}

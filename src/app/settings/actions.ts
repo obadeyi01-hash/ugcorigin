@@ -24,6 +24,7 @@ export type CreatorSettingsInput = {
   lastName: string;
   displayName: string;
   location: string;
+  phone: string | null;
   bio: string;
   niches: string[];
   startingRate: number;
@@ -99,6 +100,7 @@ export async function updateCreatorSettings(input: CreatorSettingsInput): Promis
       last_name: last || null,
       display_name: display,
       location: input.location.trim() || null,
+      phone: input.phone || null,
       bio: input.bio.trim() || null,
       niches: input.niches,
       starting_rate_naira: input.startingRate > 0 ? Math.round(input.startingRate) : null,
@@ -140,6 +142,7 @@ export type BrandSettingsInput = {
   companyName: string;
   website: string;
   storeUrl: string;
+  phone: string | null;
   logoUrl: string | null;
 };
 
@@ -156,6 +159,7 @@ export async function updateBrandSettings(input: BrandSettingsInput): Promise<Ac
       company_name: input.companyName.trim(),
       website: input.website.trim() || null,
       store_url: input.storeUrl.trim() || null,
+      phone: input.phone || null,
       logo_url: input.logoUrl,
     })
     .eq("id", user.id);

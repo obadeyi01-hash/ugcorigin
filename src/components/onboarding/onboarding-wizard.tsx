@@ -5,10 +5,11 @@ import { ArrowRight, ArrowLeft, Video, Store, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PillRow } from "@/components/ui/pill-row";
 import { Input, Textarea, Field, Select } from "@/components/ui/input";
+import { PhoneField } from "@/components/ui/phone-field";
 import { Chip } from "@/components/ui/chip";
 import { cn } from "@/lib/utils";
 import { NICHES } from "@/lib/sample-data";
-import { REGIONS } from "@/lib/categories";
+import { NG_STATES } from "@/lib/categories";
 import {
   createCreatorProfile,
   createBrandProfile,
@@ -36,6 +37,7 @@ export function OnboardingWizard({
     lastName: "",
     displayName: "",
     location: "",
+    phone: null,
     bio: "",
     niches: [],
     startingRate: 0,
@@ -43,7 +45,7 @@ export function OnboardingWizard({
   const [step, setStep] = useState(1);
 
   // brand fields
-  const [b, setB] = useState<BrandInput>({ companyName: "", website: "", storeUrl: "" });
+  const [b, setB] = useState<BrandInput>({ companyName: "", website: "", storeUrl: "", phone: null });
 
   function toggleNiche(n: string) {
     setC((prev) => ({
@@ -111,6 +113,9 @@ export function OnboardingWizard({
           <Field label="Online store" hint="Optional, Shopify, Instagram shop, etc.">
             <Input value={b.storeUrl} onChange={(e) => setB({ ...b, storeUrl: e.target.value })} placeholder="https://" />
           </Field>
+          <Field label="Phone number" hint="For booking coordination. Shared with a creator only after you agree on a gig.">
+            <PhoneField value={b.phone} onChange={(phone) => setB({ ...b, phone })} />
+          </Field>
           {error && <p className="text-sm text-error">{error}</p>}
           <Button onClick={submitBrand} loading={pending} disabled={!b.companyName.trim()}>
             Create brand account <ArrowRight className="size-4" />
@@ -152,13 +157,16 @@ export function OnboardingWizard({
               <Input value={c.handle} onChange={(e) => setC({ ...c, handle: e.target.value })} placeholder="amara.ugc" />
             </div>
           </Field>
-          <Field label="Region">
+          <Field label="Location" hint="Where you're based in Nigeria.">
             <Select value={c.location} onChange={(e) => setC({ ...c, location: e.target.value })}>
-              <option value="">Select your region</option>
-              {REGIONS.map((r) => (
+              <option value="">Select your state</option>
+              {NG_STATES.map((r) => (
                 <option key={r} value={r}>{r}</option>
               ))}
             </Select>
+          </Field>
+          <Field label="Phone number" hint="For booking coordination. Hidden until you both agree on a gig.">
+            <PhoneField value={c.phone} onChange={(phone) => setC({ ...c, phone })} />
           </Field>
           <Button onClick={() => setStep(2)} disabled={!canNext1}>
             Continue <ArrowRight className="size-4" />

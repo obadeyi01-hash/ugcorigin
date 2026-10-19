@@ -68,7 +68,7 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
       let query = supabase
         .from("creator_profiles")
         .select(
-          "id, handle, display_name, first_name, last_name, location, niches, starting_rate_naira, featured, verification_status, tier, earned_reputation, updated_at, avatar_url, metrics:creator_metrics(avg_rating, review_count, gigs_completed)",
+          "id, handle, display_name, first_name, last_name, location, niches, starting_rate_naira, featured, verification_status, tier, earned_reputation, updated_at, avatar_url, strikes, benched, metrics:creator_metrics(avg_rating, review_count, gigs_completed)",
         )
         .eq("is_live", true)
         .eq("shadowbanned", false)
@@ -108,6 +108,8 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
           gigs_completed: m?.gigs_completed ?? 0,
           first_name: c.first_name as string | null,
           last_name: c.last_name as string | null,
+          strikes: (c.strikes as number | null) ?? 0,
+          benched: !!c.benched,
         } as RankCreator & { avatar_url: string | null; gigs_completed: number; first_name: string | null; last_name: string | null };
       });
 

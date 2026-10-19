@@ -15,6 +15,7 @@ export type CreatorInput = {
   lastName: string;
   displayName: string;
   location: string;
+  phone: string | null;
   bio: string;
   niches: string[];
   startingRate: number;
@@ -24,6 +25,7 @@ export type BrandInput = {
   companyName: string;
   website: string;
   storeUrl: string;
+  phone: string | null;
 };
 
 function creatorCompleteness(i: CreatorInput) {
@@ -63,6 +65,7 @@ export async function createCreatorProfile(input: CreatorInput): Promise<ActionR
     last_name: last || null,
     display_name: display,
     location: input.location.trim(),
+    phone: input.phone || null,
     bio: input.bio.trim(),
     niches: input.niches,
     starting_rate_naira: Math.max(0, Math.round(input.startingRate)),
@@ -92,6 +95,7 @@ export async function createBrandProfile(input: BrandInput): Promise<ActionResul
     company_name: input.companyName.trim(),
     website: input.website.trim() || null,
     store_url: input.storeUrl.trim() || null,
+    phone: input.phone || null,
   });
 
   if (error) {

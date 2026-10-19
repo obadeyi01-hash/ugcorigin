@@ -21,6 +21,8 @@ export type RankCreator = {
   avg_rating?: number | null;
   review_count?: number;
   boosted?: boolean;
+  strikes?: number;
+  benched?: boolean;
 };
 
 export type RankOpts = { niche?: string; q?: string };
@@ -55,6 +57,11 @@ export function scoreCreator(c: RankCreator, { niche, q }: RankOpts): number {
   // Paid boost / editorial featured — small bounded nudge.
   if (c.boosted) s += 12;
   else if (c.featured) s += 8;
+
+  // Trust penalties: each strike lowers ranking; a benched creator sinks to the
+  // very bottom (still listed, so they can recover).
+  if (c.strikes) s -= c.strikes * 15;
+  if (c.benched) s -= 1000;
 
   return s;
 }
