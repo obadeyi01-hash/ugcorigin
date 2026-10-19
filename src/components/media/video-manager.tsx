@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { Upload, Loader2, Trash2, Video as VideoIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { signVideoUpload, saveProfileVideo, deleteProfileVideo } from "@/app/media/actions";
+import { validateVideo, LIMITS } from "@/lib/upload-limits";
 
 type Vid = { id: string; url: string; poster_url: string | null };
-const MAX_BYTES = 100 * 1024 * 1024; // 100MB
 
 export function VideoManager({ videos: initial }: { videos: Vid[] }) {
   const router = useRouter();
@@ -23,8 +23,8 @@ export function VideoManager({ videos: initial }: { videos: Vid[] }) {
     e.target.value = "";
     if (!file || uploading) return;
     setErr(null);
-    if (!file.type.startsWith("video/")) return setErr("Please choose a video file.");
-    if (file.size > MAX_BYTES) return setErr("Videos must be under 100MB.");
+    const check = await validateVideo(file, "showcase");
+    if (!check.ok) return setErr(check.error);
 
     setUploading(true);
     setProgress(0);
@@ -82,9 +82,9 @@ export function VideoManager({ videos: initial }: { videos: Vid[] }) {
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="font-display font-semibold text-ink">Showcase videos</p>
-          <p className="text-xs text-ink-3">Up to 6. Brands see these on your profile. Optimized automatically.</p>
+          <p className="text-xs text-ink-3">Up to 6. {LIMITS.showcase.guide}</p>
         </div>
-        <input ref={fileRef} type="file" accept="video/*" onChange={onFile} className="hidden" />
+        <input ref={fileRef} type="file" accept="video/mp4,video/quicktime,video/webm" onChange={onFile} className="hidden" />
         <Button variant="secondary" size="sm" onClick={() => fileRef.current?.click()} disabled={uploading || videos.length >= 6}>
           {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
           {uploading ? `Uploading ${progress}%` : "Add video"}

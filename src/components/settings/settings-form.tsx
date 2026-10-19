@@ -12,6 +12,7 @@ import { cn, formatNaira } from "@/lib/utils";
 import { tierMeta } from "@/lib/tiers";
 import { createClient, supabaseConfigured } from "@/lib/supabase/client";
 import { resizeToWebp } from "@/lib/image-resize";
+import { validateFile, LIMITS, type UploadKind } from "@/lib/upload-limits";
 import { NICHES } from "@/lib/sample-data";
 import {
   updateCreatorSettings,
@@ -107,6 +108,7 @@ function ImageUploader({
   display,
   round = true,
   label,
+  kind,
 }: {
   userId: string;
   value: string | null;
@@ -114,6 +116,7 @@ function ImageUploader({
   display: string;
   round?: boolean;
   label: string;
+  kind: UploadKind;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -124,8 +127,8 @@ function ImageUploader({
     e.target.value = "";
     if (!file) return;
     setErr(null);
-    if (!file.type.startsWith("image/")) return setErr("Please choose an image file.");
-    if (file.size > 10 * 1024 * 1024) return setErr("Image must be under 10MB.");
+    const check = validateFile(file, kind);
+    if (!check.ok) return setErr(check.error);
     if (!supabaseConfigured) return setErr("Backend not connected.");
 
     setBusy(true);
@@ -177,7 +180,7 @@ function ImageUploader({
             </Button>
           )}
         </div>
-        <p className="mt-1.5 text-xs text-ink-3">JPG, PNG or WebP · we optimize it automatically.</p>
+        <p className="mt-1.5 text-xs text-ink-3">{LIMITS[kind].typeHint} · {LIMITS[kind].guide}</p>
         {err && <p className="mt-1 text-xs font-medium text-error">{err}</p>}
       </div>
     </div>
@@ -231,7 +234,7 @@ function CreatorSettings({ userId, creator }: { userId: string; creator: Creator
   return (
     <form onSubmit={onSubmit}>
       <Section title="Profile photo" description="A real photo of you builds trust with brands.">
-        <ImageUploader userId={userId} value={avatarUrl} onChange={setAvatarUrl} display={displayName || handle} label="photo" />
+        <ImageUploader userId={userId} value={avatarUrl} onChange={setAvatarUrl} display={displayName || handle} label="photo" kind="avatar" />
       </Section>
 
       <Section title="Your tier" description="Your standing grows as you complete gigs and earn reviews, you move up one tier at a time, never by skipping.">
@@ -323,7 +326,7 @@ function BrandSettings({ userId, brand }: { userId: string; brand: Brand }) {
   return (
     <form onSubmit={onSubmit}>
       <Section title="Brand logo" description="Shown on your offers and briefs.">
-        <ImageUploader userId={userId} value={logoUrl} onChange={setLogoUrl} display={companyName} round={false} label="logo" />
+        <ImageUploader userId={userId} value={logoUrl} onChange={setLogoUrl} display={companyName} round={false} label="logo" kind="logo" />
       </Section>
 
       <Section title="Company">

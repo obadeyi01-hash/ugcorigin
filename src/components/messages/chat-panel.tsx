@@ -6,9 +6,7 @@ import { cn } from "@/lib/utils";
 import { createClient, supabaseConfigured } from "@/lib/supabase/client";
 import { sendMessage, signAttachment, signChatUpload, type ChatMessage } from "@/app/messages/actions";
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
-
-const MAX_BYTES = 10 * 1024 * 1024;
-const OK_TYPES = /^(image\/|application\/pdf)/;
+import { validateFile } from "@/lib/upload-limits";
 
 function timeOf(iso: string) {
   try {
@@ -89,8 +87,8 @@ export function ChatPanel({
     e.target.value = "";
     if (!file) return;
     setWarn(null);
-    if (!OK_TYPES.test(file.type)) return setWarn("Only images and PDFs can be attached.");
-    if (file.size > MAX_BYTES) return setWarn("Attachments must be under 10MB.");
+    const check = validateFile(file, "chat");
+    if (!check.ok) return setWarn(check.error);
 
     setUploading(true);
     try {

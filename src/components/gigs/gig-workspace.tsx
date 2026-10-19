@@ -8,6 +8,7 @@ import { Input, Textarea } from "@/components/ui/input";
 import { Card, CardBody } from "@/components/ui/card";
 import { cn, formatNaira } from "@/lib/utils";
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
+import { validateVideo, LIMITS } from "@/lib/upload-limits";
 import {
   signDeliverableUpload,
   recordDeliverableAction,
@@ -89,6 +90,11 @@ export function GigWorkspace({
     const file = e.target.files?.[0];
     if (!file) return;
     setErr(null);
+    const check = await validateVideo(file, "deliverable");
+    if (!check.ok) {
+      setErr(check.error);
+      return;
+    }
     setUploading(true);
     try {
       const sig = await signDeliverableUpload(gig.id);
@@ -151,11 +157,12 @@ export function GigWorkspace({
             <CardBody>
               <p className="font-semibold text-ink">{deliverable?.status === "revision_requested" ? "Upload a revised draft" : "Submit your draft"}</p>
               <p className="mt-0.5 text-sm text-ink-2">Watermarked draft for review. Final files unlock when the brand approves.</p>
+              <p className="mt-0.5 text-xs text-ink-3">{LIMITS.deliverable.guide}</p>
               <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional note for the brand…" className="mt-3 min-h-16" />
               <label className={cn("mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-line-strong bg-surface-2 py-6 text-sm font-medium text-ink-2 hover:border-accent hover:text-accent", uploading && "pointer-events-none opacity-60")}>
                 <UploadCloud className="size-5" />
                 {uploading ? "Uploading…" : "Choose a video to upload"}
-                <input type="file" accept="video/*" className="hidden" onChange={onFile} disabled={uploading} />
+                <input type="file" accept="video/mp4,video/quicktime,video/webm" className="hidden" onChange={onFile} disabled={uploading} />
               </label>
             </CardBody>
           </Card>

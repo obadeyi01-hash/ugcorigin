@@ -47,7 +47,9 @@ export async function saveProfileVideo(publicId: string): Promise<{ ok?: boolean
   const { error } = await supabase.from("profile_videos").insert({
     creator_id: creatorId,
     public_id: publicId,
-    url: cloudinaryUrl(publicId, "video"),
+    // f_auto,q_auto serves a lighter web codec; cap the long edge so a 4K phone
+    // clip never streams at full size (vertical UGC needs at most ~1080 wide).
+    url: cloudinaryUrl(publicId, "video", "c_limit,w_1080"),
     poster_url: videoPoster(publicId),
     position: count ?? 0,
   });
