@@ -71,14 +71,14 @@ export function CreatorCard({ creator }: { creator: Creator }) {
         </div>
 
         {/* Body */}
-        <div className="p-4">
-          <div className="flex items-center gap-1.5">
-            <h3 className="truncate font-display font-semibold text-ink">{creator.name}</h3>
+        <div className="min-w-0 p-3 sm:p-4">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <h3 className="min-w-0 truncate font-display text-sm font-semibold text-ink sm:text-base">{creator.name}</h3>
             {creator.verified && <VerifiedBadge compact />}
           </div>
-          <p className="mt-0.5 flex items-center gap-1 text-xs text-ink-3">
-            <MapPin className="size-3" aria-hidden />
-            {creator.location}
+          <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-ink-3">
+            <MapPin className="size-3 shrink-0" aria-hidden />
+            <span className="truncate">{creator.location}</span>
           </p>
 
           <PillRow className="mt-3">
@@ -89,14 +89,14 @@ export function CreatorCard({ creator }: { creator: Creator }) {
 
           {creator.gigsCompleted ? (
             <p className="mt-2.5 flex items-center gap-1 text-xs text-ink-3">
-              <CheckCircle2 className="size-3.5 text-success" aria-hidden />
+              <CheckCircle2 className="size-3.5 shrink-0 text-success" aria-hidden />
               <span className="font-semibold text-ink-2">{creator.gigsCompleted}</span> gig{creator.gigsCompleted === 1 ? "" : "s"} delivered
             </p>
           ) : null}
 
-          <div className="mt-4 flex items-center justify-between border-t border-line pt-3">
+          <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-2 border-t border-line pt-3">
             <span className="text-xs text-ink-3">Starting at</span>
-            <span className="font-display text-base font-semibold text-ink">
+            <span className="font-display text-sm font-semibold text-ink sm:text-base">
               {formatNaira(creator.startingRate)}
             </span>
           </div>
