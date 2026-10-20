@@ -173,6 +173,18 @@ async function ProfileInner({ params }: { params: Promise<{ handle: string }> })
         revealed = !!contract;
       }
 
+      // Can the viewer (a brand) save this creator, and have they?
+      let canSave = false;
+      let saved = false;
+      if (viewer && viewer.id !== creator.id) {
+        const [{ data: brand }, { data: savedRow }] = await Promise.all([
+          supabase.from("brand_profiles").select("id").eq("id", viewer.id).maybeSingle(),
+          supabase.from("saved_creators").select("creator_id").eq("brand_id", viewer.id).eq("creator_id", creator.id).maybeSingle(),
+        ]);
+        canSave = !!brand;
+        saved = !!savedRow;
+      }
+
       const [{ data: socials }, { data: packages }, { data: reviewRows }, { data: portfolio }, { data: vids }, { data: metricsRow }] = await Promise.all([
         supabase.from("social_accounts").select("platform, handle, url").eq("creator_id", creator.id),
         supabase.from("packages").select("id, title, type, price_naira, revisions, format").eq("creator_id", creator.id).eq("active", true),
@@ -208,6 +220,8 @@ async function ProfileInner({ params }: { params: Promise<{ handle: string }> })
         verified: creator.verification_status === "verified",
         tier: creator.tier,
         influencer: isInfluencer(creator.tier, creator.is_influencer),
+        canSave,
+        saved,
         startingRate: creator.starting_rate_naira,
         url: `${SITE}/@${creator.handle}`,
         socials: socialList,

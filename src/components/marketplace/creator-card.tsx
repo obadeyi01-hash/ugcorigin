@@ -5,6 +5,7 @@ import { Chip } from "@/components/ui/chip";
 import { PillRow } from "@/components/ui/pill-row";
 import { Rating } from "@/components/ui/rating";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
+import { SaveButton } from "@/components/marketplace/save-button";
 import { formatNaira } from "@/lib/utils";
 
 export type Creator = {
@@ -20,6 +21,10 @@ export type Creator = {
   rating?: number;
   reviews?: number;
   gigsCompleted?: number;
+  /** For the save (like) control — only when a brand is viewing. */
+  id?: string;
+  canSave?: boolean;
+  saved?: boolean;
 };
 
 function initials(name: string) {
@@ -54,8 +59,13 @@ export function CreatorCard({ creator }: { creator: Creator }) {
             </span>
           )}
           {creator.rating !== undefined && (
-            <div className="absolute right-3 top-3">
+            <div className="absolute bottom-3 left-3">
               <Rating value={creator.rating} count={creator.reviews} className="rounded-full bg-chalk/95 px-2.5 py-1 shadow-sm backdrop-blur" />
+            </div>
+          )}
+          {creator.canSave && creator.id && (
+            <div className="absolute right-3 top-3">
+              <SaveButton creatorId={creator.id} initialSaved={creator.saved} />
             </div>
           )}
         </div>

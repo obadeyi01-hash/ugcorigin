@@ -12,6 +12,7 @@ import { StartConversationButton } from "@/components/messages/start-conversatio
 import { Reviews, type ReviewItem } from "@/components/marketplace/reviews";
 import { SocialEmbeds, type EmbedLink } from "@/components/marketplace/social-embeds";
 import { CreatorSnapshot, type CreatorMetrics } from "@/components/marketplace/creator-snapshot";
+import { SaveButton } from "@/components/marketplace/save-button";
 import { ReportButton } from "@/components/moderation/report-button";
 import { formatNaira } from "@/lib/utils";
 import { formatLabel } from "@/lib/content-formats";
@@ -27,6 +28,8 @@ export type ProfileData = {
   verified: boolean;
   tier?: string | null;
   influencer?: boolean;
+  canSave?: boolean;
+  saved?: boolean;
   startingRate?: number | null;
   url: string;
   socials: { platform: string; handle: string; url?: string | null }[];
@@ -210,6 +213,11 @@ export function CreatorProfile({ data }: { data: ProfileData }) {
             {data.id && (
               <div className="mt-2">
                 <StartConversationButton otherUserId={data.id} label="Message" className="w-full" />
+              </div>
+            )}
+            {data.canSave && data.id && (
+              <div className="mt-2">
+                <SaveButton creatorId={data.id} initialSaved={data.saved} variant="button" />
               </div>
             )}
             <div className="mt-2">

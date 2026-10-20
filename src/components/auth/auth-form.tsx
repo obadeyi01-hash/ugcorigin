@@ -3,10 +3,9 @@
 import { useState, type FormEvent, type ReactElement } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Mail, ArrowRight, Store, Video } from "lucide-react";
+import { Mail, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 import { createClient, supabaseConfigured } from "@/lib/supabase/client";
 
 type Mode = "login" | "signup";
@@ -59,9 +58,9 @@ const providers = ALL_PROVIDERS.filter((p) => enabledSet.has(p.id));
 
 export function AuthForm({ mode }: { mode: Mode }) {
   const params = useSearchParams();
-  const [role, setRole] = useState<"creator" | "brand">(
-    params.get("role") === "brand" ? "brand" : "creator",
-  );
+  // Role is chosen in onboarding, not here. We only carry a role through when a
+  // deep link (e.g. "Become a creator") already expressed intent.
+  const roleParam = params.get("role");
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "sent" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +68,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL ||
     (typeof window !== "undefined" ? window.location.origin : "");
-  const redirectTo = `${siteUrl}/auth/callback?role=${role}`;
+  const redirectTo = `${siteUrl}/auth/callback${roleParam === "brand" || roleParam === "creator" ? `?role=${roleParam}` : ""}`;
 
   async function oauth(provider: Provider) {
     if (!supabaseConfigured) return setError("Backend isn't connected yet.");
@@ -110,34 +109,6 @@ export function AuthForm({ mode }: { mode: Mode }) {
           ? "Join UGCOrigin, it only takes a minute."
           : "Log in to your UGCOrigin account."}
       </p>
-
-      {mode === "signup" && (
-        <div className="mt-6">
-          <p className="mb-2 text-sm font-medium text-ink">I'm joining as a…</p>
-          <div className="grid grid-cols-2 gap-2">
-            {([
-              { id: "creator", label: "Creator", icon: Video, hint: "Make content, get paid" },
-              { id: "brand", label: "Brand", icon: Store, hint: "Hire creators" },
-            ] as const).map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => setRole(r.id)}
-                className={cn(
-                  "u-press rounded-xl border p-3 text-left transition-colors",
-                  role === r.id
-                    ? "border-accent bg-accent-tint"
-                    : "border-line bg-surface hover:border-line-strong",
-                )}
-              >
-                <r.icon className={cn("size-5", role === r.id ? "text-accent" : "text-ink-2")} />
-                <p className="mt-2 text-sm font-semibold text-ink">{r.label}</p>
-                <p className="text-xs text-ink-3">{r.hint}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {providers.length > 0 && (
         <>

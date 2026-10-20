@@ -12,10 +12,29 @@ import { createClient } from "@/lib/supabase/server";
 import { rankCreators, type RankCreator } from "@/lib/ranking";
 import { publicName } from "@/lib/names";
 
-export const metadata: Metadata = {
-  title: "Find creators",
-  description: "Browse verified Nigerian UGC creators by category, region, budget and platform.",
-};
+// Per-filter SEO: a niche/region query reads like a landing page so it ranks
+// for "hire <niche> UGC creators in <region>".
+export async function generateMetadata({ searchParams }: { searchParams: Promise<SP> }): Promise<Metadata> {
+  const sp = await searchParams;
+  const niche = (sp.niche ?? "").trim();
+  const region = (sp.region ?? "").trim();
+  const where = region && region !== "Remote" ? ` in ${region}` : "";
+
+  if (niche) {
+    const u = new URLSearchParams({ niche });
+    if (region) u.set("region", region);
+    return {
+      title: `Hire ${niche} UGC creators${where || " in Nigeria"}`,
+      description: `Browse verified ${niche} creators${where} on UGCOrigin. Real, human, identity-verified. Escrow-protected payments, Nigeria-first.`,
+      alternates: { canonical: `/creators?${u.toString()}` },
+    };
+  }
+  return {
+    title: "Find creators",
+    description: "Browse verified Nigerian UGC creators by category, region, budget and platform. Escrow-protected, identity-verified.",
+    alternates: { canonical: "/creators" },
+  };
+}
 
 type SP = { q?: string; niche?: string; region?: string; max?: string; platform?: string; sort?: string; page?: string };
 
@@ -54,6 +73,21 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
   let noPlatformMatch = false;
   if (configured) {
     const supabase = await createClient();
+
+    // Is the viewer a brand? If so, they can save creators; fetch their saves.
+    const {
+      data: { user: viewer },
+    } = await supabase.auth.getUser();
+    let canSave = false;
+    const savedSet = new Set<string>();
+    if (viewer) {
+      const [{ data: brand }, { data: saves }] = await Promise.all([
+        supabase.from("brand_profiles").select("id").eq("id", viewer.id).maybeSingle(),
+        supabase.from("saved_creators").select("creator_id").eq("brand_id", viewer.id),
+      ]);
+      canSave = !!brand;
+      (saves ?? []).forEach((s) => savedSet.add(s.creator_id));
+    }
 
     // Platform filter: pre-resolve the creator ids that have that platform
     // linked (indexed), then constrain the main query.
@@ -140,6 +174,9 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
         startingRate: c.starting_rate_naira ?? 0,
         featured: c.featured || !!c.boosted,
         verified: c.verification_status === "verified",
+        id: c.id,
+        canSave,
+        saved: savedSet.has(c.id),
         ...(c.review_count && c.avg_rating ? { rating: c.avg_rating, reviews: c.review_count } : {}),
         ...((c as RankCreator & { gigs_completed?: number }).gigs_completed ? { gigsCompleted: (c as RankCreator & { gigs_completed?: number }).gigs_completed } : {}),
       }));

@@ -170,6 +170,7 @@ async function DashboardInner() {
               <div className="mt-5 flex flex-wrap gap-2">
                 <Link href="/creators"><Button size="sm">Browse creators <ArrowRight className="size-4" /></Button></Link>
                 <Link href="/briefs/new"><Button size="sm" variant="secondary">Post a brief</Button></Link>
+                <Link href="/saved"><Button size="sm" variant="ghost">Saved</Button></Link>
                 <Link href="/offers"><Button size="sm" variant="ghost">Offers</Button></Link>
               </div>
             </CardBody>
