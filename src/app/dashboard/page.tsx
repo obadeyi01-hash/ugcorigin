@@ -14,6 +14,8 @@ import { TierBadge } from "@/components/ui/tier-badge";
 import { BoostButton } from "@/components/boost/boost-button";
 import { tierMeta } from "@/lib/tiers";
 import { createClient } from "@/lib/supabase/server";
+import { publicName } from "@/lib/names";
+import { RecommendationsPopup, type RecCreator } from "@/components/dashboard/recommendations-popup";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -91,8 +93,34 @@ async function DashboardInner() {
     ? await supabase.from("profile_videos").select("id, url, poster_url").eq("creator_id", user.id).order("position", { ascending: true })
     : { data: [] as { id: string; url: string; poster_url: string | null }[] };
 
+  // Brand recommendations: a mix of top performers + newly-vetted creators.
+  let recs: RecCreator[] = [];
+  if (brand) {
+    const base = "id, handle, display_name, first_name, last_name, niches, starting_rate_naira, created_at";
+    const [{ data: top }, { data: fresh }] = await Promise.all([
+      supabase.from("creator_profiles").select(base).eq("is_live", true).eq("shadowbanned", false).order("earned_reputation", { ascending: false, nullsFirst: false }).limit(3),
+      supabase.from("creator_profiles").select(base).eq("is_live", true).eq("shadowbanned", false).order("created_at", { ascending: false }).limit(4),
+    ]);
+    const seen = new Set<string>();
+    const pick = (rows: typeof top, newbie: boolean) =>
+      (rows ?? []).forEach((c) => {
+        if (recs.length >= 5 || seen.has(c.id) || !c.handle) return;
+        seen.add(c.id);
+        recs.push({
+          handle: c.handle,
+          name: publicName({ first: c.first_name, last: c.last_name, display: c.display_name, handle: c.handle }),
+          niches: c.niches ?? [],
+          startingRate: c.starting_rate_naira ?? 0,
+          newbie,
+        });
+      });
+    pick(top, false);
+    pick(fresh, true);
+  }
+
   return (
     <>
+      {recs.length > 0 && <RecommendationsPopup creators={recs} />}
       <TopBar signedIn />
       <Container className="py-12">
         <h1 className="font-display text-2xl font-bold tracking-tight text-ink">

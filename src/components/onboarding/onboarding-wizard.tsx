@@ -10,6 +10,7 @@ import { Chip } from "@/components/ui/chip";
 import { cn } from "@/lib/utils";
 import { NICHES } from "@/lib/sample-data";
 import { NG_STATES } from "@/lib/categories";
+import { BRAND_GOALS, AD_PLATFORMS, CONTENT_TYPES, BUSINESS_TYPES, CONTACT_ROLES, TEAM_SIZES } from "@/lib/brand-options";
 import {
   createCreatorProfile,
   createBrandProfile,
@@ -45,7 +46,12 @@ export function OnboardingWizard({
   const [step, setStep] = useState(1);
 
   // brand fields
-  const [b, setB] = useState<BrandInput>({ companyName: "", contactFirstName: "", contactLastName: "", website: "", storeUrl: "", phone: null });
+  const [b, setB] = useState<BrandInput>({
+    companyName: "", contactFirstName: "", contactLastName: "", website: "", storeUrl: "", phone: null,
+    goal: "", adPlatforms: [], contentTypes: [], businessType: "", contactRole: "", teamSize: "",
+  });
+  const [bstep, setBstep] = useState(1);
+  const toggleIn = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
   function toggleNiche(n: string) {
     setC((prev) => ({
@@ -99,10 +105,81 @@ export function OnboardingWizard({
     );
   }
 
-  // ---- Brand form ----
+  // ---- Brand multi-step flow ----
   if (role === "brand") {
+    const Radio = ({ options, value, onPick }: { options: { value: string; label: string; hint?: string }[]; value: string; onPick: (v: string) => void }) => (
+      <div className="grid gap-2.5">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onPick(o.value)}
+            className={cn("flex items-center justify-between gap-3 rounded-xl border p-3.5 text-left transition-colors", value === o.value ? "border-accent bg-accent-tint" : "border-line bg-surface hover:border-line-strong")}
+          >
+            <span>
+              <span className="block font-medium text-ink">{o.label}</span>
+              {o.hint && <span className="block text-xs text-ink-3">{o.hint}</span>}
+            </span>
+            <span className={cn("size-4 shrink-0 rounded-full border", value === o.value ? "border-accent bg-accent" : "border-line")} />
+          </button>
+        ))}
+      </div>
+    );
+    const Multi = ({ options, values, onToggle }: { options: { value: string; label: string }[]; values: string[]; onToggle: (v: string) => void }) => (
+      <div className="grid gap-2.5">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onToggle(o.value)}
+            className={cn("flex items-center justify-between gap-3 rounded-xl border p-3.5 text-left transition-colors", values.includes(o.value) ? "border-accent bg-accent-tint" : "border-line bg-surface hover:border-line-strong")}
+          >
+            <span className="font-medium text-ink">{o.label}</span>
+            <span className={cn("grid size-4 shrink-0 place-items-center rounded border", values.includes(o.value) ? "border-accent bg-accent text-accent-ink" : "border-line")}>
+              {values.includes(o.value) && <Check className="size-3" />}
+            </span>
+          </button>
+        ))}
+      </div>
+    );
+
+    if (bstep === 1)
+      return (
+        <Shell title="What are you trying to do?" subtitle="Most brands use more than one. Pick your main focus." preview={preview} onBack={() => setRole(initialRole ? role : null)}>
+          <Radio options={BRAND_GOALS} value={b.goal} onPick={(goal) => setB({ ...b, goal })} />
+          <div className="mt-5 flex justify-end">
+            <Button onClick={() => setBstep(2)} disabled={!b.goal}>Continue <ArrowRight className="size-4" /></Button>
+          </div>
+        </Shell>
+      );
+    if (bstep === 2)
+      return (
+        <Shell title="Where do your ads run?" subtitle="And what content do you need? Select all that apply." preview={preview} onBack={() => setBstep(1)}>
+          <p className="mb-2 text-sm font-medium text-ink">Ad platforms</p>
+          <Multi options={AD_PLATFORMS} values={b.adPlatforms} onToggle={(v) => setB({ ...b, adPlatforms: toggleIn(b.adPlatforms, v) })} />
+          <p className="mb-2 mt-5 text-sm font-medium text-ink">Content you need</p>
+          <Multi options={CONTENT_TYPES} values={b.contentTypes} onToggle={(v) => setB({ ...b, contentTypes: toggleIn(b.contentTypes, v) })} />
+          <div className="mt-5 flex justify-end">
+            <Button onClick={() => setBstep(3)}>Continue <ArrowRight className="size-4" /></Button>
+          </div>
+        </Shell>
+      );
+    if (bstep === 3)
+      return (
+        <Shell title="Tell us about you" subtitle="So we can tailor your recommendations." preview={preview} onBack={() => setBstep(2)}>
+          <p className="mb-2 text-sm font-medium text-ink">What kind of business?</p>
+          <Radio options={BUSINESS_TYPES} value={b.businessType} onPick={(businessType) => setB({ ...b, businessType })} />
+          <p className="mb-2 mt-5 text-sm font-medium text-ink">Your role</p>
+          <Radio options={CONTACT_ROLES} value={b.contactRole} onPick={(contactRole) => setB({ ...b, contactRole })} />
+          <p className="mb-2 mt-5 text-sm font-medium text-ink">Team size</p>
+          <Radio options={TEAM_SIZES} value={b.teamSize} onPick={(teamSize) => setB({ ...b, teamSize })} />
+          <div className="mt-5 flex justify-end">
+            <Button onClick={() => setBstep(4)}>Continue <ArrowRight className="size-4" /></Button>
+          </div>
+        </Shell>
+      );
     return (
-      <Shell title="Tell us about your brand" subtitle="This helps creators understand who they're working with." preview={preview} onBack={() => setRole(initialRole ? role : null)}>
+      <Shell title="Your brand details" subtitle="This is what creators see when you reach out." preview={preview} onBack={() => setBstep(3)}>
         <div className="grid gap-4">
           <Field label="Company / store name">
             <Input value={b.companyName} onChange={(e) => setB({ ...b, companyName: e.target.value })} placeholder="e.g. Zuri Skincare" />

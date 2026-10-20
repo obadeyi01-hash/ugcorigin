@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea, Field, Select } from "@/components/ui/input";
 import { PhoneField } from "@/components/ui/phone-field";
 import { BrandVerifyCard } from "@/components/settings/brand-verify-card";
+import { BRAND_GOALS, AD_PLATFORMS, CONTENT_TYPES, BUSINESS_TYPES, CONTACT_ROLES, TEAM_SIZES } from "@/lib/brand-options";
 import { NG_STATES } from "@/lib/categories";
 import { CONTENT_FORMATS } from "@/lib/content-formats";
 import { Chip } from "@/components/ui/chip";
@@ -49,6 +50,12 @@ type Brand = {
   contact_last_name?: string | null;
   verification_status?: string | null;
   rc_number?: string | null;
+  goal?: string | null;
+  ad_platforms?: string[] | null;
+  content_types?: string[] | null;
+  business_type?: string | null;
+  contact_role?: string | null;
+  team_size?: string | null;
 };
 
 function initials(name: string) {
@@ -357,15 +364,22 @@ function BrandSettings({ userId, brand }: { userId: string; brand: Brand }) {
   const [website, setWebsite] = useState(brand.website ?? "");
   const [storeUrl, setStoreUrl] = useState(brand.store_url ?? "");
   const [phone, setPhone] = useState<string | null>(brand.phone ?? null);
+  const [goal, setGoal] = useState(brand.goal ?? "");
+  const [adPlatforms, setAdPlatforms] = useState<string[]>(brand.ad_platforms ?? []);
+  const [contentTypes, setContentTypes] = useState<string[]>(brand.content_types ?? []);
+  const [businessType, setBusinessType] = useState(brand.business_type ?? "");
+  const [contactRole, setContactRole] = useState(brand.contact_role ?? "");
+  const [teamSize, setTeamSize] = useState(brand.team_size ?? "");
   const [pending, start] = useTransition();
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const toggleIn = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     start(async () => {
-      const res = await updateBrandSettings({ companyName, contactFirstName, contactLastName, website, storeUrl, phone, logoUrl });
+      const res = await updateBrandSettings({ companyName, contactFirstName, contactLastName, website, storeUrl, phone, logoUrl, goal, adPlatforms, contentTypes, businessType, contactRole, teamSize });
       if (res.error) {
         setError(res.error);
         setStatus("error");
@@ -408,6 +422,55 @@ function BrandSettings({ userId, brand }: { userId: string; brand: Brand }) {
           <Field label="Phone number" hint="For booking coordination. Shared with a creator only after you agree on a gig.">
             <PhoneField value={phone} onChange={setPhone} />
           </Field>
+        </div>
+      </Section>
+
+      <Section title="Preferences" description="What you selected at sign-up — tweak anytime, it tunes your recommendations.">
+        <div className="grid gap-4">
+          <Field label="Your main goal">
+            <Select value={goal} onChange={(e) => setGoal(e.target.value)}>
+              <option value="">Select a goal</option>
+              {BRAND_GOALS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
+            </Select>
+          </Field>
+          <Field label="Ad platforms">
+            <div className="flex flex-wrap gap-2">
+              {AD_PLATFORMS.map((p) => (
+                <button key={p.value} type="button" onClick={() => setAdPlatforms((a) => toggleIn(a, p.value))}>
+                  <Chip active={adPlatforms.includes(p.value)}>{p.label}</Chip>
+                </button>
+              ))}
+            </div>
+          </Field>
+          <Field label="Content you need">
+            <div className="flex flex-wrap gap-2">
+              {CONTENT_TYPES.map((p) => (
+                <button key={p.value} type="button" onClick={() => setContentTypes((a) => toggleIn(a, p.value))}>
+                  <Chip active={contentTypes.includes(p.value)}>{p.label}</Chip>
+                </button>
+              ))}
+            </div>
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="Business type">
+              <Select value={businessType} onChange={(e) => setBusinessType(e.target.value)}>
+                <option value="">Select</option>
+                {BUSINESS_TYPES.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}
+              </Select>
+            </Field>
+            <Field label="Your role">
+              <Select value={contactRole} onChange={(e) => setContactRole(e.target.value)}>
+                <option value="">Select</option>
+                {CONTACT_ROLES.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}
+              </Select>
+            </Field>
+            <Field label="Team size">
+              <Select value={teamSize} onChange={(e) => setTeamSize(e.target.value)}>
+                <option value="">Select</option>
+                {TEAM_SIZES.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}
+              </Select>
+            </Field>
+          </div>
         </div>
         {error && <p className="mt-3 text-sm font-medium text-error">{error}</p>}
         <SaveRow pending={pending} status={status} />

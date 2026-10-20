@@ -156,6 +156,12 @@ export type BrandSettingsInput = {
   storeUrl: string;
   phone: string | null;
   logoUrl: string | null;
+  goal: string;
+  adPlatforms: string[];
+  contentTypes: string[];
+  businessType: string;
+  contactRole: string;
+  teamSize: string;
 };
 
 export async function updateBrandSettings(input: BrandSettingsInput): Promise<ActionResult> {
@@ -175,6 +181,12 @@ export async function updateBrandSettings(input: BrandSettingsInput): Promise<Ac
       store_url: input.storeUrl.trim() || null,
       phone: input.phone || null,
       logo_url: input.logoUrl,
+      goal: input.goal || null,
+      ad_platforms: input.adPlatforms ?? [],
+      content_types: input.contentTypes ?? [],
+      business_type: input.businessType || null,
+      contact_role: input.contactRole || null,
+      team_size: input.teamSize || null,
     })
     .eq("id", user.id);
 

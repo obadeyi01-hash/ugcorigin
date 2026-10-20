@@ -28,6 +28,12 @@ export type BrandInput = {
   website: string;
   storeUrl: string;
   phone: string | null;
+  goal: string;
+  adPlatforms: string[];
+  contentTypes: string[];
+  businessType: string;
+  contactRole: string;
+  teamSize: string;
 };
 
 function creatorCompleteness(i: CreatorInput) {
@@ -100,6 +106,12 @@ export async function createBrandProfile(input: BrandInput): Promise<ActionResul
     website: input.website.trim() || null,
     store_url: input.storeUrl.trim() || null,
     phone: input.phone || null,
+    goal: input.goal || null,
+    ad_platforms: input.adPlatforms ?? [],
+    content_types: input.contentTypes ?? [],
+    business_type: input.businessType || null,
+    contact_role: input.contactRole || null,
+    team_size: input.teamSize || null,
   });
 
   if (error) {
