@@ -53,7 +53,7 @@ const DEMO: Card = {
   verified: true,
   tier: "pro",
   startingRate: 45000,
-  avatarUrl: "https://images.pexels.com/photos/10375901/pexels-photo-10375901.jpeg?auto=compress&cs=tinysrgb&w=600",
+  avatarUrl: null,
 };
 
 function initials(name: string) {
