@@ -56,8 +56,8 @@ export function BriefForm() {
         <Field label="Budget per creator (₦)">
           <Input type="number" inputMode="numeric" value={budget || ""} onChange={(e) => setBudget(Number(e.target.value))} />
         </Field>
-        <Field label="Creators needed">
-          <Input type="number" inputMode="numeric" min={1} value={slots || ""} onChange={(e) => setSlots(Number(e.target.value))} />
+        <Field label="Creators needed" hint="Up to 100 — hire at scale.">
+          <Input type="number" inputMode="numeric" min={1} max={100} value={slots || ""} onChange={(e) => setSlots(Math.min(100, Math.max(1, Number(e.target.value))))} />
         </Field>
         <Field label="Deadline" hint="Optional">
           <Input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />

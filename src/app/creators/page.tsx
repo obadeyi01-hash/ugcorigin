@@ -260,13 +260,21 @@ export default function CreatorsPage({ searchParams }: { searchParams: Promise<S
       <SiteHeader />
       <main className="flex-1">
         <Container className="py-10 sm:py-14">
-          <div className="max-w-2xl">
-            <h1 className="font-display text-3xl font-bold tracking-tight text-ink sm:text-4xl">
-              Find creators
-            </h1>
-            <p className="mt-2 text-ink-2">
-              Verified Nigerian creators across beauty, food, fashion, fintech and more. Filter by service, region, budget and platform, sorted by what fits best.
-            </p>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="max-w-2xl">
+              <h1 className="font-display text-3xl font-bold tracking-tight text-ink sm:text-4xl">
+                Find creators
+              </h1>
+              <p className="mt-2 text-ink-2">
+                Verified Nigerian creators across beauty, food, fashion, fintech and more. Filter by service, region, budget and platform, sorted by what fits best.
+              </p>
+            </div>
+            <Link
+              href="/briefs/new"
+              className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-4 py-2 text-sm font-medium text-ink-2 transition-colors hover:border-accent hover:text-accent"
+            >
+              <Users className="size-4" /> Hiring at scale? Post a brief for up to 100 creators
+            </Link>
           </div>
 
           <div className="mt-8">

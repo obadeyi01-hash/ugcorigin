@@ -42,7 +42,7 @@ export async function postBriefAction(input: BriefInput): Promise<{ error?: stri
       niches: input.niches,
       budget_naira: Math.round(input.budget),
       deadline: input.deadline || null,
-      slots: Math.max(1, Math.round(input.slots || 1)),
+      slots: Math.min(100, Math.max(1, Math.round(input.slots || 1))),
       gig_type: "original",
       status: "open",
     })
