@@ -27,6 +27,8 @@ export function OfferForm({
   const [price, setPrice] = useState(initialPrice || startingRate || 0);
   const [deadline, setDeadline] = useState("");
   const [needsProduct, setNeedsProduct] = useState(false);
+  const [needsLocation, setNeedsLocation] = useState(false);
+  const [locationAddress, setLocationAddress] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [needsBrand, setNeedsBrand] = useState(false);
   const [pending, start] = useTransition();
@@ -38,7 +40,7 @@ export function OfferForm({
     setError(null);
     setNeedsBrand(false);
     start(async () => {
-      const res = await sendOfferAction({ handle, title, brief, price, deadline, needsProduct });
+      const res = await sendOfferAction({ handle, title, brief, price, deadline, needsProduct, needsLocation, locationAddress });
       if (res?.needsBrand) setNeedsBrand(true);
       if (res?.error) setError(res.error);
       // success redirects server-side
@@ -74,6 +76,29 @@ export function OfferForm({
           <span className="block text-xs text-ink-3">The creator will share a delivery address after booking so you can send the item via a courier.</span>
         </span>
       </label>
+
+      <div className="rounded-xl border border-line bg-surface p-3">
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={needsLocation}
+            onChange={(e) => setNeedsLocation(e.target.checked)}
+            className="mt-0.5 size-4 accent-[var(--accent,#ec4899)]"
+          />
+          <span className="text-sm">
+            <span className="font-medium text-ink">Creator shoots on location (in-store / venue)</span>
+            <span className="block text-xs text-ink-3">The creator comes to your store or event to film. Share the address and they&rsquo;ll see it after booking.</span>
+          </span>
+        </label>
+        {needsLocation && (
+          <Textarea
+            value={locationAddress}
+            onChange={(e) => setLocationAddress(e.target.value)}
+            placeholder="Store/venue address, landmark, and when to come."
+            className="mt-3 min-h-16"
+          />
+        )}
+      </div>
 
       <div className="rounded-xl border border-line bg-surface-2 p-4 text-sm">
         <div className="flex justify-between text-ink-2"><span>Creator rate</span><span>{formatNaira(price || 0)}</span></div>

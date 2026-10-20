@@ -4,6 +4,7 @@ import { Check, X } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Card, CardBody } from "@/components/ui/card";
 import { VerificationRow } from "@/components/admin/verification-row";
+import { BrandVerificationRow } from "@/components/admin/brand-verification-row";
 import { requireSection, isReadonly } from "@/lib/admin/rbac";
 import { createClient } from "@/lib/supabase/server";
 
@@ -32,6 +33,14 @@ async function VerificationInner() {
   const rows = data ?? [];
   const readonly = isReadonly(role);
 
+  const { data: brandData } = await supabase
+    .from("brand_profiles")
+    .select("id, company_name, rc_number, verification_submitted_at")
+    .eq("verification_status", "pending")
+    .order("verification_submitted_at", { ascending: true })
+    .limit(100);
+  const brands = brandData ?? [];
+
   return (
     <AdminShell role={role} active="verification">
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Verification queue</h1>
@@ -55,6 +64,27 @@ async function VerificationInner() {
                   </div>
                 </div>
                 <VerificationRow id={c.id} identityVerified={!!c.identity_verified} isLive={!!c.is_live} readonly={readonly} />
+              </div>
+            </CardBody>
+          </Card>
+        ))}
+      </div>
+
+      <h2 className="mt-10 font-display text-lg font-semibold text-ink">Brand verification ({brands.length})</h2>
+      <p className="mt-0.5 text-sm text-ink-2">Businesses awaiting review. Check the CAC/RC number against the company name.</p>
+      <div className="mt-4 grid gap-3">
+        {brands.length === 0 && (
+          <Card variant="outline"><CardBody className="py-10 text-center text-ink-2">No brands waiting.</CardBody></Card>
+        )}
+        {brands.map((b) => (
+          <Card key={b.id}>
+            <CardBody>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-ink">{b.company_name || "Unnamed business"}</p>
+                  <p className="text-xs text-ink-3">RC/CAC: {b.rc_number || "—"}{b.verification_submitted_at ? ` · submitted ${new Date(b.verification_submitted_at).toLocaleDateString()}` : ""}</p>
+                </div>
+                <BrandVerificationRow brandId={b.id} readonly={readonly} />
               </div>
             </CardBody>
           </Card>

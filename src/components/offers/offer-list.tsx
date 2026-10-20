@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { BadgeCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ export type OfferRow = {
   role: "creator" | "brand";
   counterparty: string;
   brandMetrics?: BrandMetrics;
+  brandVerified?: boolean;
 };
 
 const STATUS_STYLES: Record<string, string> = {
@@ -67,8 +69,13 @@ export function OfferList({ offers }: { offers: OfferRow[] }) {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h3 className="font-display font-semibold text-ink">{o.title}</h3>
-                  <p className="text-xs text-ink-3">
+                  <p className="flex flex-wrap items-center gap-1.5 text-xs text-ink-3">
                     {o.role === "creator" ? "From" : "To"} {o.counterparty}
+                    {o.brandVerified && (
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-success/14 px-1.5 py-0.5 font-medium text-success">
+                        <BadgeCheck className="size-3" /> Verified brand
+                      </span>
+                    )}
                     {o.deadline ? ` · due ${o.deadline}` : ""}
                   </p>
                 </div>

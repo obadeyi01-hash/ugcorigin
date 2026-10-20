@@ -183,6 +183,28 @@ export async function approveReleaseAction(
   return { ok: true, payoutQueued };
 }
 
+/** Creator marks an in-person/on-location shoot as done. */
+export async function setLocationVisitedAction(gigId: string): Promise<{ error?: string; ok?: boolean }> {
+  const { supabase, user } = await auth();
+  if (!user) return { error: "Please sign in again." };
+  const { data: gig } = await supabase.from("gigs").select("id, creator_id, brand_id, title, needs_location").eq("id", gigId).maybeSingle();
+  if (!gig || gig.creator_id !== user.id) return { error: "Not allowed." };
+  if (!gig.needs_location) return { error: "This gig has no on-location shoot." };
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("gigs").update({ location_status: "visited" }).eq("id", gigId);
+  if (error) return { error: error.message };
+  await notifyUser(admin, gig.brand_id, {
+    type: "gig_update",
+    title: "Creator visited your location",
+    body: `The creator marked the on-location shoot for "${gig.title}" as done.`,
+    href: `/gigs/${gigId}`,
+    ctaLabel: "View the gig",
+  });
+  revalidatePath(`/gigs/${gigId}`);
+  return { ok: true };
+}
+
 // ---- Physical-product logistics --------------------------------------------
 
 /** Creator sets the delivery address for a physical-product gig. */

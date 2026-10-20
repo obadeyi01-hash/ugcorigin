@@ -117,6 +117,9 @@ export async function POST(request: Request) {
       deadline: offer.deadline ?? null,
       needs_product: !!offer.needs_product,
       shipping_status: offer.needs_product ? "awaiting_address" : null,
+      needs_location: !!offer.needs_location,
+      location_address: offer.location_address ?? null,
+      location_status: offer.needs_location ? "scheduled" : null,
     })
     .select("id")
     .single();

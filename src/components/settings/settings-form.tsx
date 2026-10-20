@@ -6,6 +6,7 @@ import { Card, CardBody } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Field, Select } from "@/components/ui/input";
 import { PhoneField } from "@/components/ui/phone-field";
+import { BrandVerifyCard } from "@/components/settings/brand-verify-card";
 import { NG_STATES } from "@/lib/categories";
 import { CONTENT_FORMATS } from "@/lib/content-formats";
 import { Chip } from "@/components/ui/chip";
@@ -46,6 +47,8 @@ type Brand = {
   phone?: string | null;
   contact_first_name?: string | null;
   contact_last_name?: string | null;
+  verification_status?: string | null;
+  rc_number?: string | null;
 };
 
 function initials(name: string) {
@@ -375,6 +378,10 @@ function BrandSettings({ userId, brand }: { userId: string; brand: Brand }) {
 
   return (
     <form onSubmit={onSubmit}>
+      <Section title="Business verification" description="Get the Verified brand badge creators trust.">
+        <BrandVerifyCard status={brand.verification_status ?? "unverified"} companyName={brand.company_name ?? ""} rcNumber={brand.rc_number ?? ""} />
+      </Section>
+
       <Section title="Brand logo" description="Shown on your offers and briefs.">
         <ImageUploader userId={userId} value={logoUrl} onChange={setLogoUrl} display={companyName} round={false} label="logo" kind="logo" />
       </Section>

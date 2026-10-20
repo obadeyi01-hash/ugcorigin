@@ -22,6 +22,8 @@ export type SendOfferInput = {
   price: number;
   deadline: string; // YYYY-MM-DD
   needsProduct?: boolean;
+  needsLocation?: boolean;
+  locationAddress?: string;
 };
 
 export async function sendOfferAction(input: SendOfferInput): Promise<{ error?: string; needsBrand?: boolean }> {
@@ -55,6 +57,8 @@ export async function sendOfferAction(input: SendOfferInput): Promise<{ error?: 
     deadline: input.deadline || null,
     status: "pending",
     needs_product: !!input.needsProduct,
+    needs_location: !!input.needsLocation,
+    location_address: input.needsLocation ? (input.locationAddress ?? "").trim() || null : null,
     expires_at: expires.toISOString(),
   });
   if (error) return { error: error.message };

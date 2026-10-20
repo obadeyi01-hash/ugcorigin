@@ -9,6 +9,7 @@ import { GigWorkspace, type Comment } from "@/components/gigs/gig-workspace";
 import { ReviewForm } from "@/components/gigs/review-form";
 import { AddVerifiedWork } from "@/components/gigs/add-verified-work";
 import { ProductLogistics } from "@/components/gigs/product-logistics";
+import { LocationVisit } from "@/components/gigs/location-visit";
 import { MeetingScheduler, type Meeting } from "@/components/gigs/meeting-scheduler";
 import { OpenDispute } from "@/components/gigs/open-dispute";
 import { createClient } from "@/lib/supabase/server";
@@ -50,7 +51,7 @@ async function GigInner({ params }: { params: Promise<{ id: string }> }) {
 
   const { data: gig } = await supabase
     .from("gigs")
-    .select("id, title, status, price_naira, fee_naira, brand_id, creator_id, needs_product, shipping_address, shipping_status")
+    .select("id, title, status, price_naira, fee_naira, brand_id, creator_id, needs_product, shipping_address, shipping_status, needs_location, location_address, location_status")
     .eq("id", id)
     .maybeSingle();
   if (!gig) return <div className="py-20 text-center text-ink-2">Gig not found.</div>;
@@ -157,6 +158,9 @@ async function GigInner({ params }: { params: Promise<{ id: string }> }) {
         )}
         {gig.needs_product && funded && (
           <ProductLogistics gigId={gig.id} role={role} address={gig.shipping_address} status={gig.shipping_status} />
+        )}
+        {gig.needs_location && funded && (
+          <LocationVisit gigId={gig.id} role={role} address={gig.location_address} status={gig.location_status} />
         )}
         {contact && (contact.phone || contact.name) && (
           <div className="mb-6 rounded-2xl border border-line bg-surface p-5">
