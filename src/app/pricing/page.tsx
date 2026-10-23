@@ -45,9 +45,9 @@ export default function PricingPage() {
 
           <div className="mx-auto mt-12 grid max-w-4xl gap-5 sm:grid-cols-3">
             {facts.map((f) => (
-              <Card key={f.label}>
+              <Card key={f.label} className="u-lift transition-colors hover:border-accent/30">
                 <CardBody className="text-center">
-                  <p className="font-display text-4xl font-bold text-ink">{f.stat}</p>
+                  <p className="font-display text-4xl font-bold text-accent">{f.stat}</p>
                   <p className="mt-2 font-semibold text-ink">{f.label}</p>
                   <p className="mt-1 text-sm text-ink-2">{f.sub}</p>
                 </CardBody>
@@ -59,7 +59,7 @@ export default function PricingPage() {
             <h2 className="text-center font-display text-2xl font-semibold text-ink">What every deal includes</h2>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {guarantees.map((g) => (
-                <div key={g.title} className="flex gap-3 rounded-2xl border border-line bg-surface p-5">
+                <div key={g.title} className="u-lift flex gap-3 rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-accent/30">
                   <g.icon className="size-5 shrink-0 text-accent" />
                   <div>
                     <p className="font-semibold text-ink">{g.title}</p>
