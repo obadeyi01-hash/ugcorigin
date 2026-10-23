@@ -135,8 +135,8 @@ export default function Home() {
           <StatsBand />
         </Container>
 
-        {/* How it works */}
-        <section className="pb-16 sm:pb-24">
+        {/* How it works — full-bleed band for a distinct "area" */}
+        <section className="bg-gradient-to-b from-surface to-paper py-16 sm:py-24">
           <Container>
             <SectionHeading
               align="center"
@@ -147,11 +147,11 @@ export default function Home() {
             <div className="mt-12 grid gap-5 md:grid-cols-3">
               {steps.map((s, i) => (
                 <Reveal key={s.title} delay={i * 80}>
-                  <div className="h-full rounded-2xl border border-line bg-surface p-7 shadow-sm">
+                  <div className="group u-lift h-full rounded-2xl border border-line bg-surface p-7 shadow-sm transition-colors hover:border-accent/30">
                     <span className="font-display text-sm font-semibold text-ink-3">
                       0{i + 1}
                     </span>
-                    <div className="mt-3 grid size-12 place-items-center rounded-xl bg-accent-tint text-accent-hover">
+                    <div className="mt-3 grid size-12 place-items-center rounded-xl bg-accent-tint text-accent-hover transition-transform duration-300 group-hover:scale-110">
                       <s.icon className="size-6" />
                     </div>
                     <h3 className="mt-5 font-display text-lg font-semibold text-ink">
@@ -199,8 +199,9 @@ export default function Home() {
         </section>
 
         {/* Creators across Nigeria (representative, no fabricated metrics) */}
-        <section className="pb-16 sm:pb-24">
-          <Container>
+        <section className="relative overflow-hidden bg-gradient-to-b from-paper via-accent-tint/25 to-paper py-16 sm:py-24">
+          <div className="pointer-events-none absolute left-1/2 top-0 size-[40rem] -translate-x-1/2 rounded-full bg-accent/5 blur-[140px]" />
+          <Container className="relative">
             <div className="flex items-end justify-between gap-4">
               <SectionHeading
                 eyebrow="Creators"
@@ -235,8 +236,8 @@ export default function Home() {
             <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {audiences.map((a, i) => (
                 <Reveal key={a.title} delay={i * 70}>
-                  <div className={`h-full rounded-2xl border border-line/60 p-7 ${a.tint}`}>
-                    <div className="grid size-11 place-items-center rounded-xl bg-surface text-ink shadow-xs">
+                  <div className={`group u-lift h-full rounded-2xl border border-line/60 p-7 ${a.tint}`}>
+                    <div className="grid size-11 place-items-center rounded-xl bg-surface text-ink shadow-xs transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110">
                       <a.icon className="size-5" />
                     </div>
                     <h3 className="mt-4 font-display text-lg font-semibold text-ink">
