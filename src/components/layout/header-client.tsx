@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronDown, LayoutDashboard, IdCard, Inbox, BadgeCheck, Settings, LogOut, Megaphone, FileText, MessageSquare } from "lucide-react";
+import { ChevronDown, LayoutDashboard, IdCard, Inbox, BadgeCheck, Settings, LogOut, Megaphone, FileText, MessageSquare, Menu, X } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
@@ -29,6 +29,7 @@ export function HeaderClient({ nav }: { nav: NavItem[] }) {
   const [loading, setLoading] = useState(true);
   const [account, setAccount] = useState<Account | null>(null); // null = signed out
   const [open, setOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -186,8 +187,46 @@ export function HeaderClient({ nav }: { nav: NavItem[] }) {
               </Link>
             </>
           )}
+
+          {/* Mobile menu toggle — the main nav is hidden below md */}
+          <button
+            onClick={() => setMobileOpen((o) => !o)}
+            className="u-press grid size-10 place-items-center rounded-full border border-line bg-surface text-ink-2 hover:text-ink md:hidden"
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileOpen}
+          >
+            {mobileOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+          </button>
         </div>
       </Container>
+
+      {/* Mobile nav drawer */}
+      {mobileOpen && (
+        <div className="border-t border-line bg-paper md:hidden">
+          <Container className="flex flex-col py-2">
+            {nav.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                className="rounded-xl px-2 py-3 text-base font-medium text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink"
+              >
+                {item.label}
+              </Link>
+            ))}
+            {!loading && !signedIn && (
+              <div className="mt-2 flex flex-col gap-2 border-t border-line pt-3">
+                <Link href="/login" onClick={() => setMobileOpen(false)}>
+                  <Button variant="secondary" className="w-full">Log in</Button>
+                </Link>
+                <Link href="/signup" onClick={() => setMobileOpen(false)}>
+                  <Button className="w-full">Get started</Button>
+                </Link>
+              </div>
+            )}
+          </Container>
+        </div>
+      )}
     </header>
   );
 }
