@@ -22,7 +22,9 @@ export async function submitBrandVerification(input: { companyName: string; rcNu
   if (!company) return { error: "Enter your registered business name." };
   if (rc.length < 4) return { error: "Enter your CAC/RC number." };
 
-  const { error } = await supabase
+  // verification_status is a service-role-only gate column, so write via admin.
+  const admin = createAdminClient();
+  const { error } = await admin
     .from("brand_profiles")
     .update({ company_name: company, rc_number: rc, verification_status: "pending", verification_submitted_at: new Date().toISOString() })
     .eq("id", user.id);
