@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { ArrowRight, ArrowLeft, Video, Store, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PillRow } from "@/components/ui/pill-row";
 import { Input, Textarea, Field, Select } from "@/components/ui/input";
 import { PhoneField } from "@/components/ui/phone-field";
 import { Chip } from "@/components/ui/chip";
@@ -262,13 +261,13 @@ export function OnboardingWizard({
       {step === 2 && (
         <div className="grid gap-4">
           <Field label="Your niches" hint="Pick up to 5, what you make best.">
-            <PillRow>
+            <div className="flex flex-wrap gap-2">
               {NICHES.map((n) => (
                 <button key={n} type="button" onClick={() => toggleNiche(n)}>
                   <Chip active={c.niches.includes(n)}>{n}</Chip>
                 </button>
               ))}
-            </PillRow>
+            </div>
           </Field>
           <Button onClick={() => setStep(3)} disabled={!canNext2}>
             Continue <ArrowRight className="size-4" />

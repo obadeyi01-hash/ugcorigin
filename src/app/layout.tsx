@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Inter, Space_Grotesk } from "next/font/google";
 import { JsonLd, SITE_URL } from "@/components/seo/json-ld";
 import { Analytics } from "@/components/analytics/analytics";
+import { SmoothScroll } from "@/components/layout/smooth-scroll";
 import "./globals.css";
 
 const inter = Inter({
@@ -93,6 +94,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${inter.variable} ${spaceGrotesk.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-paper text-ink">
+        <SmoothScroll />
         <JsonLd data={[orgLd, siteLd]} />
         {children}
         {/* usePathname() inside Analytics is runtime-only; stream it in so the

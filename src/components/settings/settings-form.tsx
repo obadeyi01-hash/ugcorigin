@@ -11,7 +11,6 @@ import { BRAND_GOALS, AD_PLATFORMS, CONTENT_TYPES, BUSINESS_TYPES, CONTACT_ROLES
 import { NG_STATES } from "@/lib/categories";
 import { CONTENT_FORMATS } from "@/lib/content-formats";
 import { Chip } from "@/components/ui/chip";
-import { PillRow } from "@/components/ui/pill-row";
 import { TierBadge } from "@/components/ui/tier-badge";
 import { cn, formatNaira } from "@/lib/utils";
 import { tierMeta } from "@/lib/tiers";
@@ -324,14 +323,14 @@ function CreatorSettings({ userId, creator }: { userId: string; creator: Creator
               placeholder={String(floor)}
             />
           </Field>
-          <Field label="Niches" hint="Pick the categories you create in, scroll to see all.">
-            <PillRow>
+          <Field label="Niches" hint="Pick the categories you create in.">
+            <div className="flex flex-wrap gap-2">
               {NICHES.map((n) => (
                 <button key={n} type="button" onClick={() => toggleNiche(n)}>
                   <Chip active={niches.includes(n)}>{n}</Chip>
                 </button>
               ))}
-            </PillRow>
+            </div>
           </Field>
           <Field label="What you offer" hint="The formats you deliver, so brands know what to ask for.">
             <div className="flex flex-wrap gap-2">

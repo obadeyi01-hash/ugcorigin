@@ -207,3 +207,21 @@
   from { background-position: -200% 0; }
   to { background-position: 200% 0; }
 }
+
+/* iOS/Android zoom-on-focus happens when a form control's font-size is < 16px.
+   Force 16px on small screens so focusing an input never zooms the page. */
+@media (max-width: 640px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Lenis smooth scroll (see SmoothScroll). */
+html.lenis,
+html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }
+.lenis.lenis-smooth iframe { pointer-events: none; }

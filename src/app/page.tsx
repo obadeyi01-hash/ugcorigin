@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/ui/reveal";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { CreatorCard } from "@/components/marketplace/creator-card";
+import { CardScroller } from "@/components/marketplace/card-scroller";
 import { HeroSearch } from "@/components/marketplace/hero-search";
 import { StatsBand } from "@/components/marketplace/stats-band";
 import { SAMPLE_CREATORS, NICHES } from "@/lib/sample-data";
@@ -115,13 +116,13 @@ export default function Home() {
             </div>
 
             {/* Creator strip */}
-            <div className="relative mt-12 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <CardScroller gridClass="mt-12 grid-cols-2 lg:grid-cols-4" className="relative">
               {SAMPLE_CREATORS.slice(0, 4).map((c, i) => (
                 <Reveal key={c.name} delay={i * 60}>
                   <CreatorCard creator={c} />
                 </Reveal>
               ))}
-            </div>
+            </CardScroller>
           </section>
         </Container>
 
@@ -194,13 +195,13 @@ export default function Home() {
                 </Button>
               </Link>
             </div>
-            <div className="mt-10 grid grid-cols-2 gap-5 lg:grid-cols-3">
+            <CardScroller gridClass="mt-10 grid-cols-2 lg:grid-cols-3">
               {SAMPLE_CREATORS.slice(2, 8).map((c, i) => (
                 <Reveal key={c.name} delay={i * 50}>
                   <CreatorCard creator={c} />
                 </Reveal>
               ))}
-            </div>
+            </CardScroller>
             <div className="mt-8 text-center sm:hidden">
               <Link href="/creators">
                 <Button variant="secondary">Browse all creators</Button>
