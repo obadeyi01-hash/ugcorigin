@@ -60,30 +60,32 @@ export default function ForBrandsPage() {
       <LandingNav ctaLabel="Post a brief" ctaHref={SIGNUP} />
       <main className="flex-1">
         {/* Hero */}
-        <Container className="pt-6">
-          <section className="relative overflow-hidden rounded-[2rem] bg-obsidian px-5 py-14 text-chalk sm:px-10 sm:py-20">
+        <Container className="pt-3 sm:pt-6">
+          <section className="relative -mx-4 overflow-hidden rounded-none bg-obsidian px-5 py-11 text-chalk sm:mx-0 sm:rounded-[2rem] sm:px-10 sm:py-20">
             <div className="u-grain pointer-events-none absolute inset-0 opacity-30" />
-            <div className="relative mx-auto max-w-3xl text-center">
+            <div className="pointer-events-none absolute -right-24 -top-24 size-[32rem] rounded-full bg-accent/25 blur-[120px]" />
+            <div className="pointer-events-none absolute -left-32 bottom-0 size-[28rem] rounded-full bg-[#a855f7]/15 blur-[120px]" />
+            <div className="relative mx-auto max-w-3xl text-left sm:text-center">
               <Reveal>
-                <span className="inline-flex items-center rounded-full border border-chalk/15 bg-chalk/[0.06] px-3.5 py-1 text-xs font-medium uppercase tracking-[0.12em] text-chalk/75">
+                <span className="inline-flex items-center rounded-full border border-chalk/15 bg-chalk/[0.06] px-3.5 py-1 text-[0.7rem] font-medium uppercase tracking-[0.12em] text-chalk/75 sm:text-xs">
                   For brands
                 </span>
               </Reveal>
               <Reveal delay={60}>
-                <h1 className="mt-5 text-balance font-display text-4xl font-bold leading-[1.05] tracking-tight text-chalk sm:text-6xl">
+                <h1 className="mt-4 text-balance font-display text-[2.1rem] font-bold leading-[1.05] tracking-tight text-chalk sm:mt-5 sm:text-6xl">
                   Authentic UGC from <span className="text-accent-bright">real humans</span> that converts.
                 </h1>
               </Reveal>
               <Reveal delay={120}>
-                <p className="mx-auto mt-5 max-w-xl text-pretty text-chalk/75 sm:text-lg">
+                <p className="mt-4 max-w-xl text-pretty text-chalk/75 sm:mx-auto sm:mt-5 sm:text-lg">
                   Hire identity-verified Nigerian creators for content that sells. Escrow-protected, reviewed in one clean
                   workspace, and you only ever pay for work you approve.
                 </p>
               </Reveal>
               <Reveal delay={180}>
-                <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                  <Link href={SIGNUP}><Button size="lg">Post a brief, it&apos;s free <ArrowRight className="size-4" /></Button></Link>
-                  <Link href="/creators"><Button size="lg" variant="secondary">Browse creators</Button></Link>
+                <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
+                  <Link href={SIGNUP} className="w-full sm:w-auto"><Button size="lg" className="w-full sm:w-auto">Post a brief, it&apos;s free <ArrowRight className="size-4" /></Button></Link>
+                  <Link href="/creators" className="w-full sm:w-auto"><Button size="lg" variant="secondary" className="w-full sm:w-auto">Browse creators</Button></Link>
                 </div>
                 <p className="mt-4 text-xs text-chalk/55">Free to post · Escrow-protected · Verified humans, no AI slop</p>
               </Reveal>
@@ -115,8 +117,8 @@ export default function ForBrandsPage() {
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {values.map((v, i) => (
               <Reveal key={v.title} delay={i * 60}>
-                <Card className="h-full"><CardBody>
-                  <div className="grid size-10 place-items-center rounded-xl bg-accent-tint text-accent"><v.icon className="size-5" /></div>
+                <Card className="group h-full u-lift transition-colors hover:border-accent/30"><CardBody>
+                  <div className="grid size-10 place-items-center rounded-xl bg-accent-tint text-accent transition-transform duration-300 group-hover:scale-110"><v.icon className="size-5" /></div>
                   <p className="mt-4 font-display font-semibold text-ink">{v.title}</p>
                   <p className="mt-1 text-sm text-ink-2">{v.text}</p>
                 </CardBody></Card>
@@ -131,7 +133,7 @@ export default function ForBrandsPage() {
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {steps.map((s, i) => (
               <Reveal key={s.n} delay={i * 60}>
-                <div className="h-full rounded-2xl border border-line bg-surface p-5">
+                <div className="u-lift h-full rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-accent/30">
                   <p className="font-display text-sm font-bold text-accent">{s.n}</p>
                   <p className="mt-2 font-semibold text-ink">{s.t}</p>
                   <p className="mt-1 text-sm text-ink-2">{s.d}</p>
