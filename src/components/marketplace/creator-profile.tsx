@@ -47,7 +47,12 @@ export type ProfileData = {
   embeds: EmbedLink[];
   videos?: { id: string; url: string; poster: string | null; verified?: boolean; caption?: string | null }[];
   metrics?: CreatorMetrics;
+  avatarUrl?: string | null;
 };
+
+function initials(name: string) {
+  return name.split(" ").map((p) => p[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
+}
 
 export function CreatorProfile({ data }: { data: ProfileData }) {
   const hasPackages = data.packages.length > 0;
@@ -56,19 +61,33 @@ export function CreatorProfile({ data }: { data: ProfileData }) {
     <div className="grid gap-10 py-10 md:grid-cols-[1fr_340px]">
       {/* Main */}
       <div>
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{data.name}</h1>
-          {data.verified && <VerifiedBadge />}
-          {data.tier && <TierBadge tier={data.tier} />}
-          {data.influencer && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-accent to-[#a855f7] px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm">
-              <Sparkles className="size-3" /> Influencer
-            </span>
-          )}
+        <div className="flex items-start gap-4">
+          <div className="size-20 shrink-0 overflow-hidden rounded-2xl bg-surface-2 sm:size-24">
+            {data.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={data.avatarUrl} alt={data.name} className="size-full object-cover" />
+            ) : (
+              <span className="grid size-full place-items-center bg-gradient-to-b from-accent-tint to-surface-2 font-display text-2xl font-bold text-accent/70">
+                {initials(data.name)}
+              </span>
+            )}
+          </div>
+          <div className="min-w-0 pt-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{data.name}</h1>
+              {data.verified && <VerifiedBadge />}
+              {data.tier && <TierBadge tier={data.tier} />}
+              {data.influencer && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-accent to-[#a855f7] px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm">
+                  <Sparkles className="size-3" /> Influencer
+                </span>
+              )}
+            </div>
+            <p className="mt-1.5 flex items-center gap-1.5 text-ink-3">
+              <MapPin className="size-4" /> {data.location || "Nigeria"} · @{data.handle}
+            </p>
+          </div>
         </div>
-        <p className="mt-1.5 flex items-center gap-1.5 text-ink-3">
-          <MapPin className="size-4" /> {data.location || "Nigeria"} · @{data.handle}
-        </p>
 
         {data.socials.length > 0 && (
           <div className="mt-4 flex flex-wrap items-center gap-2">
