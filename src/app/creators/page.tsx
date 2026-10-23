@@ -230,8 +230,8 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
         {totalPages > 1 ? ` · page ${page} of ${totalPages}` : ""}
       </p>
       <div className="mt-4 grid grid-cols-2 gap-5 lg:grid-cols-3">
-        {creators.map((c) => (
-          <CreatorCard key={c.handle ?? c.name} creator={c} />
+        {creators.map((c, i) => (
+          <CreatorCard key={c.handle ?? c.name} creator={{ ...c, priority: i < 3 }} />
         ))}
       </div>
 

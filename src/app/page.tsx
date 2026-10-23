@@ -13,6 +13,7 @@ import {
   Rocket,
   ShoppingBag,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { Container } from "@/components/ui/container";
@@ -119,7 +120,7 @@ export default function Home() {
             <CardScroller gridClass="mt-12 grid-cols-2 lg:grid-cols-4" className="relative">
               {SAMPLE_CREATORS.slice(0, 4).map((c, i) => (
                 <Reveal key={c.name} delay={i * 60}>
-                  <CreatorCard creator={c} />
+                  <CreatorCard creator={{ ...c, priority: i < 2 }} />
                 </Reveal>
               ))}
             </CardScroller>
@@ -161,21 +162,35 @@ export default function Home() {
           </Container>
         </section>
 
-        {/* Value props */}
+        {/* Value props — bento: one wide feature tile + two supporting */}
         <section className="pb-16 sm:pb-24">
           <Container>
-            <div className="grid gap-5 md:grid-cols-3">
-              {values.map((v, i) => (
-                <Reveal key={v.title} delay={i * 80}>
-                  <div className="h-full rounded-2xl border border-line bg-surface p-7">
-                    <v.icon className="size-7 text-accent" />
-                    <h3 className="mt-4 font-display text-xl font-semibold text-ink">
-                      {v.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-ink-2">{v.body}</p>
-                  </div>
-                </Reveal>
-              ))}
+            <div className="grid gap-4 sm:grid-cols-2">
+              {values.map((v, i) => {
+                const feature = i === 0;
+                return (
+                  <Reveal key={v.title} delay={i * 80} className={feature ? "sm:col-span-2" : undefined}>
+                    <div
+                      className={cn(
+                        "u-lift h-full rounded-3xl border p-7 transition-colors sm:p-8",
+                        feature
+                          ? "border-accent/15 bg-accent-tint/50"
+                          : "border-line bg-surface",
+                      )}
+                    >
+                      <div className="grid size-12 place-items-center rounded-2xl bg-white/70 text-accent shadow-sm">
+                        <v.icon className="size-6" />
+                      </div>
+                      <h3 className={cn("mt-5 font-display font-semibold text-ink", feature ? "text-2xl" : "text-xl")}>
+                        {v.title}
+                      </h3>
+                      <p className={cn("mt-2 leading-relaxed text-ink-2", feature ? "max-w-xl text-base" : "text-sm")}>
+                        {v.body}
+                      </p>
+                    </div>
+                  </Reveal>
+                );
+              })}
             </div>
           </Container>
         </section>

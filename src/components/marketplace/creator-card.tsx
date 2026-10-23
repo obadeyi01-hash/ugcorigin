@@ -25,6 +25,8 @@ export type Creator = {
   id?: string;
   canSave?: boolean;
   saved?: boolean;
+  /** Prioritize the image for above-the-fold LCP. */
+  priority?: boolean;
 };
 
 function initials(name: string) {
@@ -44,6 +46,7 @@ export function CreatorCard({ creator }: { creator: Creator }) {
               alt={`${creator.name}, creator`}
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 300px"
+              priority={creator.priority}
               className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
             />
           ) : (
