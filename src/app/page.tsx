@@ -78,8 +78,11 @@ export default function Home() {
       <main className="flex-1">
         {/* Hero */}
         <Container className="pt-6 sm:pt-8">
-          <section className="relative overflow-hidden rounded-[2rem] bg-obsidian px-5 py-14 text-chalk sm:px-10 sm:py-20">
+          <section className="relative overflow-hidden rounded-[2rem] bg-obsidian px-5 py-10 text-chalk sm:px-10 sm:py-14">
             <div className="u-grain pointer-events-none absolute inset-0 opacity-30" />
+            {/* Soft pink glow for depth */}
+            <div className="pointer-events-none absolute -right-24 -top-24 size-[32rem] rounded-full bg-accent/25 blur-[120px]" />
+            <div className="pointer-events-none absolute -left-32 bottom-0 size-[28rem] rounded-full bg-[#a855f7]/15 blur-[120px]" />
             <div className="relative mx-auto max-w-3xl text-center">
               <Reveal>
                 <span className="inline-flex items-center rounded-full border border-chalk/15 bg-chalk/[0.06] px-3.5 py-1 text-xs font-medium uppercase tracking-[0.12em] text-chalk/75">
@@ -87,8 +90,8 @@ export default function Home() {
                 </span>
               </Reveal>
               <Reveal delay={60}>
-                <h1 className="mt-5 text-balance font-display text-4xl font-bold leading-[1.03] tracking-tight text-chalk sm:text-6xl">
-                  Get original content from{" "}
+                <h1 className="mt-4 text-balance font-display text-4xl font-bold leading-[1.02] tracking-tight text-chalk sm:text-[3.25rem]">
+                  Original content from{" "}
                   <span className="text-accent-bright">real humans</span>.
                 </h1>
               </Reveal>
@@ -117,7 +120,7 @@ export default function Home() {
             </div>
 
             {/* Creator strip */}
-            <CardScroller gridClass="mt-12 grid-cols-2 lg:grid-cols-4" className="relative">
+            <CardScroller gridClass="mt-9 grid-cols-2 lg:grid-cols-4" className="relative">
               {SAMPLE_CREATORS.slice(0, 4).map((c, i) => (
                 <Reveal key={c.name} delay={i * 60}>
                   <CreatorCard creator={{ ...c, priority: i < 2 }} />

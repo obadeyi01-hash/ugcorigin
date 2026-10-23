@@ -6,6 +6,7 @@ import { guardWrite, type AdminRole } from "@/lib/admin/rbac";
 import { paystackConfigured, initiateTransfer } from "@/lib/payments/paystack";
 import { feeFor } from "@/lib/fees";
 import { placeCreator } from "@/lib/tiering/placement";
+import { notifyUser } from "@/lib/notify";
 
 type Res = { error?: string; ok?: boolean };
 
@@ -14,12 +15,31 @@ export async function adminSetIdentityVerified(creatorId: string, verified: bool
   const { error } = await guardWrite("verification");
   if (error) return { error };
   const admin = createAdminClient();
-  const { error: e } = await admin
-    .from("creator_profiles")
-    .update({ identity_verified: verified, verification_status: verified ? "verified" : "pending" })
-    .eq("id", creatorId);
+  // On verification: mark verified, flip the badge, and push the profile LIVE
+  // automatically (as promised). Un-verifying reverts status to pending.
+  const patch = verified
+    ? { identity_verified: true, verification_status: "verified", is_live: true }
+    : { identity_verified: false, verification_status: "pending" };
+  const { error: e } = await admin.from("creator_profiles").update(patch).eq("id", creatorId);
   if (e) return { error: e.message };
+
+  if (verified) {
+    try {
+      await placeCreator(creatorId); // place on the tier ladder now they're live
+    } catch {
+      /* tier engine optional */
+    }
+    await notifyUser(admin, creatorId, {
+      type: "product",
+      title: "You're verified — your profile is live 🎉",
+      body: "Your identity is verified and your profile is now live in the directory. Brands can find and hire you. Add your bank details to receive payouts.",
+      href: "/dashboard",
+      ctaLabel: "View your dashboard",
+    });
+  }
+
   revalidatePath("/admin/verification");
+  revalidatePath("/admin/users");
   return { ok: true };
 }
 

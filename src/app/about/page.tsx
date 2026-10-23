@@ -14,7 +14,6 @@ export default function AboutPage() {
       <p>We&apos;re building for Nigerian creators and brands first, local payments, local culture, escrow that works here, then expanding across Africa and beyond.</p>
       <h2>How we&apos;re different</h2>
       <p>Escrow on every deal, identity-verified creators, a clean workspace from brief to approval, and a strong stand for original human content over AI slop.</p>
-      <p className="text-sm text-ink-3">A product by Dream Intrepid Ltd.</p>
     </SimplePage>
   );
 }
