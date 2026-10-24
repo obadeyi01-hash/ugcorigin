@@ -20,6 +20,12 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         <div className="flex flex-1 items-center justify-center py-10">
           <Suspense fallback={null}>{children}</Suspense>
         </div>
+        {/* Mobile-only trust strip — the brand panel carries this on lg+ */}
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-ink-3 lg:hidden">
+          <span className="inline-flex items-center gap-1.5"><ShieldCheck className="size-3.5 text-accent" /> Escrow-protected</span>
+          <span className="inline-flex items-center gap-1.5"><BadgeCheck className="size-3.5 text-accent" /> Verified humans</span>
+          <span className="inline-flex items-center gap-1.5"><Banknote className="size-3.5 text-accent" /> Next-day payouts</span>
+        </div>
       </div>
 
       {/* Brand side, real creator photo backdrop + dark overlay */}
