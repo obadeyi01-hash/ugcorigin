@@ -149,7 +149,7 @@ export function CreatorProfile({ data }: { data: ProfileData }) {
             <h2 className="font-display text-lg font-semibold text-ink">Packages</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               {data.packages.map((p) => (
-                <Card key={p.id}>
+                <Card key={p.id} className="u-lift transition-colors hover:border-accent/30">
                   <CardBody>
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="font-semibold text-ink">{p.title}</h3>
@@ -223,7 +223,7 @@ export function CreatorProfile({ data }: { data: ProfileData }) {
           <CardBody>
             <p className="text-xs text-ink-3">Starting at</p>
             <p className="font-display text-3xl font-bold text-ink">
-              {data.startingRate ? formatNaira(data.startingRate) : ", "}
+              {data.startingRate ? formatNaira(data.startingRate) : "On request"}
             </p>
 
             <Link href={`/${data.handle}/hire`} className="mt-5 block">
