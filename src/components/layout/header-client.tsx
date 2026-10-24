@@ -13,10 +13,23 @@ import { createClient, supabaseConfigured } from "@/lib/supabase/client";
 
 type NavItem = { label: string; href: string };
 
-type Account =
-  | { role: "creator"; display: string; handle: string | null; avatarUrl: string | null }
-  | { role: "brand"; display: string; handle: null; avatarUrl: string | null }
-  | { role: "none"; display: string; handle: null; avatarUrl: string | null };
+// A single account can hold a creator profile, a brand profile, or both.
+// Capabilities are tracked independently so the menu shows each role's items
+// to the accounts that actually hold that role.
+type Account = {
+  isCreator: boolean;
+  isBrand: boolean;
+  display: string;
+  handle: string | null;
+  avatarUrl: string | null;
+};
+
+function roleLabel(a: Account) {
+  if (a.isCreator && a.isBrand) return "Brand + Creator";
+  if (a.isCreator) return "Creator";
+  if (a.isBrand) return "Brand";
+  return "Finish setup";
+}
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -55,13 +68,18 @@ export function HeaderClient({ nav }: { nav: NavItem[] }) {
         supabase.from("brand_profiles").select("company_name, logo_url").eq("id", user.id).maybeSingle(),
       ]);
       if (cancelled) return;
-      if (creator) {
-        setAccount({ role: "creator", display: creator.display_name || creator.handle || "Creator", handle: creator.handle ?? null, avatarUrl: null });
-      } else if (brand) {
-        setAccount({ role: "brand", display: brand.company_name || "Brand", handle: null, avatarUrl: brand.logo_url ?? null });
-      } else {
-        setAccount({ role: "none", display: user.email?.split("@")[0] || "Account", handle: null, avatarUrl: null });
-      }
+      const isCreator = !!creator;
+      const isBrand = !!brand;
+      // Prefer the creator identity for the display name/avatar when the
+      // account holds both, matching the rest of the app.
+      const display = creator?.display_name || creator?.handle || brand?.company_name || user.email?.split("@")[0] || "Account";
+      setAccount({
+        isCreator,
+        isBrand,
+        display,
+        handle: creator?.handle ?? null,
+        avatarUrl: isCreator ? null : brand?.logo_url ?? null,
+      });
       setLoading(false);
     }
 
@@ -138,30 +156,28 @@ export function HeaderClient({ nav }: { nav: NavItem[] }) {
                   <div className="absolute right-0 top-12 z-50 w-60 overflow-hidden rounded-2xl border border-line bg-surface shadow-xl">
                     <div className="border-b border-line px-4 py-3">
                       <p className="truncate text-sm font-semibold text-ink">{account!.display}</p>
-                      <p className="mt-0.5 text-xs capitalize text-ink-3">
-                        {account!.role === "none" ? "Finish setup" : account!.role}
-                      </p>
+                      <p className="mt-0.5 text-xs text-ink-3">{roleLabel(account!)}</p>
                     </div>
                     <div className="py-1">
                       <MenuLink href="/dashboard" icon={LayoutDashboard} onClick={() => setOpen(false)}>Dashboard</MenuLink>
                       <MenuLink href="/messages" icon={MessageSquare} onClick={() => setOpen(false)}>Messages</MenuLink>
-                      {account!.role === "creator" && account!.handle && (
+                      {account!.isCreator && account!.handle && (
                         <MenuLink href={`/${account!.handle}`} icon={IdCard} onClick={() => setOpen(false)}>View my card</MenuLink>
                       )}
-                      {account!.role === "creator" && (
+                      {account!.isCreator && (
                         <MenuLink href="/verify" icon={BadgeCheck} onClick={() => setOpen(false)}>Verification</MenuLink>
                       )}
-                      {account!.role === "brand" && (
+                      {account!.isBrand && (
                         <MenuLink href="/briefs/new" icon={FileText} onClick={() => setOpen(false)}>Post a brief</MenuLink>
                       )}
                       <MenuLink href="/offers" icon={Inbox} onClick={() => setOpen(false)}>Offers</MenuLink>
-                      {account!.role === "brand" && (
+                      {account!.isBrand && (
                         <MenuLink href="/campaigns" icon={Megaphone} onClick={() => setOpen(false)}>Campaigns</MenuLink>
                       )}
-                      {account!.role === "none" && (
+                      {!account!.isCreator && !account!.isBrand && (
                         <MenuLink href="/onboarding" icon={Settings} onClick={() => setOpen(false)}>Complete profile</MenuLink>
                       )}
-                      {account!.role !== "none" && (
+                      {(account!.isCreator || account!.isBrand) && (
                         <MenuLink href="/settings" icon={Settings} onClick={() => setOpen(false)}>Settings</MenuLink>
                       )}
                     </div>

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { CreatorCard, type Creator } from "@/components/marketplace/creator-card";
 import { DirectoryFilters } from "@/components/marketplace/directory-filters";
 import { createClient } from "@/lib/supabase/server";
+import { getViewer } from "@/lib/auth/role";
 import { rankCreators, applyExploration, applyTierDiversity, type RankCreator } from "@/lib/ranking";
 import { FEATURED_CAP } from "@/lib/boosts";
 import { publicName } from "@/lib/names";
@@ -293,6 +294,20 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
   );
 }
 
+/** Brand-only post-a-brief nudge; dynamic (reads the session) so it lives in Suspense. */
+async function HiringNudge() {
+  const { showBrandCtas } = await getViewer();
+  if (!showBrandCtas) return null;
+  return (
+    <Link
+      href="/briefs/new"
+      className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-4 py-2 text-sm font-medium text-ink-2 transition-colors hover:border-accent hover:text-accent"
+    >
+      <Users className="size-4" /> Hiring at scale? Post a brief for up to 100 creators
+    </Link>
+  );
+}
+
 export default function CreatorsPage({ searchParams }: { searchParams: Promise<SP> }) {
   return (
     <>
@@ -308,12 +323,7 @@ export default function CreatorsPage({ searchParams }: { searchParams: Promise<S
                 Verified Nigerian creators across beauty, food, fashion, fintech and more. Filter by service, region, budget and platform, sorted by what fits best.
               </p>
             </div>
-            <Link
-              href="/briefs/new"
-              className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-4 py-2 text-sm font-medium text-ink-2 transition-colors hover:border-accent hover:text-accent"
-            >
-              <Users className="size-4" /> Hiring at scale? Post a brief for up to 100 creators
-            </Link>
+            <Suspense fallback={null}><HiringNudge /></Suspense>
           </div>
 
           <div className="mt-8">

@@ -7,7 +7,9 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { OfferForm } from "@/components/offers/offer-form";
+import { AccessNotice } from "@/components/layout/access-notice";
 import { createClient } from "@/lib/supabase/server";
+import { getViewer } from "@/lib/auth/role";
 
 export const metadata: Metadata = { title: "Make an offer" };
 
@@ -23,6 +25,17 @@ async function HireInner({ params, searchParams }: { params: Promise<{ handle: s
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const { isBrand } = await getViewer();
+  if (!isBrand) {
+    return (
+      <AccessNotice
+        title="Only brands can make offers"
+        message="Hiring a creator is a brand action. You're signed in as a creator — add a brand account to send offers."
+        cta={{ label: "Add a brand account", href: "/onboarding?role=brand" }}
+      />
+    );
+  }
 
   const { data: creator } = await supabase
     .from("creator_profiles")

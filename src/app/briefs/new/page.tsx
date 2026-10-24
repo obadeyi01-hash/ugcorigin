@@ -6,7 +6,9 @@ import { ArrowLeft } from "lucide-react";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Container } from "@/components/ui/container";
 import { BriefForm } from "@/components/briefs/brief-form";
+import { AccessNotice } from "@/components/layout/access-notice";
 import { createClient } from "@/lib/supabase/server";
+import { getViewer } from "@/lib/auth/role";
 
 export const metadata: Metadata = { title: "Post a brief" };
 
@@ -17,6 +19,17 @@ async function NewBriefInner() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const { isBrand } = await getViewer();
+  if (!isBrand) {
+    return (
+      <AccessNotice
+        title="Brands post briefs"
+        message="You're signed in as a creator. Briefs are posted by brands — add a brand account to post one, or browse open briefs to apply."
+        cta={{ label: "Add a brand account", href: "/onboarding?role=brand" }}
+      />
+    );
+  }
 
   return (
     <div className="mx-auto max-w-xl py-10">

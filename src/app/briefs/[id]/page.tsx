@@ -13,6 +13,7 @@ import { ApplyForm } from "@/components/briefs/apply-form";
 import { ApplicationsList, type AppRow } from "@/components/briefs/applications-list";
 import { BoostButton } from "@/components/boost/boost-button";
 import { createClient } from "@/lib/supabase/server";
+import { getViewer } from "@/lib/auth/role";
 import { formatNaira } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Brief" };
@@ -43,6 +44,8 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
     data: { user },
   } = await supabase.auth.getUser();
   const isOwner = !!user && brief.brand_id === user.id;
+  // Applying is a creator action — hide the form from brand-only accounts.
+  const { showCreatorCtas } = await getViewer();
   const company = (brief as unknown as { brand?: { company_name: string | null } }).brand?.company_name || "A brand";
 
   let apps: AppRow[] = [];
@@ -102,7 +105,7 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
               </div>
             )}
 
-            {!isOwner && brief.status === "open" && (
+            {!isOwner && brief.status === "open" && showCreatorCtas && (
               <div className="mt-5">
                 {myAppStatus ? (
                   <div className="rounded-xl border border-success/30 bg-success/10 p-3 text-sm text-ink">
@@ -112,6 +115,9 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
                   <ApplyForm briefId={id} />
                 )}
               </div>
+            )}
+            {!isOwner && brief.status === "open" && !showCreatorCtas && (
+              <p className="mt-5 text-sm text-ink-3">Creators apply to briefs. To work with a creator directly, make them an offer from their profile.</p>
             )}
             {!isOwner && brief.status !== "open" && <p className="mt-5 text-sm text-ink-3">This brief is closed.</p>}
           </CardBody>

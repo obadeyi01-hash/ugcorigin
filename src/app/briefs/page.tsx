@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { Card, CardBody } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
+import { getViewer } from "@/lib/auth/role";
 import { formatNaira } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -28,8 +29,16 @@ type BriefRow = {
   brand: { company_name: string | null } | null;
 };
 
+/** Brand-only "Post a brief" link; dynamic (reads the session) so it lives in Suspense. */
+async function PostBriefCta() {
+  const { showBrandCtas } = await getViewer();
+  if (!showBrandCtas) return null;
+  return <Link href="/briefs/new" className="hidden shrink-0 sm:block"><Button>Post a brief</Button></Link>;
+}
+
 async function BriefsInner() {
   const configured = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const { showBrandCtas: showPost } = await getViewer();
   let briefs: BriefRow[] = [];
   const boosted = new Set<string>();
   if (configured) {
@@ -54,8 +63,14 @@ async function BriefsInner() {
       <div className="mt-8 rounded-3xl border border-line bg-surface px-6 py-16 text-center">
         <div className="mx-auto grid size-12 place-items-center rounded-full bg-accent-tint text-accent"><Megaphone className="size-6" /></div>
         <h2 className="mt-4 font-display text-xl font-semibold text-ink">No open briefs yet</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm text-ink-2">When brands post campaigns, they&apos;ll show up here for creators to apply.</p>
-        <Link href="/briefs/new" className="mt-5 inline-block"><Button>Post the first brief</Button></Link>
+        <p className="mx-auto mt-2 max-w-md text-sm text-ink-2">
+          {showPost
+            ? "When brands post campaigns, they'll show up here for creators to apply."
+            : "Brands haven't posted any campaigns yet. Check back soon, or apply the moment one opens."}
+        </p>
+        {showPost && (
+          <Link href="/briefs/new" className="mt-5 inline-block"><Button>Post the first brief</Button></Link>
+        )}
       </div>
     );
   }
@@ -100,7 +115,8 @@ export default function BriefsPage() {
               <h1 className="font-display text-3xl font-bold tracking-tight text-ink sm:text-4xl">Open briefs</h1>
               <p className="mt-2 text-ink-2">Campaigns from brands looking for creators. Apply with a quick pitch.</p>
             </div>
-            <Link href="/briefs/new" className="hidden shrink-0 sm:block"><Button>Post a brief</Button></Link>
+            {/* Creator-only accounts don't post briefs — the CTA resolves the session inside Suspense. */}
+            <Suspense fallback={null}><PostBriefCta /></Suspense>
           </div>
           <Suspense fallback={<div className="mt-8 h-40 animate-pulse rounded-2xl bg-surface-2" />}>
             <BriefsInner />
