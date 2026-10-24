@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { Card, CardBody } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
+import { getViewer } from "@/lib/auth/role";
 import { formatNaira } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Per-view campaigns" };
@@ -20,7 +21,15 @@ type Row = {
   brand: { company_name: string | null } | null;
 };
 
+/** Brand-only "Create a campaign" link; dynamic (reads the session) so it lives in Suspense. */
+async function CreateCampaignCta() {
+  const { showBrandCtas } = await getViewer();
+  if (!showBrandCtas) return null;
+  return <Link href="/campaigns/new" className="hidden shrink-0 sm:block"><Button>Create a campaign</Button></Link>;
+}
+
 async function Inner() {
+  const { showBrandCtas: showCreate } = await getViewer();
   let rows: Row[] = [];
   const boosted = new Set<string>();
   if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
@@ -44,7 +53,9 @@ async function Inner() {
         <div className="mx-auto grid size-12 place-items-center rounded-full bg-accent-tint text-accent"><Flame className="size-6" /></div>
         <h2 className="mt-4 font-display text-xl font-semibold text-ink">No live campaigns yet</h2>
         <p className="mx-auto mt-2 max-w-md text-sm text-ink-2">Per-view campaigns let brands fund a pool and pay creators for the views they drive.</p>
-        <Link href="/campaigns/new" className="mt-5 inline-block"><Button>Create a campaign</Button></Link>
+        {showCreate && (
+          <Link href="/campaigns/new" className="mt-5 inline-block"><Button>Create a campaign</Button></Link>
+        )}
       </div>
     );
   }
@@ -87,7 +98,8 @@ export default function CampaignsPage() {
               <h1 className="font-display text-3xl font-bold tracking-tight text-ink sm:text-4xl">Per-view campaigns</h1>
               <p className="mt-2 text-ink-2">Brands fund a pool; creators submit and get paid per 1,000 views.</p>
             </div>
-            <Link href="/campaigns/new" className="hidden shrink-0 sm:block"><Button>Create a campaign</Button></Link>
+            {/* Creating a campaign is a brand action — the CTA resolves the session inside Suspense. */}
+            <Suspense fallback={null}><CreateCampaignCta /></Suspense>
           </div>
           <Suspense fallback={<div className="mt-8 h-40 animate-pulse rounded-2xl bg-surface-2" />}><Inner /></Suspense>
         </Container>

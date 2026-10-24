@@ -6,7 +6,9 @@ import { ArrowLeft } from "lucide-react";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Container } from "@/components/ui/container";
 import { CampaignForm } from "@/components/campaigns/campaign-form";
+import { AccessNotice } from "@/components/layout/access-notice";
 import { createClient } from "@/lib/supabase/server";
+import { getViewer } from "@/lib/auth/role";
 
 export const metadata: Metadata = { title: "New campaign" };
 
@@ -17,6 +19,17 @@ async function Inner() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const { isBrand } = await getViewer();
+  if (!isBrand) {
+    return (
+      <AccessNotice
+        title="Brands run campaigns"
+        message="You're signed in as a creator. Per-view campaigns are funded by brands — add a brand account to create one, or browse open campaigns to submit."
+        cta={{ label: "Add a brand account", href: "/onboarding?role=brand" }}
+      />
+    );
+  }
 
   return (
     <div className="mx-auto max-w-xl py-10">
