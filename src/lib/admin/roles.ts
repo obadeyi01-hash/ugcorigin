@@ -23,15 +23,16 @@ export type Section =
   | "moderation"
   | "messages"
   | "support"
+  | "comms"
   | "roles";
 
 // Which sections each role can see.
 const ACCESS: Record<AdminRole, Section[]> = {
-  super_admin: ["overview", "verification", "users", "gigs", "finance", "disputes", "tiers", "boosts", "docs", "moderation", "messages", "support", "roles"],
+  super_admin: ["overview", "verification", "users", "gigs", "finance", "disputes", "tiers", "boosts", "docs", "moderation", "messages", "support", "comms", "roles"],
   finance: ["overview", "gigs", "finance", "boosts"],
-  trust_safety: ["overview", "verification", "users", "gigs", "disputes", "tiers", "docs", "moderation", "messages", "support"],
-  support: ["overview", "users", "gigs", "moderation", "messages", "support"],
-  growth: ["overview", "users", "tiers", "boosts", "docs"],
+  trust_safety: ["overview", "verification", "users", "gigs", "disputes", "tiers", "docs", "moderation", "messages", "support", "comms"],
+  support: ["overview", "users", "gigs", "moderation", "messages", "support", "comms"],
+  growth: ["overview", "users", "tiers", "boosts", "docs", "comms"],
   analyst: ["overview", "users", "gigs", "finance", "disputes", "tiers", "boosts", "docs", "moderation", "messages"], // read-only
 };
 

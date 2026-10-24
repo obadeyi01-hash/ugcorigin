@@ -16,6 +16,7 @@ import { tierMeta } from "@/lib/tiers";
 import { createClient } from "@/lib/supabase/server";
 import { publicName } from "@/lib/names";
 import { RecommendationsPopup, type RecCreator } from "@/components/dashboard/recommendations-popup";
+import { UpsellNudge } from "@/components/upsell/upsell-nudge";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -118,9 +119,46 @@ async function DashboardInner() {
     pick(fresh, true);
   }
 
+  // Premium upsell eligibility. Creators who aren't already Pro get a Creator
+  // Pro nudge; brands that haven't verified get a Verified-brand nudge. Shown
+  // one at a time (creator first) and frequency-capped client-side.
+  let proActive = false;
+  if (creator) {
+    const { data: sub } = await supabase
+      .from("subscriptions")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .gt("current_period_end", new Date().toISOString())
+      .limit(1);
+    proActive = !!sub && sub.length > 0;
+  }
+  const showCreatorPro = !!creator && !proActive;
+  const showBrandVerify = !showCreatorPro && !!brand && brand.verification_status !== "verified";
+
   return (
     <>
       {recs.length > 0 && <RecommendationsPopup creators={recs} />}
+      {showCreatorPro && (
+        <UpsellNudge
+          dismissKey="ugc:upsell:creator-pro"
+          eyebrow="Creator Pro"
+          title="Get more from your profile"
+          body="Unlock extra username changes, a Pro badge that signals you're serious, and priority support — from ₦2,500/mo."
+          ctaLabel="See Creator Pro"
+          ctaHref="/pro"
+        />
+      )}
+      {showBrandVerify && (
+        <UpsellNudge
+          dismissKey="ugc:upsell:brand-verify"
+          eyebrow="Verified brand"
+          title="Win more creators' trust"
+          body="Verify your business to earn the Verified brand badge on your offers — verified brands get more (and better) applicants."
+          ctaLabel="Verify your brand"
+          ctaHref="/settings"
+        />
+      )}
       <TopBar signedIn />
       <Container className="py-12">
         <h1 className="font-display text-2xl font-bold tracking-tight text-ink">

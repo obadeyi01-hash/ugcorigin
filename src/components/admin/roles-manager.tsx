@@ -6,7 +6,7 @@ import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { Card, CardBody } from "@/components/ui/card";
-import { ROLES, ROLE_LABEL, type AdminRole } from "@/lib/admin/roles";
+import { ROLES, ROLE_LABEL, sectionsFor, isReadonly, type AdminRole } from "@/lib/admin/roles";
 import { adminAddAdmin, adminSetRole, adminRemoveAdmin } from "@/app/admin/actions";
 
 export type AdminRow = { userId: string; role: AdminRole; email: string };
@@ -41,6 +41,28 @@ export function RolesManager({ rows, meId }: { rows: AdminRow[]; meId: string })
           </div>
           {err && <p className="mt-2 text-sm text-error">{err}</p>}
           <p className="mt-2 text-xs text-ink-3">They must have signed up first. Roles control which admin sections they can use.</p>
+        </CardBody>
+      </Card>
+
+      <Card variant="outline">
+        <CardBody>
+          <p className="font-semibold text-ink">What each role can do</p>
+          <p className="mt-0.5 text-xs text-ink-3">Grant the narrowest role that fits. Only Super Admin can manage roles.</p>
+          <ul className="mt-3 grid gap-2.5">
+            {ROLES.map((r) => (
+              <li key={r} className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-3">
+                <span className="w-32 shrink-0 text-sm font-medium text-ink">
+                  {ROLE_LABEL[r]}
+                  {isReadonly(r) && <span className="ml-1 text-2xs font-semibold text-ink-3">(read-only)</span>}
+                </span>
+                <span className="flex flex-wrap gap-1">
+                  {sectionsFor(r).map((s) => (
+                    <span key={s} className="rounded-full bg-surface-2 px-2 py-0.5 text-2xs font-medium capitalize text-ink-2">{s}</span>
+                  ))}
+                </span>
+              </li>
+            ))}
+          </ul>
         </CardBody>
       </Card>
 

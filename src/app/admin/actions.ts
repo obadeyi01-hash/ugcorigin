@@ -8,6 +8,8 @@ import { feeFor } from "@/lib/fees";
 import { placeCreator } from "@/lib/tiering/placement";
 import { notifyUser } from "@/lib/notify";
 import { logAudit } from "@/lib/admin/audit";
+import { sendEmail, emailConfigured } from "@/lib/email/send";
+import { creatorApprovedEmail } from "@/lib/email/templates";
 
 type Res = { error?: string; ok?: boolean };
 
@@ -30,13 +32,26 @@ export async function adminSetIdentityVerified(creatorId: string, verified: bool
     } catch {
       /* tier engine optional */
     }
+    // In-app notification (always), plus a dedicated welcome/approval email that
+    // bypasses the product-update preference — being verified is a milestone we
+    // always want to confirm. skipEmail avoids a duplicate generic email.
     await notifyUser(admin, creatorId, {
       type: "product",
       title: "You're verified — your profile is live 🎉",
       body: "Your identity is verified and your profile is now live in the directory. Brands can find and hire you. Add your bank details to receive payouts.",
       href: "/dashboard",
       ctaLabel: "View your dashboard",
+      skipEmail: true,
     });
+    if (emailConfigured()) {
+      const [{ data: profile }, { data: cp }] = await Promise.all([
+        admin.from("profiles").select("email").eq("id", creatorId).maybeSingle(),
+        admin.from("creator_profiles").select("display_name, handle").eq("id", creatorId).maybeSingle(),
+      ]);
+      if (profile?.email) {
+        await sendEmail(creatorApprovedEmail(profile.email, { name: cp?.display_name, handle: cp?.handle }));
+      }
+    }
   }
 
   await logAudit(admin, ctx!.userId, "creator.identity_verified", { targetType: "creator", targetId: creatorId, after: { verified } });
@@ -281,11 +296,22 @@ export async function adminAddAdmin(email: string, role: AdminRole): Promise<Res
   return { ok: true };
 }
 
+/** Count super_admins so we never demote/remove the last one (lockout guard). */
+async function superAdminCount(admin: ReturnType<typeof createAdminClient>): Promise<number> {
+  const { count } = await admin.from("admin_users").select("user_id", { count: "exact", head: true }).eq("role", "super_admin");
+  return count ?? 0;
+}
+
 export async function adminSetRole(userId: string, role: AdminRole): Promise<Res> {
   const { ctx, error } = await guardWrite("roles");
   if (error) return { error };
   const admin = createAdminClient();
   const { data: prev } = await admin.from("admin_users").select("role").eq("user_id", userId).maybeSingle();
+  if (!prev) return { error: "That admin no longer exists." };
+  // Don't strip the final super_admin — it would lock everyone out of role management.
+  if (prev.role === "super_admin" && role !== "super_admin" && (await superAdminCount(admin)) <= 1) {
+    return { error: "Promote another super admin first — you can't remove the last one." };
+  }
   const { error: e } = await admin.from("admin_users").update({ role }).eq("user_id", userId);
   if (e) return { error: e.message };
   await logAudit(admin, ctx!.userId, "admin.role_change", { targetType: "admin_user", targetId: userId, before: prev ?? null, after: { role } });
@@ -298,9 +324,13 @@ export async function adminRemoveAdmin(userId: string): Promise<Res> {
   if (error) return { error };
   if (ctx && ctx.userId === userId) return { error: "You can't remove yourself." };
   const admin = createAdminClient();
+  const { data: prev } = await admin.from("admin_users").select("role").eq("user_id", userId).maybeSingle();
+  if (prev?.role === "super_admin" && (await superAdminCount(admin)) <= 1) {
+    return { error: "You can't remove the last super admin." };
+  }
   const { error: e } = await admin.from("admin_users").delete().eq("user_id", userId);
   if (e) return { error: e.message };
-  await logAudit(admin, ctx!.userId, "admin.remove", { targetType: "admin_user", targetId: userId });
+  await logAudit(admin, ctx!.userId, "admin.remove", { targetType: "admin_user", targetId: userId, before: prev ?? null });
   revalidatePath("/admin/roles");
   return { ok: true };
 }
