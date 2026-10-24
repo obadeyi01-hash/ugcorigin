@@ -92,7 +92,7 @@ export function OfferList({ offers }: { offers: OfferRow[] }) {
                 </div>
               )}
 
-              <div className="mt-4 flex items-center justify-between border-t border-line pt-3">
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-line pt-3">
                 <div className="text-sm">
                   <span className="font-display font-semibold text-ink">{formatNaira(o.price_naira)}</span>
                   {o.role === "brand" && (
