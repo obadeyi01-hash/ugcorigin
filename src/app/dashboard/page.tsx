@@ -157,11 +157,11 @@ async function DashboardInner() {
               <div className="mt-5 grid gap-2 text-sm">
                 <p className="flex items-center gap-2 text-ink-2">
                   <BadgeCheck className={creator.identity_verified ? "size-4 text-success" : "size-4 text-ink-3"} />
-                  Identity {creator.identity_verified ? "verified" : ", verify to go live"}
+                  Identity {creator.identity_verified ? "verified" : "— verify to go live"}
                 </p>
                 <p className="flex items-center gap-2 text-ink-2">
                   <ShieldCheck className={creator.bank_verified ? "size-4 text-success" : "size-4 text-ink-3"} />
-                  Bank {creator.bank_verified ? "verified" : ", add to receive payouts"}
+                  Bank {creator.bank_verified ? "verified" : "— add to receive payouts"}
                 </p>
               </div>
 

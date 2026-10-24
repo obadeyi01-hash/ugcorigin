@@ -91,7 +91,7 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
         <Card className="md:sticky md:top-20">
           <CardBody>
             <p className="text-xs text-ink-3">Budget per creator</p>
-            <p className="font-display text-3xl font-bold text-ink">{brief.budget_naira ? formatNaira(brief.budget_naira) : ", "}</p>
+            <p className="font-display text-3xl font-bold text-ink">{brief.budget_naira ? formatNaira(brief.budget_naira) : "Open budget"}</p>
             <p className="mt-3 flex items-center gap-1.5 text-sm text-ink-2"><Users className="size-4" /> {brief.slots} creator{brief.slots === 1 ? "" : "s"} needed</p>
             {brief.deadline && <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-2"><MapPin className="size-4" /> Due {brief.deadline}</p>}
 
