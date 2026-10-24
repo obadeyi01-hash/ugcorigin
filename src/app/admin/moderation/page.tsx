@@ -6,6 +6,7 @@ import { Card, CardBody } from "@/components/ui/card";
 import { ReportActions } from "@/components/admin/report-actions";
 import { requireSection, isReadonly } from "@/lib/admin/rbac";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = { title: "Admin · Moderation" };
 
@@ -52,6 +53,15 @@ async function ModerationInner() {
   if (profileIds.length) {
     const { data: cs } = await supabase.from("creator_profiles").select("id, handle").in("id", profileIds);
     (cs ?? []).forEach((c) => c.handle && handles.set(c.id, c.handle));
+  }
+
+  // Resolve deliverable targets → their gig id so we can link to the delivery.
+  // Deliverables are gig-scoped (RLS), so read them with the admin client.
+  const deliverableIds = reports.filter((r) => r.target_type === "deliverable").map((r) => r.target_id);
+  const gigForDeliverable = new Map<string, string>();
+  if (deliverableIds.length) {
+    const { data: ds } = await createAdminClient().from("deliverables").select("id, gig_id").in("id", deliverableIds);
+    (ds ?? []).forEach((d) => d.gig_id && gigForDeliverable.set(d.id, d.gig_id));
   }
 
   const openCount = reports.filter((r) => r.status === "open").length;
@@ -108,8 +118,14 @@ async function ModerationInner() {
           <ul className="divide-y divide-line">
             {reports.map((r) => {
               const handle = handles.get(r.target_id);
+              const gigId = gigForDeliverable.get(r.target_id);
               const link =
-                r.target_type === "profile" && handle ? `/${handle}` : null;
+                r.target_type === "profile" && handle
+                  ? `/${handle}`
+                  : r.target_type === "deliverable" && gigId
+                    ? `/gigs/${gigId}`
+                    : null;
+              const linkLabel = r.target_type === "profile" ? `view @${handle}` : "view delivery";
               return (
                 <li key={r.id} className="p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -123,7 +139,7 @@ async function ModerationInner() {
                       <p className="mt-1 text-xs text-ink-3">
                         {new Date(r.created_at).toLocaleString()}
                         {link ? (
-                          <> · <Link href={link} className="text-accent hover:underline">view @{handle}</Link></>
+                          <> · <Link href={link} className="text-accent hover:underline">{linkLabel}</Link></>
                         ) : (
                           <> · {r.target_id.slice(0, 8)}</>
                         )}

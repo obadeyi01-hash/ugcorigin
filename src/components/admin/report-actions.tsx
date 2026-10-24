@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Ban, Trash2, XCircle, Check, AlertTriangle } from "lucide-react";
-import { dismissReport, takedownProfile, removeReview, removeSubmission, issueStrike } from "@/app/admin/moderation/actions";
+import { dismissReport, takedownProfile, removeReview, removeSubmission, issueStrike, strikeForDeliverable } from "@/app/admin/moderation/actions";
 
 type TargetType = "profile" | "review" | "campaign_submission" | "deliverable";
 
@@ -43,6 +43,11 @@ export function ReportActions({ reportId, targetType, targetId }: { reportId: st
       {targetType === "campaign_submission" && (
         <button disabled={pending} onClick={() => run(() => removeSubmission(reportId))} className={`${btn} border-error/30 text-error hover:bg-error/5`}>
           <XCircle className="size-3.5" /> Forfeit submission
+        </button>
+      )}
+      {targetType === "deliverable" && (
+        <button disabled={pending} onClick={() => run(() => strikeForDeliverable(reportId, ""))} className={`${btn} border-warning/40 text-warning hover:bg-warning/5`}>
+          <AlertTriangle className="size-3.5" /> Strike creator
         </button>
       )}
       <button disabled={pending} onClick={() => run(() => dismissReport(reportId, ""))} className={`${btn} border-line text-ink-2 hover:text-ink`}>

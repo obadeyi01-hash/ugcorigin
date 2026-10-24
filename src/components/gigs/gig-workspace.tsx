@@ -6,6 +6,7 @@ import { UploadCloud, MessageSquarePlus, Check, RotateCcw, ShieldCheck, Play } f
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Card, CardBody } from "@/components/ui/card";
+import { ReportButton } from "@/components/moderation/report-button";
 import { cn, formatNaira } from "@/lib/utils";
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
 import { validateVideo, LIMITS } from "@/lib/upload-limits";
@@ -151,6 +152,13 @@ export function GigWorkspace({
             </div>
           )}
         </div>
+
+        {/* Report a submitted delivery (AI/fake, infringing, abusive, off-brief). */}
+        {deliverable && role === "brand" && (
+          <div className="mt-2 flex justify-end">
+            <ReportButton targetType="deliverable" targetId={deliverable.id} label="Report this delivery" />
+          </div>
+        )}
 
         {canUpload && (
           <Card className="mt-4">

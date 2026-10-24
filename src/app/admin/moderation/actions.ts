@@ -76,11 +76,8 @@ export async function removeReview(reportId: string): Promise<Res> {
   return { ok: true };
 }
 
-/** Issue a trust strike to a creator (auto-benches at 3+). Lowers ranking. */
-export async function issueStrike(creatorId: string, note: string): Promise<Res> {
-  const { ctx, error } = await guardWrite("moderation");
-  if (error || !ctx) return { error: error ?? "Not permitted." };
-  const admin = createAdminClient();
+/** Apply a trust strike to a creator (auto-benches at 3+) + notify. Shared. */
+async function applyStrike(admin: Admin, actorId: string, creatorId: string, note: string): Promise<Res> {
   const { data: cur } = await admin.from("creator_profiles").select("strikes").eq("id", creatorId).maybeSingle();
   if (!cur) return { error: "Creator not found." };
   const strikes = (cur.strikes ?? 0) + 1;
@@ -90,7 +87,7 @@ export async function issueStrike(creatorId: string, note: string): Promise<Res>
     .update({ strikes, benched, strike_note: note.trim() || null })
     .eq("id", creatorId);
   if (e) return { error: e.message };
-  await admin.from("audit_log").insert({ actor_id: ctx.userId, action: "moderation.strike_issued", target_type: "creator_profile", target_id: creatorId, after: { strikes, benched } });
+  await admin.from("audit_log").insert({ actor_id: actorId, action: "moderation.strike_issued", target_type: "creator_profile", target_id: creatorId, after: { strikes, benched } });
   await admin.from("notifications").insert({
     user_id: creatorId,
     type: "ai_warning",
@@ -100,6 +97,41 @@ export async function issueStrike(creatorId: string, note: string): Promise<Res>
       : "A trust strike was added to your account. It lowers your search ranking. Keep deals on-platform and honour agreements to recover.",
     href: "/dashboard",
   });
+  return { ok: true };
+}
+
+/** Issue a trust strike to a creator (auto-benches at 3+). Lowers ranking. */
+export async function issueStrike(creatorId: string, note: string): Promise<Res> {
+  const { ctx, error } = await guardWrite("moderation");
+  if (error || !ctx) return { error: error ?? "Not permitted." };
+  const admin = createAdminClient();
+  const res = await applyStrike(admin, ctx.userId, creatorId, note);
+  if (res.error) return res;
+  revalidatePath("/admin/moderation");
+  return { ok: true };
+}
+
+/**
+ * Resolve a reported deliverable → its gig's creator → strike them, and mark
+ * the report actioned. The deliverable content itself (AI/fake, infringing,
+ * abusive, off-brief) is the trust signal; the escrow outcome is handled
+ * separately from the gig/finance tools.
+ */
+export async function strikeForDeliverable(reportId: string, note: string): Promise<Res> {
+  const { ctx, error } = await guardWrite("moderation");
+  if (error || !ctx) return { error: error ?? "Not permitted." };
+  const admin = createAdminClient();
+  const r = await loadReport(admin, reportId);
+  if (!r || r.target_type !== "deliverable") return { error: "Not a deliverable report." };
+
+  const { data: deliverable } = await admin.from("deliverables").select("gig_id").eq("id", r.target_id).maybeSingle();
+  if (!deliverable?.gig_id) return { error: "Deliverable not found." };
+  const { data: gig } = await admin.from("gigs").select("creator_id").eq("id", deliverable.gig_id).maybeSingle();
+  if (!gig?.creator_id) return { error: "Gig not found." };
+
+  const res = await applyStrike(admin, ctx.userId, gig.creator_id, note.trim() || "Issued from a reported delivery.");
+  if (res.error) return res;
+  await markResolved(admin, reportId, ctx.userId, "actioned", "Creator struck for a reported delivery.");
   revalidatePath("/admin/moderation");
   return { ok: true };
 }
