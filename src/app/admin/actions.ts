@@ -6,12 +6,15 @@ import { guardWrite, type AdminRole } from "@/lib/admin/rbac";
 import { paystackConfigured, initiateTransfer, createRefund } from "@/lib/payments/paystack";
 import { feeFor } from "@/lib/fees";
 import { placeCreator } from "@/lib/tiering/placement";
-import { notifyUser } from "@/lib/notify";
+import { notifyUser, notifyMany } from "@/lib/notify";
 import { logAudit } from "@/lib/admin/audit";
+import { requiresDualControl } from "@/lib/admin/security";
 import { sendEmail, emailConfigured } from "@/lib/email/send";
 import { creatorApprovedEmail } from "@/lib/email/templates";
+import { formatNaira } from "@/lib/utils";
 
-type Res = { error?: string; ok?: boolean };
+type Admin = ReturnType<typeof createAdminClient>;
+type Res = { error?: string; ok?: boolean; pendingApproval?: boolean };
 
 // ---- Verification ----------------------------------------------------------
 export async function adminSetIdentityVerified(creatorId: string, verified: boolean): Promise<Res> {
@@ -217,11 +220,18 @@ export async function adminSetFeatured(creatorId: string, featured: boolean): Pr
 }
 
 // ---- Finance: escrow + payouts --------------------------------------------
-export async function adminReleaseEscrow(gigId: string): Promise<Res> {
-  const { ctx, error } = await guardWrite("finance");
-  if (error) return { error };
-  const admin = createAdminClient();
+//
+// Release/refund move real money. For amounts at/above the dual-control threshold
+// (see @/lib/admin/security) a single admin may NOT move the money: they file a
+// request in `release_approvals` and a SECOND, DISTINCT finance/super_admin must
+// approve before the transfer executes (the initiator cannot self-approve). Below
+// the threshold the one-step path is kept. The execute* cores below hold the
+// idempotent money logic and are called either directly (small amounts) or by the
+// approval action (large amounts) — never twice for the same gig thanks to the
+// compare-and-swaps on gig/escrow status.
 
+/** Actually release escrow → ledger + one payout (idempotent). Audits as the given actor. */
+async function executeRelease(admin: Admin, gigId: string, actorId: string): Promise<Res> {
   const { data: gig } = await admin.from("gigs").select("id, creator_id, title, price_naira, status").eq("id", gigId).maybeSingle();
   if (!gig) return { error: "Gig not found." };
   if (gig.status === "completed") return { error: "This gig is already completed." };
@@ -271,15 +281,12 @@ export async function adminReleaseEscrow(gigId: string): Promise<Res> {
     }
   }
 
-  await logAudit(admin, ctx!.userId, "escrow.release", { targetType: "gig", targetId: gigId, after: { amount_naira: gig.price_naira, payout_id: payout?.id ?? null } });
-  revalidatePath("/admin/finance");
+  await logAudit(admin, actorId, "escrow.release", { targetType: "gig", targetId: gigId, after: { amount_naira: gig.price_naira, payout_id: payout?.id ?? null } });
   return { ok: true };
 }
 
-export async function adminRefundEscrow(gigId: string): Promise<Res> {
-  const { ctx, error } = await guardWrite("finance");
-  if (error) return { error };
-  const admin = createAdminClient();
+/** Actually refund escrow → Paystack + ledger + notify brand (idempotent). Audits as the given actor. */
+async function executeRefund(admin: Admin, gigId: string, actorId: string): Promise<Res> {
   const { data: gig } = await admin.from("gigs").select("id, brand_id, title, price_naira, status").eq("id", gigId).maybeSingle();
   if (!gig) return { error: "Gig not found." };
 
@@ -316,7 +323,181 @@ export async function adminRefundEscrow(gigId: string): Promise<Res> {
     ctaLabel: "View the gig",
   });
 
-  await logAudit(admin, ctx!.userId, "escrow.refund", { targetType: "gig", targetId: gigId, after: { amount_naira: total, refund_started: refundStarted } });
+  await logAudit(admin, actorId, "escrow.refund", { targetType: "gig", targetId: gigId, after: { amount_naira: total, refund_started: refundStarted } });
+  return { ok: true };
+}
+
+/** Notify every OTHER eligible approver (finance / super_admin) that a request is waiting. */
+async function notifyApprovers(admin: Admin, requesterId: string, summary: string): Promise<void> {
+  const { data: admins } = await admin.from("admin_users").select("user_id, role").in("role", ["finance", "super_admin"]);
+  const recipients = (admins ?? []).map((a) => a.user_id as string).filter((id) => id && id !== requesterId);
+  if (recipients.length === 0) return;
+  await notifyMany(
+    admin,
+    recipients.map((userId) => ({
+      userId,
+      payload: {
+        // Not a preference-gated type → always delivered (security-critical).
+        type: "admin_approval",
+        title: "A large payment needs a second approval",
+        body: `${summary} Another admin must approve it before the money moves.`,
+        href: "/admin/finance",
+        ctaLabel: "Review approvals",
+      },
+    })),
+  );
+}
+
+/**
+ * Create a pending dual-control request for a large release/refund. Idempotent on
+ * (gig_id, kind) while pending (DB unique index) — a second click returns the
+ * existing request instead of stacking duplicates.
+ */
+async function requestApproval(
+  admin: Admin,
+  requesterId: string,
+  gig: { id: string; title: string },
+  kind: "release" | "refund",
+  amountNaira: number,
+): Promise<Res> {
+  const { data: existing } = await admin
+    .from("release_approvals")
+    .select("id")
+    .eq("gig_id", gig.id)
+    .eq("kind", kind)
+    .eq("status", "pending")
+    .maybeSingle();
+  if (existing) {
+    await logAudit(admin, requesterId, `escrow.${kind}_requested`, { targetType: "gig", targetId: gig.id, after: { amount_naira: amountNaira, approval_id: existing.id, duplicate: true } });
+    revalidatePath("/admin/finance");
+    return { ok: true, pendingApproval: true };
+  }
+
+  const { data: row, error: e } = await admin
+    .from("release_approvals")
+    .insert({ gig_id: gig.id, kind, amount_naira: amountNaira, requested_by: requesterId, status: "pending" })
+    .select("id")
+    .single();
+  if (e || !row) return { error: e?.message ?? "Could not file the approval request." };
+
+  await logAudit(admin, requesterId, `escrow.${kind}_requested`, { targetType: "gig", targetId: gig.id, after: { amount_naira: amountNaira, approval_id: row.id } });
+  await notifyApprovers(admin, requesterId, `A ${kind} of ${formatNaira(amountNaira)} for "${gig.title}" is awaiting approval.`);
+  revalidatePath("/admin/finance");
+  return { ok: true, pendingApproval: true };
+}
+
+export async function adminReleaseEscrow(gigId: string): Promise<Res> {
+  const { ctx, error } = await guardWrite("finance");
+  if (error) return { error };
+  const admin = createAdminClient();
+
+  const { data: gig } = await admin.from("gigs").select("id, title, price_naira, status").eq("id", gigId).maybeSingle();
+  if (!gig) return { error: "Gig not found." };
+  if (gig.status === "completed") return { error: "This gig is already completed." };
+
+  // Large releases go through two-admin approval instead of moving money now.
+  if (requiresDualControl(gig.price_naira)) {
+    return requestApproval(admin, ctx!.userId, gig, "release", gig.price_naira);
+  }
+  const res = await executeRelease(admin, gigId, ctx!.userId);
+  revalidatePath("/admin/finance");
+  return res;
+}
+
+export async function adminRefundEscrow(gigId: string): Promise<Res> {
+  const { ctx, error } = await guardWrite("finance");
+  if (error) return { error };
+  const admin = createAdminClient();
+
+  const { data: gig } = await admin.from("gigs").select("id, title, price_naira, status").eq("id", gigId).maybeSingle();
+  if (!gig) return { error: "Gig not found." };
+  const total = gig.price_naira + feeFor(gig.price_naira);
+
+  // Large refunds go through two-admin approval instead of moving money now. Only
+  // gate what we can still refund (a held escrow); let execute* surface the real
+  // "nothing to refund" error below the threshold path.
+  if (requiresDualControl(total)) {
+    const { data: held } = await admin.from("escrow_transactions").select("id").eq("gig_id", gigId).eq("status", "held").maybeSingle();
+    if (!held) return { error: "No held escrow to refund (already released or refunded)." };
+    return requestApproval(admin, ctx!.userId, gig, "refund", total);
+  }
+  const res = await executeRefund(admin, gigId, ctx!.userId);
+  revalidatePath("/admin/finance");
+  return res;
+}
+
+/**
+ * Second-admin approval of a pending large release/refund. Enforces that the
+ * approver is a DISTINCT admin from the initiator, claims the request with a
+ * compare-and-swap (so two simultaneous approvers can't both execute), then runs
+ * the real money movement and marks the request executed. Audits the approval
+ * (who/when/amount) on top of the execute core's own escrow.release/refund entry.
+ */
+export async function adminApproveRelease(approvalId: string): Promise<Res> {
+  const { ctx, error } = await guardWrite("finance");
+  if (error) return { error };
+  const admin = createAdminClient();
+
+  const { data: req } = await admin
+    .from("release_approvals")
+    .select("id, gig_id, kind, amount_naira, status, requested_by")
+    .eq("id", approvalId)
+    .maybeSingle();
+  if (!req) return { error: "Approval request not found." };
+  if (req.status !== "pending") return { error: "This request has already been decided." };
+  if (req.requested_by === ctx!.userId) return { error: "You can't approve your own request — a different admin must approve." };
+
+  // Claim the request: only the approver who flips pending→approved proceeds.
+  const { data: claimed } = await admin
+    .from("release_approvals")
+    .update({ status: "approved", approved_by: ctx!.userId, decided_at: new Date().toISOString() })
+    .eq("id", approvalId)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
+  if (!claimed) return { error: "This request was just decided by someone else." };
+
+  await logAudit(admin, ctx!.userId, `escrow.${req.kind}_approved`, {
+    targetType: "gig",
+    targetId: req.gig_id,
+    after: { approval_id: req.id, amount_naira: req.amount_naira, requested_by: req.requested_by },
+  });
+
+  const res = req.kind === "release"
+    ? await executeRelease(admin, req.gig_id, ctx!.userId)
+    : await executeRefund(admin, req.gig_id, ctx!.userId);
+
+  if (res.error) {
+    // Money didn't move — reopen the request so it isn't lost, and surface why.
+    await admin.from("release_approvals").update({ status: "pending", approved_by: null, decided_at: null }).eq("id", approvalId);
+    return { error: res.error };
+  }
+
+  await admin.from("release_approvals").update({ status: "executed", executed_at: new Date().toISOString() }).eq("id", approvalId);
+  revalidatePath("/admin/finance");
+  return { ok: true };
+}
+
+/** Reject a pending release/refund request (any finance/super_admin, incl. the initiator cancelling). */
+export async function adminRejectRelease(approvalId: string, reason?: string): Promise<Res> {
+  const { ctx, error } = await guardWrite("finance");
+  if (error) return { error };
+  const admin = createAdminClient();
+
+  const { data: claimed } = await admin
+    .from("release_approvals")
+    .update({ status: "rejected", approved_by: ctx!.userId, decided_at: new Date().toISOString(), note: reason?.trim().slice(0, 300) || null })
+    .eq("id", approvalId)
+    .eq("status", "pending")
+    .select("id, gig_id, kind, amount_naira")
+    .maybeSingle();
+  if (!claimed) return { error: "This request has already been decided." };
+
+  await logAudit(admin, ctx!.userId, `escrow.${claimed.kind}_rejected`, {
+    targetType: "gig",
+    targetId: claimed.gig_id,
+    after: { approval_id: claimed.id, amount_naira: claimed.amount_naira, reason: reason?.trim().slice(0, 300) ?? null },
+  });
   revalidatePath("/admin/finance");
   return { ok: true };
 }

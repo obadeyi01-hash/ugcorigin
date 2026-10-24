@@ -1,6 +1,6 @@
 import type { ElementType, ReactNode } from "react";
 import Link from "next/link";
-import { LayoutDashboard, BadgeCheck, Users, Briefcase, Banknote, Scale, Shield, Layers, Rocket, BookOpen, Flag, MessageSquare, LifeBuoy, Megaphone } from "lucide-react";
+import { LayoutDashboard, BadgeCheck, Users, Briefcase, Banknote, Scale, Shield, Layers, Rocket, BookOpen, Flag, MessageSquare, LifeBuoy, Megaphone, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { Container } from "@/components/ui/container";
 import { cn } from "@/lib/utils";
@@ -43,7 +43,16 @@ export function AdminShell({
             <Link href="/"><Logo variant="combined" size={30} /></Link>
             <span className="rounded-full bg-ink px-2 py-0.5 text-xs font-semibold text-paper">Admin</span>
           </div>
-          <span className="text-sm font-medium text-ink-3">{ROLE_LABEL[role]}</span>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/admin/mfa"
+              title="Two-factor authentication"
+              className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink"
+            >
+              <ShieldCheck className="size-4 text-accent" /> 2FA
+            </Link>
+            <span className="text-sm font-medium text-ink-3">{ROLE_LABEL[role]}</span>
+          </div>
         </Container>
       </header>
 

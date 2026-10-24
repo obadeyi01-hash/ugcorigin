@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Card, CardBody } from "@/components/ui/card";
-import { EscrowControls, PayoutControls, RetryPayoutControls } from "@/components/admin/finance-controls";
+import { EscrowControls, PayoutControls, RetryPayoutControls, ReleaseApprovalControls } from "@/components/admin/finance-controls";
 import { requireSection, isReadonly } from "@/lib/admin/rbac";
+import { dualControlThresholdNaira } from "@/lib/admin/security";
 import { createClient } from "@/lib/supabase/server";
 import { formatNaira } from "@/lib/utils";
 
@@ -12,29 +13,38 @@ export const metadata: Metadata = { title: "Admin · Finance" };
 type EscrowRow = { id: string; amount_naira: number; fee_naira: number; gig: { id: string; title: string } | null };
 type PayoutRow = { id: string; amount_naira: number; status: string; gig: { title: string } | null; creator: { handle: string; display_name: string | null } | null };
 type AuditRow = { id: string; action: string; target_type: string | null; target_id: string | null; created_at: string };
+type ApprovalRow = { id: string; kind: "release" | "refund"; amount_naira: number; requested_by: string | null; created_at: string; gig: { title: string } | null };
 
 const AUDIT_LABEL: Record<string, string> = {
   "escrow.release": "Escrow released",
   "escrow.refund": "Escrow refunded",
+  "escrow.release_requested": "Release submitted for approval",
+  "escrow.refund_requested": "Refund submitted for approval",
+  "escrow.release_approved": "Release approved (2nd admin)",
+  "escrow.refund_approved": "Refund approved (2nd admin)",
+  "escrow.release_rejected": "Release request rejected",
+  "escrow.refund_rejected": "Refund request rejected",
   "payout.mark_paid": "Payout marked paid",
   "payout.retry": "Payout retried",
 };
 
 async function FinanceInner() {
-  const { role } = await requireSection("finance");
+  const { role, userId } = await requireSection("finance");
   const supabase = await createClient();
   const readonly = isReadonly(role);
 
-  const [{ data: escrow }, { data: payouts }, { data: failed }, { data: activity }] = await Promise.all([
+  const [{ data: escrow }, { data: payouts }, { data: failed }, { data: activity }, { data: approvals }] = await Promise.all([
     supabase.from("escrow_transactions").select("id, amount_naira, fee_naira, gig:gigs(id, title)").eq("status", "held").limit(100),
     supabase.from("payouts").select("id, amount_naira, status, gig:gigs(title), creator:creator_profiles(handle, display_name)").in("status", ["pending", "processing"]).limit(100),
     supabase.from("payouts").select("id, amount_naira, status, gig:gigs(title), creator:creator_profiles(handle, display_name)").eq("status", "failed").limit(100),
     supabase.from("audit_log").select("id, action, target_type, target_id, created_at").like("action", "escrow.%").order("created_at", { ascending: false }).limit(20),
+    supabase.from("release_approvals").select("id, kind, amount_naira, requested_by, created_at, gig:gigs(title)").eq("status", "pending").order("created_at", { ascending: false }).limit(100),
   ]);
 
   const escrowRows = (escrow ?? []) as unknown as EscrowRow[];
   const payoutRows = (payouts ?? []) as unknown as PayoutRow[];
   const failedRows = (failed ?? []) as unknown as PayoutRow[];
+  const approvalRows = (approvals ?? []) as unknown as ApprovalRow[];
   // Finance + payout activity (two prefixes), newest first.
   const { data: payoutActivity } = await supabase.from("audit_log").select("id, action, target_type, target_id, created_at").like("action", "payout.%").order("created_at", { ascending: false }).limit(20);
   const activityRows = [...((activity ?? []) as AuditRow[]), ...((payoutActivity ?? []) as AuditRow[])]
@@ -44,8 +54,34 @@ async function FinanceInner() {
   return (
     <AdminShell role={role} active="finance">
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Finance</h1>
+      <p className="mt-1 text-sm text-ink-3">
+        Releases and refunds of {formatNaira(dualControlThresholdNaira())} or more need a second admin to approve before the money moves.
+      </p>
 
-      <h2 className="mt-6 font-display text-lg font-semibold text-ink">Escrow held ({escrowRows.length})</h2>
+      {approvalRows.length > 0 && (
+        <>
+          <h2 className="mt-6 font-display text-lg font-semibold text-accent">Pending approvals ({approvalRows.length})</h2>
+          <div className="mt-3 grid gap-3">
+            {approvalRows.map((a) => (
+              <Card key={a.id} variant="outline" className="border-accent/30 bg-accent-tint/30">
+                <CardBody className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-ink">
+                      <span className="capitalize">{a.kind}</span> · {formatNaira(a.amount_naira)}
+                    </p>
+                    <p className="text-xs text-ink-3">
+                      {a.gig?.title ?? "Gig"} · requested {new Date(a.created_at).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })}
+                    </p>
+                  </div>
+                  <ReleaseApprovalControls approvalId={a.id} isRequester={a.requested_by === userId} readonly={readonly} />
+                </CardBody>
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
+
+      <h2 className="mt-8 font-display text-lg font-semibold text-ink">Escrow held ({escrowRows.length})</h2>
       <div className="mt-3 grid gap-3">
         {escrowRows.length === 0 && <Card variant="outline"><CardBody className="py-10 text-center text-ink-2">No escrow currently held.</CardBody></Card>}
         {escrowRows.map((e) => (
