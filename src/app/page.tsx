@@ -28,6 +28,7 @@ import { HeroSearch } from "@/components/marketplace/hero-search";
 import { StatsBand } from "@/components/marketplace/stats-band";
 import { SAMPLE_CREATORS, NICHES } from "@/lib/sample-data";
 import { topRankedCreators } from "@/lib/creators/top";
+import { ProductMomentCard, HowItWorks } from "@/components/marketplace/product-moments";
 
 const steps = [
   {
@@ -84,7 +85,7 @@ async function HeroStrip() {
   const strip = await getStrip();
   return (
     <>
-      {strip.slice(0, 4).map((c, i) => (
+      {strip.slice(0, 3).map((c, i) => (
         <Reveal key={c.handle ?? c.name} delay={i * 60}>
           <CreatorCard creator={{ ...c, priority: i < 2 }} />
         </Reveal>
@@ -168,7 +169,8 @@ export default function Home() {
 
             {/* Creator strip — brings real faces into the first view */}
             <CardScroller gridClass="mt-7 grid-cols-2 lg:grid-cols-4" className="relative">
-              <Suspense fallback={<SampleStrip from={0} to={4} priorityCount={2} />}>
+              <ProductMomentCard />
+              <Suspense fallback={<SampleStrip from={0} to={3} priorityCount={1} />}>
                 <HeroStrip />
               </Suspense>
             </CardScroller>
@@ -189,24 +191,7 @@ export default function Home() {
               title="One place, from brief to approved content"
               subtitle="No scattered DMs, no deals lost in WhatsApp. Every step happens on UGCOrigin, so nothing slips and nobody gets burned."
             />
-            <div className="mt-12 grid gap-5 md:grid-cols-3">
-              {steps.map((s, i) => (
-                <Reveal key={s.title} delay={i * 80}>
-                  <div className="group u-lift h-full rounded-2xl border border-line bg-surface p-7 shadow-sm transition-colors hover:border-accent/30">
-                    <span className="font-display text-sm font-semibold text-ink-3">
-                      0{i + 1}
-                    </span>
-                    <div className="mt-3 grid size-12 place-items-center rounded-xl bg-accent-tint text-accent-hover transition-transform duration-300 group-hover:scale-110">
-                      <s.icon className="size-6" />
-                    </div>
-                    <h3 className="mt-5 font-display text-lg font-semibold text-ink">
-                      {s.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-ink-2">{s.body}</p>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
+            <HowItWorks steps={steps} />
           </Container>
         </section>
 
