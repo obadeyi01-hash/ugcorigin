@@ -98,7 +98,8 @@ export async function requestRevisionAction(gigId: string, deliverableId: string
   if (!gig || gig.brand_id !== user.id) return { error: "Not allowed." };
 
   const admin = createAdminClient();
-  await admin.from("deliverables").update({ status: "revision_requested" }).eq("id", deliverableId);
+  // Bind the deliverable to this gig so a stray id can't be flipped.
+  await admin.from("deliverables").update({ status: "revision_requested" }).eq("id", deliverableId).eq("gig_id", gigId);
   await admin.from("gigs").update({ status: "revision" }).eq("id", gigId);
   await notifyUser(admin, gig.creator_id, {
     type: "revision_requested",
@@ -129,15 +130,27 @@ export async function approveReleaseAction(
 
   const admin = createAdminClient();
 
-  // Approve the deliverable + complete the gig.
-  await admin.from("deliverables").update({ status: "approved" }).eq("id", deliverableId);
-  await admin.from("gigs").update({ status: "completed" }).eq("id", gigId);
+  // Compare-and-swap: claim the completion. Only the request that flips the gig
+  // out of a non-completed state proceeds — this makes release + payout fire
+  // exactly once even if two approvals land concurrently.
+  const { data: claimed } = await admin
+    .from("gigs")
+    .update({ status: "completed" })
+    .eq("id", gigId)
+    .neq("status", "completed")
+    .select("id")
+    .maybeSingle();
+  if (!claimed) return { ok: true }; // already completed by a concurrent request
 
-  // Release escrow + ledger.
+  // Approve the deliverable (bound to this gig so a stray id can't be flipped).
+  await admin.from("deliverables").update({ status: "approved" }).eq("id", deliverableId).eq("gig_id", gigId);
+
+  // Release escrow (only from a held state) + ledger.
   const { data: esc } = await admin
     .from("escrow_transactions")
     .update({ status: "released" })
     .eq("gig_id", gigId)
+    .eq("status", "held")
     .select("id")
     .maybeSingle();
   await admin.from("ledger_entries").insert([
@@ -152,14 +165,18 @@ export async function approveReleaseAction(
     .eq("id", gig.creator_id)
     .maybeSingle();
 
-  const { data: payout } = await admin
-    .from("payouts")
-    .insert({ creator_id: gig.creator_id, gig_id: gigId, provider: "paystack", amount_naira: gig.price_naira, status: "pending" })
-    .select("id")
-    .single();
+  // One payout per gig — guard against a re-run creating a second transfer.
+  const { data: existingPayout } = await admin.from("payouts").select("id, status, provider_ref").eq("gig_id", gigId).maybeSingle();
+  const { data: payout } = existingPayout
+    ? { data: existingPayout }
+    : await admin
+        .from("payouts")
+        .insert({ creator_id: gig.creator_id, gig_id: gigId, provider: "paystack", amount_naira: gig.price_naira, status: "pending" })
+        .select("id, status, provider_ref")
+        .single();
 
-  let payoutQueued = false;
-  if (paystackConfigured() && creator?.payout_recipient_code && payout) {
+  let payoutQueued = payout?.status === "processing" || payout?.status === "paid";
+  if (paystackConfigured() && creator?.payout_recipient_code && payout && payout.status === "pending") {
     try {
       const t = await initiateTransfer({
         amountNaira: gig.price_naira,

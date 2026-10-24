@@ -77,6 +77,36 @@ export async function initTransaction(args: {
   return { authorizationUrl: json.data.authorization_url, reference: json.data.reference };
 }
 
+export type VerifiedTransaction = {
+  status: string; // 'success' | 'failed' | 'abandoned' | ...
+  amountNaira: number; // converted from kobo
+  currency: string; // 'NGN'
+  reference: string;
+};
+
+/**
+ * Re-verify a transaction server-side against Paystack. Never grant value on a
+ * webhook body alone: this confirms the charge actually succeeded and how much
+ * was really paid, in the right currency. Throws on a network/API error (so the
+ * caller can let Paystack retry).
+ */
+export async function verifyTransaction(reference: string): Promise<VerifiedTransaction> {
+  if (!paystackConfigured()) throw new Error("Paystack is not configured.");
+  const res = await fetch(`${BASE}/transaction/verify/${encodeURIComponent(reference)}`, {
+    headers: headers(),
+    cache: "no-store",
+  });
+  const json = await res.json();
+  if (!json?.status) throw new Error(json?.message || "Could not verify transaction.");
+  const d = json.data;
+  return {
+    status: d.status as string,
+    amountNaira: Math.round((d.amount as number) / 100),
+    currency: d.currency as string,
+    reference: d.reference as string,
+  };
+}
+
 /** Create a transfer recipient (NUBAN) for creator payouts; returns recipient_code. */
 export async function createTransferRecipient(args: {
   name: string;
@@ -124,6 +154,31 @@ export async function initiateTransfer(args: {
   const json = await res.json();
   if (!json?.status) throw new Error(json?.message || "Could not start payout.");
   return { status: json.data.status as string, reference: json.data.reference ?? null };
+}
+
+/**
+ * Refund a charge back to the brand via Paystack. `reference` is the original
+ * transaction reference (escrow_transactions.provider_ref). Amount optional —
+ * omit for a full refund. Returns the refund status Paystack reports.
+ */
+export async function createRefund(args: {
+  reference: string;
+  amountNaira?: number;
+  reason?: string;
+}): Promise<{ status: string }> {
+  if (!paystackConfigured()) throw new Error("Paystack is not configured.");
+  const body: Record<string, unknown> = { transaction: args.reference };
+  if (args.amountNaira != null) body.amount = Math.round(args.amountNaira * 100); // kobo
+  if (args.reason) body.merchant_note = args.reason;
+  const res = await fetch(`${BASE}/refund`, {
+    method: "POST",
+    headers: headers(),
+    cache: "no-store",
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!json?.status) throw new Error(json?.message || "Could not start the refund.");
+  return { status: (json.data?.status as string) ?? "pending" };
 }
 
 /** Verify a Paystack webhook signature (x-paystack-signature = HMAC-SHA512 of the raw body). */
