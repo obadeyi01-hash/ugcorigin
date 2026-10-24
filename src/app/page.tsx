@@ -128,9 +128,9 @@ export default function Home() {
         <Container className="pt-3 sm:pt-8">
           <section className="relative -mx-4 overflow-hidden rounded-none bg-obsidian px-5 py-8 text-chalk sm:mx-0 sm:rounded-[2rem] sm:px-10 sm:py-14">
             <div className="u-grain pointer-events-none absolute inset-0 opacity-30" />
-            {/* Soft pink / violet glows for depth */}
+            {/* Soft brand glows for depth */}
             <div className="pointer-events-none absolute -right-24 -top-24 size-[32rem] rounded-full bg-accent/25 blur-[120px]" />
-            <div className="pointer-events-none absolute -left-32 bottom-0 size-[28rem] rounded-full bg-[#a855f7]/15 blur-[120px]" />
+            <div className="pointer-events-none absolute -left-32 bottom-0 size-[28rem] rounded-full bg-accent-bright/10 blur-[120px]" />
             <div className="relative mx-auto max-w-3xl text-left sm:text-center">
               <Reveal>
                 <span className="inline-flex items-center rounded-full border border-chalk/15 bg-chalk/[0.06] px-3.5 py-1 text-[0.7rem] font-medium uppercase tracking-[0.12em] text-chalk/75 sm:text-xs">

@@ -78,7 +78,7 @@ export function CreatorProfile({ data }: { data: ProfileData }) {
               {data.verified && <VerifiedBadge />}
               {data.tier && <TierBadge tier={data.tier} />}
               {data.influencer && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-accent to-[#a855f7] px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm">
+                <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-accent to-accent-bright px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm">
                   <Sparkles className="size-3" /> Influencer
                 </span>
               )}

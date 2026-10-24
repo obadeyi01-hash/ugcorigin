@@ -42,7 +42,7 @@ async function Inner() {
 
   return (
     <div className="mx-auto max-w-xl py-12">
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-accent to-[#a855f7] px-3 py-1 text-xs font-semibold text-white">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-accent to-accent-bright px-3 py-1 text-xs font-semibold text-white">
         <Sparkles className="size-3.5" /> Creator Pro
       </span>
       <h1 className="mt-4 font-display text-3xl font-bold tracking-tight text-ink sm:text-4xl">Level up with Pro</h1>

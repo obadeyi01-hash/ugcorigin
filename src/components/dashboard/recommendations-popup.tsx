@@ -46,7 +46,7 @@ export function RecommendationsPopup({ creators }: { creators: RecCreator[] }) {
       <div className="w-full max-w-lg rounded-2xl border border-line bg-surface p-6 shadow-2xl">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-accent to-[#a855f7] px-2.5 py-0.5 text-xs font-semibold text-white">
+            <p className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-accent to-accent-bright px-2.5 py-0.5 text-xs font-semibold text-white">
               <Sparkles className="size-3.5" /> Recommended for you
             </p>
             <h2 className="mt-2 font-display text-xl font-semibold text-ink">Creators to get you started</h2>
