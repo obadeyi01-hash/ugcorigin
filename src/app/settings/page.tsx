@@ -35,7 +35,7 @@ async function SettingsInner() {
   const [{ data: creator }, { data: brand }, { data: settings }] = await Promise.all([
     supabase
       .from("creator_profiles")
-      .select("handle, first_name, last_name, display_name, bio, location, phone, niches, content_formats, starting_rate_naira, avatar_url, tier")
+      .select("handle, first_name, last_name, display_name, bio, location, phone, niches, content_formats, starting_rate_naira, avatar_url, tier, identity_verified, verification_status")
       .eq("id", user.id)
       .maybeSingle(),
     supabase

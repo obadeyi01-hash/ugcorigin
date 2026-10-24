@@ -59,7 +59,7 @@ export async function updateCreatorSettings(input: CreatorSettingsInput): Promis
   // perk. Enforce before writing.
   const { data: current } = await supabase
     .from("creator_profiles")
-    .select("handle, username_changes, avatar_url, avatar_changes, avatar_last_changed_at")
+    .select("handle, username_changes, avatar_url, avatar_changes, avatar_last_changed_at, identity_verified, first_name, last_name")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -95,9 +95,13 @@ export async function updateCreatorSettings(input: CreatorSettingsInput): Promis
     if (avatarChanges >= 3 && within30d) mediaFlag = true;
   }
 
-  const first = input.firstName.trim();
-  const last = input.lastName.trim();
-  if (!first) return { error: "First name can’t be empty." };
+  // Once identity is verified the legal name is LOCKED — ignore any attempt to
+  // change it and keep the verified value (the UI also renders it read-only;
+  // this is the server-side guard). A creator must contact admin to change it.
+  const nameLocked = !!current?.identity_verified;
+  const first = nameLocked ? (current?.first_name ?? "").trim() : input.firstName.trim();
+  const last = nameLocked ? (current?.last_name ?? "").trim() : input.lastName.trim();
+  if (!nameLocked && !first) return { error: "First name can’t be empty." };
   const display = `${first} ${last}`.trim() || input.displayName.trim();
 
   const { error } = await supabase
@@ -121,7 +125,12 @@ export async function updateCreatorSettings(input: CreatorSettingsInput): Promis
     .eq("id", user.id);
 
   if (error) {
-    if (error.code === "23505") return { error: "That username is taken, try another." };
+    if (error.code === "23505") {
+      if (/phone/i.test(error.message)) {
+        return { error: "That phone number is already linked to another creator account." };
+      }
+      return { error: "That username is taken, try another." };
+    }
     return { error: error.message };
   }
 

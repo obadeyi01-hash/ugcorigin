@@ -5,8 +5,10 @@ import { redirect } from "next/navigation";
 import { Logo } from "@/components/ui/logo";
 import { VerifyFlow } from "@/components/verify/verify-flow";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { listBanks, paystackConfigured } from "@/lib/payments/paystack";
 import { kycConfigured } from "@/lib/kyc";
+import { cloudinaryConfigured } from "@/lib/cloudinary";
 
 export const metadata: Metadata = { title: "Go live" };
 
@@ -26,12 +28,22 @@ async function VerifyInner() {
 
   const { data: creator } = await supabase
     .from("creator_profiles")
-    .select("handle, completeness, bank_verified, identity_verified, agreements_accepted_at, is_live, verification_status")
+    .select("handle, completeness, bank_verified, identity_verified, photo_verified, agreements_accepted_at, is_live, verification_status")
     .eq("id", user.id)
     .maybeSingle();
 
   if (!creator) redirect("/onboarding?role=creator");
   if (creator.is_live) redirect("/dashboard");
+
+  // identity_submissions is service-role only; read the creator's own row to
+  // prefill the manual flow (status + whether a selfie is on file). We never
+  // send the NIN back to the client.
+  const admin = createAdminClient();
+  const { data: sub } = await admin
+    .from("identity_submissions")
+    .select("status, selfie_ref, reject_reason")
+    .eq("user_id", user.id)
+    .maybeSingle();
 
   const banks = await listBanks();
 
@@ -42,12 +54,19 @@ async function VerifyInner() {
         completeness: creator.completeness ?? 0,
         bank_verified: !!creator.bank_verified,
         identity_verified: !!creator.identity_verified,
+        photo_verified: !!creator.photo_verified,
         agreements_accepted_at: creator.agreements_accepted_at ?? null,
         verification_status: creator.verification_status ?? "unverified",
+      }}
+      identity={{
+        status: (sub?.status as "pending" | "approved" | "rejected" | undefined) ?? null,
+        hasSelfie: !!sub?.selfie_ref,
+        rejectReason: sub?.reject_reason ?? null,
       }}
       banks={banks}
       kycConfigured={kycConfigured()}
       paystackConfigured={paystackConfigured()}
+      cloudinaryConfigured={cloudinaryConfigured()}
     />
   );
 }

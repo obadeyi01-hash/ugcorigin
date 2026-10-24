@@ -45,6 +45,91 @@ export async function adminSetIdentityVerified(creatorId: string, verified: bool
   return { ok: true };
 }
 
+/**
+ * Approve a manual identity submission (selfie + NIN). Flips the identity badge
+ * AND the photo_verified gate, marks the submission approved, and pushes the
+ * profile live (as promised). This is the manual-review counterpart to the
+ * automated KYC webhook.
+ */
+export async function adminApproveIdentity(creatorId: string): Promise<Res> {
+  const { ctx, error } = await guardWrite("verification");
+  if (error) return { error };
+  const admin = createAdminClient();
+
+  // Require a selfie on file before approving — no going live without a photo.
+  const { data: sub } = await admin
+    .from("identity_submissions")
+    .select("selfie_ref")
+    .eq("user_id", creatorId)
+    .maybeSingle();
+  if (!sub?.selfie_ref) return { error: "This creator hasn't submitted a photo yet." };
+
+  const { error: pe } = await admin
+    .from("creator_profiles")
+    .update({ identity_verified: true, photo_verified: true, verification_status: "verified", is_live: true })
+    .eq("id", creatorId);
+  if (pe) return { error: pe.message };
+
+  await admin
+    .from("identity_submissions")
+    .update({ status: "approved", reject_reason: null, reviewed_at: new Date().toISOString(), reviewer_id: ctx!.userId })
+    .eq("user_id", creatorId);
+  await admin
+    .from("verifications")
+    .update({ status: "verified" })
+    .eq("user_id", creatorId)
+    .eq("kind", "identity");
+
+  try {
+    await placeCreator(creatorId);
+  } catch {
+    /* tier engine optional */
+  }
+  await notifyUser(admin, creatorId, {
+    type: "product",
+    title: "You're verified — your profile is live 🎉",
+    body: "Your identity is verified and your profile is now live in the directory. Brands can find and hire you. Add your bank details to receive payouts.",
+    href: "/dashboard",
+    ctaLabel: "View your dashboard",
+  });
+
+  await logAudit(admin, ctx!.userId, "creator.identity_approved", { targetType: "creator", targetId: creatorId });
+  revalidatePath("/admin/verification");
+  revalidatePath("/admin/users");
+  return { ok: true };
+}
+
+/** Reject a manual identity submission with a reviewer note (the creator can
+ *  resubmit). Never touches identity_verified — a rejected creator was never live. */
+export async function adminRejectIdentity(creatorId: string, reason: string): Promise<Res> {
+  const { ctx, error } = await guardWrite("verification");
+  if (error) return { error };
+  const note = reason.trim();
+  if (!note) return { error: "Add a short reason so the creator knows what to fix." };
+  const admin = createAdminClient();
+
+  const { error: se } = await admin
+    .from("identity_submissions")
+    .update({ status: "rejected", reject_reason: note.slice(0, 300), reviewed_at: new Date().toISOString(), reviewer_id: ctx!.userId })
+    .eq("user_id", creatorId);
+  if (se) return { error: se.message };
+
+  await admin.from("creator_profiles").update({ verification_status: "rejected" }).eq("id", creatorId);
+  await admin.from("verifications").update({ status: "rejected" }).eq("user_id", creatorId).eq("kind", "identity");
+
+  await notifyUser(admin, creatorId, {
+    type: "product",
+    title: "Identity check needs another look",
+    body: `We couldn't approve your identity submission: ${note.slice(0, 160)}. Please resubmit from your Go-live page.`,
+    href: "/verify",
+    ctaLabel: "Resubmit",
+  });
+
+  await logAudit(admin, ctx!.userId, "creator.identity_rejected", { targetType: "creator", targetId: creatorId, after: { reason: note.slice(0, 300) } });
+  revalidatePath("/admin/verification");
+  return { ok: true };
+}
+
 export async function adminSetLive(creatorId: string, live: boolean): Promise<Res> {
   const { ctx, error } = await guardWrite("verification");
   if (error) return { error };
