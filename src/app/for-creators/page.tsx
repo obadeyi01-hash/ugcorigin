@@ -12,6 +12,10 @@ import { Faq } from "@/components/landing/faq";
 import { JsonLd } from "@/components/seo/json-ld";
 import { formatNaira } from "@/lib/utils";
 import { tierMeta } from "@/lib/tiers";
+import { SAMPLE_CREATORS } from "@/lib/sample-data";
+import { CreatorCard } from "@/components/marketplace/creator-card";
+import { CardScroller } from "@/components/marketplace/card-scroller";
+import { ProductMomentFeature } from "@/components/marketplace/product-moment-feature";
 
 const SIGNUP = "/signup?role=creator";
 const FLOOR = tierMeta("origin").floorNaira; // honest: the Origin-tier price floor
@@ -86,7 +90,24 @@ export default function ForCreatorsPage() {
                 <p className="mt-4 text-xs text-chalk/55">Free to join · Keep 100% · Next-day payouts</p>
               </Reveal>
             </div>
+
+            {/* Real creators already here — faces primary (homepage treatment) */}
+            <CardScroller gridClass="mt-8 grid-cols-2 lg:grid-cols-4" className="relative">
+              {SAMPLE_CREATORS.slice(0, 4).map((c, i) => (
+                <Reveal key={c.name} delay={i * 60}>
+                  <CreatorCard creator={{ ...c, priority: i < 2 }} variant="overlay" />
+                </Reveal>
+              ))}
+            </CardScroller>
           </section>
+        </Container>
+
+        {/* Product moment in a creator's context — deliver → approved → paid */}
+        <Container className="pt-10 sm:pt-14">
+          <p className="text-center text-sm text-ink-3">This is the moment you get paid — the same flow every brand runs</p>
+          <Reveal className="mt-6">
+            <ProductMomentFeature variant="creator" />
+          </Reveal>
         </Container>
 
         {/* Values */}

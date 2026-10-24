@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { ArrowRight, ShieldCheck, BadgeCheck, Wallet, MessageSquare, Sparkles, Check } from "lucide-react";
 import { LandingNav } from "@/components/landing/landing-nav";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -12,6 +11,9 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { Faq } from "@/components/landing/faq";
 import { JsonLd } from "@/components/seo/json-ld";
 import { SAMPLE_CREATORS } from "@/lib/sample-data";
+import { CreatorCard } from "@/components/marketplace/creator-card";
+import { CardScroller } from "@/components/marketplace/card-scroller";
+import { ProductMomentFeature } from "@/components/marketplace/product-moment-feature";
 
 const SIGNUP = "/signup?role=brand";
 
@@ -85,25 +87,24 @@ export default function ForBrandsPage() {
                 <p className="mt-4 text-xs text-chalk/55">Free to post · Escrow-protected · Verified humans, no AI slop</p>
               </Reveal>
             </div>
+
+            {/* Real creator faces, brought into the first view (homepage treatment) */}
+            <CardScroller gridClass="mt-8 grid-cols-2 lg:grid-cols-4" className="relative">
+              {SAMPLE_CREATORS.slice(0, 4).map((c, i) => (
+                <Reveal key={c.name} delay={i * 60}>
+                  <CreatorCard creator={{ ...c, priority: i < 2 }} variant="overlay" />
+                </Reveal>
+              ))}
+            </CardScroller>
           </section>
         </Container>
 
-        {/* Proof strip, representative verified creators (real people, no fabricated metrics) */}
-        <Container className="py-12">
+        {/* Product moment in a brand's context — the review → approve → release flow */}
+        <Container className="pt-10 sm:pt-14">
           <p className="text-center text-sm text-ink-3">Creators ready to work across beauty, fashion, fintech, food &amp; more</p>
-          <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-6">
-            {SAMPLE_CREATORS.slice(0, 6).map((c) => (
-              <div key={c.name} className="overflow-hidden rounded-2xl border border-line bg-surface">
-                <div className="relative aspect-square bg-surface-2">
-                  <Image src={c.image!} alt={`${c.name}, creator`} fill sizes="120px" className="object-cover" />
-                </div>
-                <div className="p-2 text-center">
-                  <p className="truncate text-xs font-semibold text-ink">{c.name}</p>
-                  <p className="truncate text-2xs text-ink-3">{c.niches[0]}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+          <Reveal className="mt-6">
+            <ProductMomentFeature variant="brand" />
+          </Reveal>
         </Container>
 
         {/* Values */}
