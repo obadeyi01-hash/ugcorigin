@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { CreatorCard, type Creator } from "@/components/marketplace/creator-card";
 import { DirectoryFilters } from "@/components/marketplace/directory-filters";
 import { createClient } from "@/lib/supabase/server";
-import { rankCreators, type RankCreator } from "@/lib/ranking";
+import { rankCreators, applyExploration, type RankCreator } from "@/lib/ranking";
 import { publicName } from "@/lib/names";
 
 // Per-filter SEO: a niche/region query reads like a landing page so it ranks
@@ -102,7 +102,7 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
       let query = supabase
         .from("creator_profiles")
         .select(
-          "id, handle, display_name, first_name, last_name, location, niches, starting_rate_naira, featured, verification_status, tier, earned_reputation, updated_at, avatar_url, strikes, benched, metrics:creator_metrics(avg_rating, review_count, gigs_completed)",
+          "id, handle, display_name, first_name, last_name, location, niches, starting_rate_naira, featured, verification_status, tier, earned_reputation, updated_at, avatar_url, strikes, benched, metrics:creator_metrics(avg_rating, review_count, gigs_completed, active_gigs)",
         )
         .eq("is_live", true)
         .eq("shadowbanned", false)
@@ -122,7 +122,7 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
 
       // Flatten + attach boost flag + review metrics.
       let rows: RankCreator[] = (data ?? []).map((c) => {
-        const m = (Array.isArray(c.metrics) ? c.metrics[0] : c.metrics) as { avg_rating?: number | null; review_count?: number; gigs_completed?: number } | null;
+        const m = (Array.isArray(c.metrics) ? c.metrics[0] : c.metrics) as { avg_rating?: number | null; review_count?: number; gigs_completed?: number; active_gigs?: number } | null;
         return {
           id: c.id,
           handle: c.handle,
@@ -138,6 +138,7 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
           avg_rating: m?.avg_rating ?? null,
           review_count: m?.review_count ?? 0,
           boosted: boosted.has(c.id),
+          active_gigs: m?.active_gigs ?? 0,
           avatar_url: c.avatar_url as string | null,
           gigs_completed: m?.gigs_completed ?? 0,
           first_name: c.first_name as string | null,
@@ -152,7 +153,12 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
       else if (sort === "price_desc") rows.sort((a, b) => (b.starting_rate_naira ?? 0) - (a.starting_rate_naira ?? 0));
       else if (sort === "recent") rows.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
       else if (sort === "rating") rows.sort((a, b) => (b.avg_rating ?? 0) - (a.avg_rating ?? 0));
-      else rows = rankCreators(rows, { niche, q });
+      else {
+        // Default "Recommended": rank, then reserve exploration slots for
+        // newcomers (the leveler) so they're discovered, not buried.
+        rows = rankCreators(rows, { niche, q });
+        rows = applyExploration(rows, { pageSize: PAGE_SIZE });
+      }
 
       // Paginate the ranked set (bounded candidate window ranked in memory).
       total = rows.length;
