@@ -182,8 +182,41 @@
     transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
   }
   .u-lift:hover {
-    transform: translateY(-4px);
+    transform: translateY(-2px);
     box-shadow: var(--elev-lg);
+  }
+
+  /* Content-card hover: a calm shadow + border settle, NO vertical jump.
+     Pairs with .u-zoom (image) and .u-detail (reveal) for a premium feel. */
+  .u-card {
+    transition: box-shadow 0.35s var(--ease-out), border-color 0.35s var(--ease-out);
+  }
+  .u-card:hover {
+    box-shadow: var(--elev-lg);
+    border-color: var(--line-strong);
+  }
+
+  /* Image zoom on hover — put .u-zoom on the card (a .group), [data-zoom] on the
+     scaling media. Scales within an overflow-hidden frame, so no layout shift. */
+  .u-zoom [data-zoom] {
+    transition: transform 0.6s var(--ease-out);
+    will-change: transform;
+  }
+  .u-zoom:hover [data-zoom] {
+    transform: scale(1.07);
+  }
+
+  /* Reveal a little more info on hover — fades + slides up inside its frame.
+     Lives on a child of a .group; hidden until the group is hovered/focused. */
+  .u-detail {
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.3s var(--ease-out), transform 0.3s var(--ease-out);
+  }
+  .group:hover .u-detail,
+  .group:focus-within .u-detail {
+    opacity: 1;
+    transform: none;
   }
   .u-grain {
     background-image: radial-gradient(
@@ -203,7 +236,8 @@
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
-  .u-reveal {
+  .u-reveal,
+  .u-detail {
     opacity: 1;
     transform: none;
   }

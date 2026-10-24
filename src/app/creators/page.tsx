@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { CreatorCard, type Creator } from "@/components/marketplace/creator-card";
+import { CategoryTiles } from "@/components/marketplace/category-tiles";
 import { DirectoryFilters } from "@/components/marketplace/directory-filters";
 import { createClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/role";
@@ -47,8 +48,8 @@ function GridSkeleton() {
     <div className="mt-8 grid grid-cols-2 gap-5 lg:grid-cols-3">
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="overflow-hidden rounded-2xl border border-line bg-surface">
-          <div className="aspect-[4/5] animate-pulse bg-surface-2" />
-          <div className="space-y-2 p-4">
+          <div className="aspect-[5/6] animate-pulse bg-surface-2" />
+          <div className="space-y-2 p-3">
             <div className="h-4 w-2/3 animate-pulse rounded bg-surface-2" />
             <div className="h-3 w-1/3 animate-pulse rounded bg-surface-2" />
           </div>
@@ -294,6 +295,20 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
   );
 }
 
+/** Discovery row — shown only when the visitor hasn't picked a niche yet. */
+async function CategoryRow({ searchParams }: { searchParams: Promise<SP> }) {
+  const sp = await searchParams;
+  if (sp.niche || sp.q) return null;
+  return (
+    <section className="mt-8">
+      <h2 className="text-sm font-semibold text-ink">Browse by category</h2>
+      <div className="mt-4">
+        <CategoryTiles />
+      </div>
+    </section>
+  );
+}
+
 /** Brand-only post-a-brief nudge; dynamic (reads the session) so it lives in Suspense. */
 async function HiringNudge() {
   const { showBrandCtas } = await getViewer();
@@ -331,6 +346,10 @@ export default function CreatorsPage({ searchParams }: { searchParams: Promise<S
               <DirectoryFilters />
             </Suspense>
           </div>
+
+          <Suspense fallback={null}>
+            <CategoryRow searchParams={searchParams} />
+          </Suspense>
 
           <Suspense fallback={<GridSkeleton />}>
             <CreatorResults searchParams={searchParams} />
