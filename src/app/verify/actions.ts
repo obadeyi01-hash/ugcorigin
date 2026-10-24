@@ -122,7 +122,7 @@ export async function submitIdentityAction(input: {
   nin: string;
   selfieRef: string;
 }): Promise<{ ok?: boolean; error?: string }> {
-  const { supabase, user } = await requireUser();
+  const { user } = await requireUser();
   if (!user) return { error: "Please sign in again." };
 
   const nin = input.nin.replace(/\D/g, "");
@@ -143,8 +143,9 @@ export async function submitIdentityAction(input: {
     return { error: "Your identity is already verified." };
   }
 
-  // Snapshot the current phone for the reviewer's reference.
-  const { data: prof } = await supabase.from("creator_profiles").select("phone").eq("id", user.id).maybeSingle();
+  // Snapshot the current phone for the reviewer's reference. phone SELECT is
+  // revoked from anon/authenticated at the column level, so read it via admin.
+  const { data: prof } = await admin.from("creator_profiles").select("phone").eq("id", user.id).maybeSingle();
 
   const { error } = await admin.from("identity_submissions").upsert(
     {
