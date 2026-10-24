@@ -63,8 +63,13 @@ async function GigInner({ params }: { params: Promise<{ id: string }> }) {
   const contact = await (async () => {
     const funded = ["funded", "in_progress", "in_review", "revision", "approved", "released", "completed"].includes(gig.status);
     if (!funded) return null;
+    // phone SELECT is revoked from anon/authenticated at the column level (so a
+    // creator's number is never world-readable). The two parties of a FUNDED gig
+    // are meant to exchange contact details, which is gated above by role +
+    // funded status — so read it here via the service-role client.
+    const admin = createAdminClient();
     if (role === "brand") {
-      const { data: c } = await supabase
+      const { data: c } = await admin
         .from("creator_profiles")
         .select("display_name, first_name, last_name, phone")
         .eq("id", gig.creator_id)
@@ -72,7 +77,7 @@ async function GigInner({ params }: { params: Promise<{ id: string }> }) {
       if (!c) return null;
       return { name: fullName({ first: c.first_name, last: c.last_name, display: c.display_name }), phone: c.phone as string | null, who: "creator" as const };
     }
-    const { data: b } = await supabase
+    const { data: b } = await admin
       .from("brand_profiles")
       .select("company_name, contact_first_name, contact_last_name, phone")
       .eq("id", gig.brand_id)

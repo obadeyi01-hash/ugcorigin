@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { Container } from "@/components/ui/container";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { SettingsForm } from "@/components/settings/settings-form";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -32,13 +33,17 @@ async function SettingsInner() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  // The owner's own profile rows include PII (phone, rc_number) whose SELECT is
+  // revoked from anon/authenticated at the column level. Read them through the
+  // service-role client, strictly scoped to the signed-in user's own id.
+  const admin = createAdminClient();
   const [{ data: creator }, { data: brand }, { data: settings }] = await Promise.all([
-    supabase
+    admin
       .from("creator_profiles")
       .select("handle, first_name, last_name, display_name, bio, location, phone, niches, content_formats, starting_rate_naira, avatar_url, tier, identity_verified, verification_status")
       .eq("id", user.id)
       .maybeSingle(),
-    supabase
+    admin
       .from("brand_profiles")
       .select("company_name, contact_first_name, contact_last_name, website, store_url, phone, logo_url, verification_status, rc_number, goal, ad_platforms, content_types, business_type, contact_role, team_size")
       .eq("id", user.id)

@@ -14,6 +14,7 @@ import { getViewer } from "@/lib/auth/role";
 import { rankCreators, applyExploration, applyTierDiversity, type RankCreator } from "@/lib/ranking";
 import { FEATURED_CAP } from "@/lib/boosts";
 import { publicName } from "@/lib/names";
+import { sanitizeSearchTerm } from "@/lib/utils";
 
 // Per-filter SEO: a niche/region query reads like a landing page so it ranks
 // for "hire <niche> UGC creators in <region>".
@@ -61,7 +62,7 @@ function GridSkeleton() {
 
 async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
-  const q = (sp.q ?? "").replace(/[,()%*]/g, "").trim();
+  const q = sanitizeSearchTerm(sp.q ?? "");
   const niche = sp.niche ?? "";
   const region = sp.region ?? "";
   const platform = sp.platform ?? "";

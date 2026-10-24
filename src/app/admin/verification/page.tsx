@@ -74,7 +74,9 @@ async function VerificationInner() {
     (sig ?? []).forEach((s) => signals.set(s.creator_id, { verified_followers: s.verified_followers ?? 0, prior_work_score: s.prior_work_score ?? 0 }));
   }
 
-  const { data: brandData } = await supabase
+  // rc_number SELECT is revoked from anon/authenticated at the column level, so
+  // read the pending-brand queue through the service-role admin client.
+  const { data: brandData } = await admin
     .from("brand_profiles")
     .select("id, company_name, rc_number, verification_submitted_at")
     .eq("verification_status", "pending")

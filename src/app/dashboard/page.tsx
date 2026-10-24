@@ -14,6 +14,7 @@ import { TierBadge } from "@/components/ui/tier-badge";
 import { BoostButton } from "@/components/boost/boost-button";
 import { tierMeta } from "@/lib/tiers";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { publicName } from "@/lib/names";
 import { RecommendationsPopup, type RecCreator } from "@/components/dashboard/recommendations-popup";
 import { UpsellNudge } from "@/components/upsell/upsell-nudge";
@@ -72,9 +73,12 @@ async function DashboardInner() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  // select("*") pulls PII columns (phone, rc_number) whose SELECT is revoked
+  // from anon/authenticated; read the owner's own rows via the service role.
+  const admin = createAdminClient();
   const [{ data: creator }, { data: brand }] = await Promise.all([
-    supabase.from("creator_profiles").select("*").eq("id", user.id).maybeSingle(),
-    supabase.from("brand_profiles").select("*").eq("id", user.id).maybeSingle(),
+    admin.from("creator_profiles").select("*").eq("id", user.id).maybeSingle(),
+    admin.from("brand_profiles").select("*").eq("id", user.id).maybeSingle(),
   ]);
 
   if (!creator && !brand) redirect("/onboarding");
