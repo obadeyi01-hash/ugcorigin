@@ -5,9 +5,12 @@ import { AdminShell } from "@/components/admin/admin-shell";
 import { Card, CardBody } from "@/components/ui/card";
 import { VerificationRow } from "@/components/admin/verification-row";
 import { BrandVerificationRow } from "@/components/admin/brand-verification-row";
+import { IdentitySubmissionRow } from "@/components/admin/identity-submission-row";
 import { EntrySignalsControl } from "@/components/admin/entry-signals-control";
 import { requireSection, isReadonly } from "@/lib/admin/rbac";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { privateUrlFromRef } from "@/lib/cloudinary-server";
 
 export const metadata: Metadata = { title: "Admin · Verification" };
 
@@ -34,6 +37,32 @@ async function VerificationInner() {
   const rows = data ?? [];
   const readonly = isReadonly(role);
 
+  // Manual identity submissions (selfie + NIN) awaiting a human reviewer. These
+  // live in a service-role-only table, so read them with the admin client and
+  // mint a short-lived signed URL for each selfie.
+  const admin = createAdminClient();
+  const { data: subData } = await admin
+    .from("identity_submissions")
+    .select("user_id, nin, selfie_ref, phone, submitted_at")
+    .eq("status", "pending")
+    .order("submitted_at", { ascending: true })
+    .limit(100);
+  const subs = subData ?? [];
+  const subCreators = new Map<string, { handle: string | null; display_name: string | null }>();
+  if (subs.length) {
+    const { data: cs } = await supabase
+      .from("creator_profiles")
+      .select("id, handle, display_name")
+      .in("id", subs.map((s) => s.user_id));
+    (cs ?? []).forEach((c) => subCreators.set(c.id, { handle: c.handle, display_name: c.display_name }));
+  }
+  const submissions = subs.map((s) => ({
+    ...s,
+    handle: subCreators.get(s.user_id)?.handle ?? null,
+    displayName: subCreators.get(s.user_id)?.display_name ?? null,
+    selfieUrl: privateUrlFromRef(s.selfie_ref),
+  }));
+
   // Current entry-credibility signals for the listed creators (for prefill).
   const ids = rows.map((c) => c.id);
   const signals = new Map<string, { verified_followers: number; prior_work_score: number }>();
@@ -58,7 +87,42 @@ async function VerificationInner() {
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Verification queue</h1>
       <p className="mt-1.5 text-sm text-ink-2">Creators who&apos;ve completed onboarding and are awaiting identity verification.</p>
 
-      <div className="mt-6 grid gap-3">
+      <h2 className="mt-7 font-display text-lg font-semibold text-ink">Identity submissions ({submissions.length})</h2>
+      <p className="mt-0.5 text-sm text-ink-2">Manual review: check the selfie against the NIN, then approve or reject.</p>
+      <div className="mt-4 grid gap-3">
+        {submissions.length === 0 && (
+          <Card variant="outline"><CardBody className="py-10 text-center text-ink-2">No photo/NIN submissions waiting.</CardBody></Card>
+        )}
+        {submissions.map((s) => (
+          <Card key={s.user_id}>
+            <CardBody>
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  {s.selfieUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={s.selfieUrl} alt="Submitted selfie" className="size-24 shrink-0 rounded-xl object-cover" />
+                  ) : (
+                    <div className="grid size-24 shrink-0 place-items-center rounded-xl bg-surface-2 text-xs text-ink-3">No photo</div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-semibold text-ink">{s.displayName || `@${s.handle}`}</p>
+                    <p className="text-xs text-ink-3">@{s.handle}</p>
+                    <dl className="mt-2 grid gap-0.5 text-sm">
+                      <div className="flex gap-2"><dt className="text-ink-3">NIN</dt><dd className="font-mono text-ink">{s.nin || "—"}</dd></div>
+                      <div className="flex gap-2"><dt className="text-ink-3">Phone</dt><dd className="text-ink-2">{s.phone || "—"}</dd></div>
+                      <div className="flex gap-2"><dt className="text-ink-3">Submitted</dt><dd className="text-ink-2">{s.submitted_at ? new Date(s.submitted_at).toLocaleString() : "—"}</dd></div>
+                    </dl>
+                  </div>
+                </div>
+                <IdentitySubmissionRow creatorId={s.user_id} readonly={readonly} />
+              </div>
+            </CardBody>
+          </Card>
+        ))}
+      </div>
+
+      <h2 className="mt-10 font-display text-lg font-semibold text-ink">All awaiting identity ({rows.length})</h2>
+      <div className="mt-4 grid gap-3">
         {rows.length === 0 && (
           <Card variant="outline"><CardBody className="py-12 text-center text-ink-2">Nobody waiting. 🎉</CardBody></Card>
         )}

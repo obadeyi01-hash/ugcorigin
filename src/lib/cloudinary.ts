@@ -28,6 +28,9 @@ export function chatFolder(conversationId: string) {
 export function deliverableFolder(gigId: string) {
   return `ugcorigin/deliverables/${gigId}`;
 }
+export function identityFolder(userId: string) {
+  return `ugcorigin/identity/${userId}`;
+}
 
 // Private files (chat attachments, deliverables) are stored on Cloudinary as
 // `type=authenticated` and delivered only through server-signed URLs. We keep

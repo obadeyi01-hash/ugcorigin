@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition, type ReactNode, type ChangeEvent, type FormEvent } from "react";
-import { Camera, Check, Loader2, Trash2 } from "lucide-react";
+import { Camera, Check, Loader2, Trash2, Lock } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Field, Select } from "@/components/ui/input";
@@ -38,6 +38,8 @@ type Creator = {
   first_name?: string | null;
   last_name?: string | null;
   phone?: string | null;
+  identity_verified?: boolean | null;
+  verification_status?: string | null;
 };
 type Brand = {
   company_name: string | null;
@@ -89,6 +91,32 @@ function SaveRow({ pending, status }: { pending: boolean; status: "idle" | "save
         </span>
       )}
       {status === "error" && <span className="text-sm font-medium text-error">Couldn’t save, try again.</span>}
+    </div>
+  );
+}
+
+/** A read-only field for sensitive/verified values. Shows the value, a lock
+ *  icon, and a tooltip explaining it can only be changed by contacting admin. */
+function LockedField({ label, value, note }: { label: string; value: ReactNode; note?: string }) {
+  const tip = note ?? "Locked once verified. Contact support to change it.";
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center gap-1.5">
+        <span className="text-sm font-medium text-ink">{label}</span>
+        <span className="group relative inline-flex">
+          <Lock className="size-3.5 text-ink-3" aria-hidden />
+          <span
+            role="tooltip"
+            className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 w-56 -translate-x-1/2 rounded-lg border border-line bg-paper px-3 py-2 text-xs text-ink-2 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+          >
+            {tip}
+          </span>
+        </span>
+      </div>
+      <div className="flex min-h-[2.75rem] items-center rounded-xl border border-line bg-surface-2 px-3 text-sm text-ink-2">
+        {value || <span className="text-ink-3">—</span>}
+      </div>
+      {note && <p className="mt-1 text-xs text-ink-3">{note}</p>}
     </div>
   );
 }
@@ -226,6 +254,14 @@ function CreatorSettings({ userId, creator }: { userId: string; creator: Creator
 
   const meta = tierMeta(creator.tier);
   const floor = meta.floorNaira;
+  const nameLocked = !!creator.identity_verified;
+  const vstatus = creator.verification_status ?? "unverified";
+  const vstatusLabel: Record<string, string> = {
+    verified: "Verified",
+    pending: "Under review",
+    rejected: "Needs resubmission",
+    unverified: "Not verified yet",
+  };
 
   function toggleNiche(n: string) {
     setNiches((prev) => (prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]));
@@ -274,6 +310,21 @@ function CreatorSettings({ userId, creator }: { userId: string; creator: Creator
         </p>
       </Section>
 
+      <Section title="Identity & verification" description="These are set during verification and locked here. Contact support to change anything verified.">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <LockedField
+            label="Verification status"
+            value={vstatusLabel[vstatus] ?? vstatus}
+            note="Your identity and NIN are reviewed by our team, not editable here."
+          />
+          <LockedField
+            label="Tier"
+            value={meta.label}
+            note="Earned through completed gigs and reviews — it can’t be set manually."
+          />
+        </div>
+      </Section>
+
       <Section title="Public profile" description="This is what brands see on your card.">
         <div className="grid gap-4">
           <Field label="Username" hint="Your public link: ugcorigin.com/@your-handle. Changing it breaks old links.">
@@ -282,17 +333,28 @@ function CreatorSettings({ userId, creator }: { userId: string; creator: Creator
               <Input value={handle} onChange={(e) => setHandle(e.target.value)} placeholder="yourname" />
             </div>
           </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="First name">
-              <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Amara" />
-            </Field>
-            <Field label="Last name" hint="Public shows initial only">
-              <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Obi" />
-            </Field>
-          </div>
-          <p className="-mt-1 text-xs text-ink-3">
-            Brands see &ldquo;{firstName.trim() || "First"} {lastName.trim() ? lastName.trim()[0].toUpperCase() + "." : "L."}&rdquo; until you both agree on a booking, then your full name and socials unlock.
-          </p>
+          {nameLocked ? (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <LockedField label="First name" value={firstName} note="Your verified legal name. Contact support to change it." />
+                <LockedField label="Last name" value={lastName} note="Verified — public shows initial only." />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="First name">
+                  <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Amara" />
+                </Field>
+                <Field label="Last name" hint="Public shows initial only">
+                  <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Obi" />
+                </Field>
+              </div>
+              <p className="-mt-1 text-xs text-ink-3">
+                Brands see &ldquo;{firstName.trim() || "First"} {lastName.trim() ? lastName.trim()[0].toUpperCase() + "." : "L."}&rdquo; until you both agree on a booking, then your full name and socials unlock. Your name locks once your identity is verified.
+              </p>
+            </>
+          )}
           <Field label="Location" hint="Where you're based in Nigeria.">
             <Select value={location} onChange={(e) => setLocation(e.target.value)}>
               <option value="">Select your state</option>

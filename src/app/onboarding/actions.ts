@@ -3,14 +3,14 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { normalizeHandle, isValidHandle } from "@/lib/username";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { generateUniqueHandle } from "@/lib/username";
 
 const configured = () => !!process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 export type ActionResult = { error?: string };
 
 export type CreatorInput = {
-  handle: string;
   firstName: string;
   lastName: string;
   displayName: string;
@@ -38,7 +38,7 @@ export type BrandInput = {
 
 function creatorCompleteness(i: CreatorInput) {
   let n = 0;
-  if (i.handle) n += 20;
+  n += 20; // handle is auto-assigned, so it always counts
   if (i.firstName) n += 15;
   if (i.location) n += 10;
   if (i.bio && i.bio.length > 20) n += 15;
@@ -50,11 +50,6 @@ function creatorCompleteness(i: CreatorInput) {
 export async function createCreatorProfile(input: CreatorInput): Promise<ActionResult> {
   if (!configured()) return { error: "Backend not connected yet, add your Supabase keys to .env.local to save." };
 
-  const handle = normalizeHandle(input.handle);
-  if (!isValidHandle(handle)) {
-    return { error: "Username must be 3 to 30 characters: letters, numbers, dot, dash or underscore." };
-  }
-
   const first = input.firstName.trim();
   const last = input.lastName.trim();
   if (!first) return { error: "Please enter your first name." };
@@ -65,6 +60,18 @@ export async function createCreatorProfile(input: CreatorInput): Promise<ActionR
 
   // display_name is derived from the real name (full name stored privately).
   const display = `${first} ${last}`.trim() || input.displayName.trim();
+
+  // Username is no longer collected at onboarding — auto-assign a clean, unique
+  // handle from the name (or the email local-part as a fallback). The creator
+  // can change it later from settings.
+  const seed = `${first}${last}`.trim() || user.email?.split("@")[0] || "creator";
+  // Check handle availability with the admin client: RLS hides non-live
+  // creators from the ordinary client, which would miss real collisions.
+  const admin = createAdminClient();
+  const handle = await generateUniqueHandle(seed, async (h) => {
+    const { data } = await admin.from("creator_profiles").select("id").eq("handle", h).maybeSingle();
+    return !!data;
+  });
 
   const { error } = await supabase.from("creator_profiles").insert({
     id: user.id,
@@ -81,7 +88,14 @@ export async function createCreatorProfile(input: CreatorInput): Promise<ActionR
   });
 
   if (error) {
-    if (error.code === "23505") return { error: "That username is taken, try another." };
+    // A phone clash is the one the creator can act on; disambiguate it from the
+    // (rare, auto-handled) handle race by the violated constraint name.
+    if (error.code === "23505") {
+      if (/phone/i.test(error.message)) {
+        return { error: "That phone number is already linked to another creator account." };
+      }
+      return { error: "Something clashed while creating your profile, please try again." };
+    }
     return { error: error.message };
   }
 

@@ -7,6 +7,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { listBanks, resolveAccount, createTransferRecipient, paystackConfigured, type Bank } from "@/lib/payments/paystack";
 import { getKycProvider, type KycInitiation } from "@/lib/kyc";
 import { placeCreator } from "@/lib/tiering/placement";
+import { signedUpload, type SignedUpload } from "@/lib/cloudinary-server";
+import { identityFolder } from "@/lib/cloudinary";
 
 const MIN_COMPLETENESS = 80;
 
@@ -99,32 +101,83 @@ export async function startIdentityAction(): Promise<KycInitiation | { error: st
   }
 }
 
-/**
- * When no automated KYC provider is connected yet, a creator can submit for
- * MANUAL review instead of hitting a dead end. This flags them pending so they
- * surface in the admin verification queue; an admin approves identity + sets
- * them live. Never self-sets identity_verified.
- */
-export async function requestManualVerificationAction(): Promise<{ ok?: boolean; error?: string }> {
+/** Creator-only: sign a Cloudinary upload for the identity selfie (authenticated,
+ *  private). The file lands in the creator's own identity folder. */
+export async function signSelfieUpload(): Promise<{ upload?: SignedUpload; error?: string }> {
   const { user } = await requireUser();
   if (!user) return { error: "Please sign in again." };
+  const upload = signedUpload(identityFolder(user.id));
+  if (!upload) return { error: "Photo upload isn’t configured yet. Please check back soon." };
+  return { upload };
+}
+
+/**
+ * Manual identity submission (selfie + NIN) while no automated KYC provider is
+ * connected. Stored in identity_submissions (service-role only — never exposed
+ * through the public creator row). Can be re-submitted while pending/rejected;
+ * blocked once approved. Never self-sets identity_verified: an admin reviews the
+ * selfie + NIN and approves, which flips the badge and sets the profile live.
+ */
+export async function submitIdentityAction(input: {
+  nin: string;
+  selfieRef: string;
+}): Promise<{ ok?: boolean; error?: string }> {
+  const { supabase, user } = await requireUser();
+  if (!user) return { error: "Please sign in again." };
+
+  const nin = input.nin.replace(/\D/g, "");
+  if (!/^\d{11}$/.test(nin)) return { error: "Enter your 11-digit NIN." };
+  if (!input.selfieRef || !input.selfieRef.startsWith("cld:")) {
+    return { error: "Please add a clear photo of yourself before submitting." };
+  }
 
   const admin = createAdminClient();
-  // Avoid duplicate pending requests.
+
+  // Don't let an already-approved creator overwrite their verified submission.
   const { data: existing } = await admin
+    .from("identity_submissions")
+    .select("status")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (existing?.status === "approved") {
+    return { error: "Your identity is already verified." };
+  }
+
+  // Snapshot the current phone for the reviewer's reference.
+  const { data: prof } = await supabase.from("creator_profiles").select("phone").eq("id", user.id).maybeSingle();
+
+  const { error } = await admin.from("identity_submissions").upsert(
+    {
+      user_id: user.id,
+      nin,
+      selfie_ref: input.selfieRef,
+      phone: prof?.phone ?? null,
+      status: "pending",
+      reject_reason: null,
+      submitted_at: new Date().toISOString(),
+      reviewed_at: null,
+      reviewer_id: null,
+    },
+    { onConflict: "user_id" },
+  );
+  if (error) {
+    if (error.code === "23505") {
+      // The only other unique key here is the NIN.
+      return { error: "That NIN is already linked to another account. If this is a mistake, contact support." };
+    }
+    return { error: error.message };
+  }
+
+  // Mirror a pending row into verifications for the audit trail / queue parity.
+  const { data: v } = await admin
     .from("verifications")
     .select("id")
     .eq("user_id", user.id)
     .eq("kind", "identity")
     .eq("status", "pending")
     .maybeSingle();
-  if (!existing) {
-    await admin.from("verifications").insert({
-      user_id: user.id,
-      kind: "identity",
-      provider: "manual",
-      status: "pending",
-    });
+  if (!v) {
+    await admin.from("verifications").insert({ user_id: user.id, kind: "identity", provider: "manual", status: "pending" });
   }
   await admin.from("creator_profiles").update({ verification_status: "pending" }).eq("id", user.id);
 
@@ -138,7 +191,7 @@ export async function goLiveAction(): Promise<{ ok?: boolean; missing?: string[]
 
   const { data: p } = await supabase
     .from("creator_profiles")
-    .select("completeness, bank_verified, identity_verified, agreements_accepted_at, is_live")
+    .select("completeness, bank_verified, identity_verified, photo_verified, agreements_accepted_at, is_live")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -148,7 +201,10 @@ export async function goLiveAction(): Promise<{ ok?: boolean; missing?: string[]
   const missing: string[] = [];
   if ((p.completeness ?? 0) < MIN_COMPLETENESS) missing.push("Complete your profile");
   if (!p.bank_verified) missing.push("Verify your bank account");
-  if (!p.identity_verified) missing.push("Verify your identity");
+  // Identity verification requires an approved selfie + NIN. photo_verified is
+  // an explicit, independent gate so a creator can never go live without an
+  // approved photo even if identity_verified were set by another path.
+  if (!p.identity_verified || !p.photo_verified) missing.push("Verify your identity");
   if (!p.agreements_accepted_at) missing.push("Accept the agreements");
   if (missing.length) return { missing };
 

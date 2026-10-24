@@ -34,3 +34,27 @@ export function suggestHandle(seed: string): string {
   const padded = (base || "creator") + Math.floor(1000 + Math.random() * 9000);
   return normalizeHandle(padded);
 }
+
+/**
+ * The handle is no longer entered at onboarding — we auto-assign one from the
+ * creator's name (falling back to the email local-part). This returns a handle
+ * guaranteed unique against existing rows by appending a numeric suffix. The DB
+ * unique index remains the final arbiter; the insert still retries on conflict.
+ *
+ * `taken(handle)` resolves true when the handle already exists.
+ */
+export async function generateUniqueHandle(
+  seed: string,
+  taken: (handle: string) => Promise<boolean>,
+): Promise<string> {
+  const base = suggestHandle(seed);
+  if (!(await taken(base))) return base;
+  // Append a growing numeric suffix, trimming the base so we stay within 30 chars.
+  for (let i = 2; i < 10000; i++) {
+    const suffix = String(i);
+    const candidate = normalizeHandle(base.slice(0, 30 - suffix.length) + suffix);
+    if (isValidHandle(candidate) && !(await taken(candidate))) return candidate;
+  }
+  // Extremely unlikely fallback: random tail.
+  return normalizeHandle(base.slice(0, 22) + Date.now().toString().slice(-6));
+}
