@@ -84,6 +84,8 @@ export async function POST(request: Request) {
         .update({ status: "active", current_period_end: periodEnd, provider_ref: reference, updated_at: new Date().toISOString() })
         .eq("id", subscriptionId)
         .eq("status", "pending");
+      // Surface Pro on the (public-readable) creator profile for ranking.
+      await admin.from("creator_profiles").update({ pro_until: periodEnd }).eq("id", s.user_id);
       await admin.from("notifications").insert({
         user_id: s.user_id,
         type: "product",

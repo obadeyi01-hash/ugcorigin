@@ -5,6 +5,7 @@ import { AdminShell } from "@/components/admin/admin-shell";
 import { Card, CardBody } from "@/components/ui/card";
 import { VerificationRow } from "@/components/admin/verification-row";
 import { BrandVerificationRow } from "@/components/admin/brand-verification-row";
+import { EntrySignalsControl } from "@/components/admin/entry-signals-control";
 import { requireSection, isReadonly } from "@/lib/admin/rbac";
 import { createClient } from "@/lib/supabase/server";
 
@@ -32,6 +33,17 @@ async function VerificationInner() {
 
   const rows = data ?? [];
   const readonly = isReadonly(role);
+
+  // Current entry-credibility signals for the listed creators (for prefill).
+  const ids = rows.map((c) => c.id);
+  const signals = new Map<string, { verified_followers: number; prior_work_score: number }>();
+  if (ids.length) {
+    const { data: sig } = await supabase
+      .from("entry_signals")
+      .select("creator_id, verified_followers, prior_work_score")
+      .in("creator_id", ids);
+    (sig ?? []).forEach((s) => signals.set(s.creator_id, { verified_followers: s.verified_followers ?? 0, prior_work_score: s.prior_work_score ?? 0 }));
+  }
 
   const { data: brandData } = await supabase
     .from("brand_profiles")
@@ -65,6 +77,12 @@ async function VerificationInner() {
                 </div>
                 <VerificationRow id={c.id} identityVerified={!!c.identity_verified} isLive={!!c.is_live} readonly={readonly} />
               </div>
+              <EntrySignalsControl
+                creatorId={c.id}
+                followers={signals.get(c.id)?.verified_followers ?? 0}
+                priorWork={signals.get(c.id)?.prior_work_score ?? 0}
+                readonly={readonly}
+              />
             </CardBody>
           </Card>
         ))}

@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { CreatorCard, type Creator } from "@/components/marketplace/creator-card";
 import { DirectoryFilters } from "@/components/marketplace/directory-filters";
 import { createClient } from "@/lib/supabase/server";
-import { rankCreators, applyExploration, type RankCreator } from "@/lib/ranking";
+import { rankCreators, applyExploration, applyTierDiversity, type RankCreator } from "@/lib/ranking";
+import { FEATURED_CAP } from "@/lib/boosts";
 import { publicName } from "@/lib/names";
 
 // Per-filter SEO: a niche/region query reads like a landing page so it ranks
@@ -70,6 +71,7 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
   const configured = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
 
   let creators: Creator[] = [];
+  let featured: Creator[] = [];
   let noPlatformMatch = false;
   if (configured) {
     const supabase = await createClient();
@@ -99,29 +101,40 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
     }
 
     if (!noPlatformMatch) {
-      let query = supabase
-        .from("creator_profiles")
-        .select(
-          "id, handle, display_name, first_name, last_name, location, niches, starting_rate_naira, featured, verification_status, tier, earned_reputation, updated_at, avatar_url, strikes, benched, metrics:creator_metrics(avg_rating, review_count, gigs_completed, active_gigs)",
-        )
-        .eq("is_live", true)
-        .eq("shadowbanned", false)
-        .limit(120);
+      const SELECT =
+        "id, handle, display_name, first_name, last_name, location, niches, starting_rate_naira, featured, verification_status, tier, earned_reputation, pro_until, updated_at, avatar_url, strikes, benched, metrics:creator_metrics(avg_rating, review_count, gigs_completed, active_gigs)";
 
-      if (niche) query = query.contains("niches", [niche]);
-      if (max) query = query.lte("starting_rate_naira", max);
-      if (region && region !== "Remote") query = query.ilike("location", `%${region}%`);
-      if (q) query = query.or(`display_name.ilike.%${q}%,handle.ilike.%${q}%,location.ilike.%${q}%`);
-      if (platformIds) query = query.in("id", platformIds);
+      // Reusable filtered base query, run twice: a top-by-reputation window and a
+      // recency window. Unioning the two keeps newcomers reachable at scale so
+      // the exploration slots can never surface someone the window dropped.
+      const build = () => {
+        let query = supabase.from("creator_profiles").select(SELECT).eq("is_live", true).eq("shadowbanned", false);
+        if (niche) query = query.contains("niches", [niche]);
+        if (max) query = query.lte("starting_rate_naira", max);
+        if (region && region !== "Remote") query = query.ilike("location", `%${region}%`);
+        if (q) query = query.or(`display_name.ilike.%${q}%,handle.ilike.%${q}%,location.ilike.%${q}%`);
+        if (platformIds) query = query.in("id", platformIds);
+        return query;
+      };
 
-      const [{ data }, { data: boostIds }] = await Promise.all([
-        query,
+      const [{ data: topData }, { data: freshData }, { data: boostIds }] = await Promise.all([
+        build().order("earned_reputation", { ascending: false, nullsFirst: false }).limit(120),
+        build().order("updated_at", { ascending: false }).limit(40),
         supabase.rpc("active_boost_target_ids", { ttype: "creator" }),
       ]);
       const boosted = new Set<string>((boostIds ?? []).map((x: unknown) => String(x)));
+      const now = Date.now();
 
-      // Flatten + attach boost flag + review metrics.
-      let rows: RankCreator[] = (data ?? []).map((c) => {
+      // Union the two windows, deduped by id.
+      const seen = new Set<string>();
+      const union = [...(topData ?? []), ...(freshData ?? [])].filter((c) => {
+        if (seen.has(c.id)) return false;
+        seen.add(c.id);
+        return true;
+      });
+
+      type Row = RankCreator & { avatar_url: string | null; first_name: string | null; last_name: string | null };
+      let rows: Row[] = union.map((c) => {
         const m = (Array.isArray(c.metrics) ? c.metrics[0] : c.metrics) as { avg_rating?: number | null; review_count?: number; gigs_completed?: number; active_gigs?: number } | null;
         return {
           id: c.id,
@@ -139,57 +152,64 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
           review_count: m?.review_count ?? 0,
           boosted: boosted.has(c.id),
           active_gigs: m?.active_gigs ?? 0,
-          avatar_url: c.avatar_url as string | null,
           gigs_completed: m?.gigs_completed ?? 0,
-          first_name: c.first_name as string | null,
-          last_name: c.last_name as string | null,
+          is_pro: !!(c.pro_until && new Date(c.pro_until as string).getTime() > now),
           strikes: (c.strikes as number | null) ?? 0,
           benched: !!c.benched,
-        } as RankCreator & { avatar_url: string | null; gigs_completed: number; first_name: string | null; last_name: string | null };
+          avatar_url: c.avatar_url as string | null,
+          first_name: c.first_name as string | null,
+          last_name: c.last_name as string | null,
+        };
       });
 
-      // Sort: Recommended (default) uses the ranking engine; the rest are explicit.
-      if (sort === "price_asc") rows.sort((a, b) => (a.starting_rate_naira ?? 1e12) - (b.starting_rate_naira ?? 1e12));
-      else if (sort === "price_desc") rows.sort((a, b) => (b.starting_rate_naira ?? 0) - (a.starting_rate_naira ?? 0));
-      else if (sort === "recent") rows.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      else if (sort === "rating") rows.sort((a, b) => (b.avg_rating ?? 0) - (a.avg_rating ?? 0));
-      else {
-        // Default "Recommended": rank, then reserve exploration slots for
-        // newcomers (the leveler) so they're discovered, not buried.
-        rows = rankCreators(rows, { niche, q });
-        rows = applyExploration(rows, { pageSize: PAGE_SIZE });
-      }
-
-      // Paginate the ranked set (bounded candidate window ranked in memory).
-      total = rows.length;
-      const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-      if (page > totalPages) page = totalPages;
-      rows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-      creators = rows.map((c) => ({
-        name: publicName({
-          first: (c as RankCreator & { first_name?: string | null }).first_name,
-          last: (c as RankCreator & { last_name?: string | null }).last_name,
-          display: c.display_name,
-          handle: c.handle,
-        }),
+      const toCard = (c: Row, asFeatured: boolean): Creator => ({
+        name: publicName({ first: c.first_name, last: c.last_name, display: c.display_name, handle: c.handle }),
         handle: c.handle ?? undefined,
-        image: (c as RankCreator & { avatar_url?: string | null }).avatar_url || undefined,
+        image: c.avatar_url || undefined,
         location: c.location ?? "Nigeria",
         niches: c.niches ?? [],
         startingRate: c.starting_rate_naira ?? 0,
-        featured: c.featured || !!c.boosted,
+        featured: asFeatured || c.featured,
+        pro: c.is_pro,
         verified: c.verification_status === "verified",
         id: c.id,
         canSave,
         saved: savedSet.has(c.id),
         ...(c.review_count && c.avg_rating ? { rating: c.avg_rating, reviews: c.review_count } : {}),
-        ...((c as RankCreator & { gigs_completed?: number }).gigs_completed ? { gigsCompleted: (c as RankCreator & { gigs_completed?: number }).gigs_completed } : {}),
-      }));
+        ...(c.gigs_completed ? { gigsCompleted: c.gigs_completed } : {}),
+      });
+
+      // Featured band: the paid-boost slots, ranked and hard-capped. Shown once on
+      // page 1 and pulled out of the organic grid so they don't double-appear.
+      if (page === 1 && sort === "") {
+        const bandRows = rankCreators(rows.filter((r) => r.boosted), { niche, q }).slice(0, FEATURED_CAP.creator);
+        const bandIds = new Set(bandRows.map((r) => r.id));
+        rows = rows.filter((r) => !bandIds.has(r.id));
+        featured = bandRows.map((c) => toCard(c, true));
+      }
+
+      // Organic order: Recommended (default) runs the engine — rank, cap any one
+      // tier's share of the page (impression cap), then reserve newcomer slots.
+      if (sort === "price_asc") rows.sort((a, b) => (a.starting_rate_naira ?? 1e12) - (b.starting_rate_naira ?? 1e12));
+      else if (sort === "price_desc") rows.sort((a, b) => (b.starting_rate_naira ?? 0) - (a.starting_rate_naira ?? 0));
+      else if (sort === "recent") rows.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+      else if (sort === "rating") rows.sort((a, b) => (b.avg_rating ?? 0) - (a.avg_rating ?? 0));
+      else {
+        rows = rankCreators(rows, { niche, q });
+        rows = applyTierDiversity(rows, { pageSize: PAGE_SIZE });
+        rows = applyExploration(rows, { pageSize: PAGE_SIZE });
+      }
+
+      total = rows.length;
+      const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+      if (page > totalPages) page = totalPages;
+      rows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+      creators = rows.map((c) => toCard(c, false));
     }
   }
 
-  if (creators.length === 0) {
+  if (creators.length === 0 && featured.length === 0) {
     const filtered = !!(q || niche || region || max || platform);
     return (
       <div className="mt-10 rounded-3xl border border-line bg-surface px-6 py-16 text-center">
@@ -229,6 +249,19 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
 
   return (
     <div className="mt-6">
+      {featured.length > 0 && (
+        <section className="mb-8">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
+            <span className="inline-block size-1.5 rounded-full bg-accent" aria-hidden />
+            Featured creators
+          </h2>
+          <div className="mt-3 grid grid-cols-2 gap-5 lg:grid-cols-3">
+            {featured.map((c, i) => (
+              <CreatorCard key={`f-${c.handle ?? c.name}`} creator={{ ...c, priority: i < 3 }} />
+            ))}
+          </div>
+        </section>
+      )}
       <p className="text-sm text-ink-3">
         {total} creator{total === 1 ? "" : "s"}
         {niche ? ` in ${niche}` : ""}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense, cache } from "react";
 import {
   ShieldCheck,
   BadgeCheck,
@@ -26,6 +27,7 @@ import { CardScroller } from "@/components/marketplace/card-scroller";
 import { HeroSearch } from "@/components/marketplace/hero-search";
 import { StatsBand } from "@/components/marketplace/stats-band";
 import { SAMPLE_CREATORS, NICHES } from "@/lib/sample-data";
+import { topRankedCreators } from "@/lib/creators/top";
 
 const steps = [
   {
@@ -69,6 +71,52 @@ const audiences = [
   { icon: Rocket, title: "Founders", body: "Get your first testimonials and demos without hiring in-house.", tint: "bg-lavender" },
   { icon: Building2, title: "Agencies", body: "Run every client's creator program from one clean dashboard.", tint: "bg-mint" },
 ];
+
+// Engine-ranked live creators for the homepage strips, deduped across the two
+// strip instances. Falls back to the pre-launch sample set until real creators
+// exist. Fetched inside Suspense so the static landing shell isn't blocked.
+const getStrip = cache(async () => {
+  const live = await topRankedCreators(8);
+  return live.length >= 4 ? live : SAMPLE_CREATORS;
+});
+
+async function HeroStrip() {
+  const strip = await getStrip();
+  return (
+    <>
+      {strip.slice(0, 4).map((c, i) => (
+        <Reveal key={c.handle ?? c.name} delay={i * 60}>
+          <CreatorCard creator={{ ...c, priority: i < 2 }} />
+        </Reveal>
+      ))}
+    </>
+  );
+}
+
+async function MidStrip() {
+  const strip = await getStrip();
+  return (
+    <>
+      {strip.slice(2, 8).map((c, i) => (
+        <Reveal key={c.handle ?? c.name} delay={i * 50}>
+          <CreatorCard creator={c} />
+        </Reveal>
+      ))}
+    </>
+  );
+}
+
+function SampleStrip({ from, to, priorityCount = 0 }: { from: number; to: number; priorityCount?: number }) {
+  return (
+    <>
+      {SAMPLE_CREATORS.slice(from, to).map((c, i) => (
+        <Reveal key={c.name} delay={i * 60}>
+          <CreatorCard creator={{ ...c, priority: i < priorityCount }} />
+        </Reveal>
+      ))}
+    </>
+  );
+}
 
 export default function Home() {
   return (
@@ -120,11 +168,9 @@ export default function Home() {
 
             {/* Creator strip — brings real faces into the first view */}
             <CardScroller gridClass="mt-7 grid-cols-2 lg:grid-cols-4" className="relative">
-              {SAMPLE_CREATORS.slice(0, 4).map((c, i) => (
-                <Reveal key={c.name} delay={i * 60}>
-                  <CreatorCard creator={{ ...c, priority: i < 2 }} />
-                </Reveal>
-              ))}
+              <Suspense fallback={<SampleStrip from={0} to={4} priorityCount={2} />}>
+                <HeroStrip />
+              </Suspense>
             </CardScroller>
           </section>
         </Container>
@@ -214,11 +260,9 @@ export default function Home() {
               </Link>
             </div>
             <CardScroller gridClass="mt-10 grid-cols-2 lg:grid-cols-3">
-              {SAMPLE_CREATORS.slice(2, 8).map((c, i) => (
-                <Reveal key={c.name} delay={i * 50}>
-                  <CreatorCard creator={c} />
-                </Reveal>
-              ))}
+              <Suspense fallback={<SampleStrip from={2} to={8} />}>
+                <MidStrip />
+              </Suspense>
             </CardScroller>
             <div className="mt-8 text-center sm:hidden">
               <Link href="/creators">

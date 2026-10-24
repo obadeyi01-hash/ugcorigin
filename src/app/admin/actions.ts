@@ -59,6 +59,51 @@ export async function adminSetLive(creatorId: string, live: boolean): Promise<Re
   return { ok: true };
 }
 
+/**
+ * Record a creator's VERIFIED external credibility (followers + prior-work
+ * score) after a reviewer has checked the evidence. Writing entry_signals fires
+ * the EPS trigger → recomputes placement/tier. This is the manual path that
+ * unblocks the "external credibility head start" until a follower-API lands.
+ */
+export async function adminSetEntrySignals(
+  creatorId: string,
+  input: { verifiedFollowers: number; priorWorkScore: number },
+): Promise<Res> {
+  const { ctx, error } = await guardWrite("verification");
+  if (error) return { error };
+
+  const followers = Math.max(0, Math.round(input.verifiedFollowers || 0));
+  const prior = Math.max(0, Math.min(100, Math.round(input.priorWorkScore || 0)));
+
+  const admin = createAdminClient();
+  // Preserve the computed signals (portfolio/niche demand) that placeCreator owns.
+  const { data: existing } = await admin
+    .from("entry_signals")
+    .select("portfolio_count, niche_demand_score")
+    .eq("creator_id", creatorId)
+    .maybeSingle();
+
+  const { error: e } = await admin.from("entry_signals").upsert(
+    {
+      creator_id: creatorId,
+      verified_followers: followers,
+      prior_work_score: prior,
+      portfolio_count: existing?.portfolio_count ?? 0,
+      niche_demand_score: existing?.niche_demand_score ?? 55,
+    },
+    { onConflict: "creator_id" },
+  );
+  if (e) return { error: e.message };
+
+  await logAudit(admin, ctx!.userId, "creator.entry_signals", {
+    targetType: "creator",
+    targetId: creatorId,
+    after: { verified_followers: followers, prior_work_score: prior },
+  });
+  revalidatePath("/admin/verification");
+  return { ok: true };
+}
+
 // ---- Users -----------------------------------------------------------------
 export async function adminSetFeatured(creatorId: string, featured: boolean): Promise<Res> {
   const { ctx, error } = await guardWrite("users");

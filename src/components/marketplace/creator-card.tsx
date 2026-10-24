@@ -16,6 +16,8 @@ export type Creator = {
   niches: string[];
   startingRate: number;
   featured?: boolean;
+  /** Active Creator Pro — shows a small trust badge. */
+  pro?: boolean;
   verified?: boolean;
   /** Server-truth only, rendered when real data exists. Never fabricated. */
   rating?: number;
@@ -78,6 +80,11 @@ export function CreatorCard({ creator }: { creator: Creator }) {
           <div className="flex min-w-0 items-center gap-1.5">
             <h3 className="min-w-0 truncate font-display text-sm font-semibold text-ink sm:text-base">{creator.name}</h3>
             {creator.verified && <VerifiedBadge compact />}
+            {creator.pro && (
+              <span className="shrink-0 rounded-full bg-ink px-1.5 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide text-paper">
+                Pro
+              </span>
+            )}
           </div>
           <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-ink-3">
             <MapPin className="size-3 shrink-0" aria-hidden />
