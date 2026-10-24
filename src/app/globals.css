@@ -45,6 +45,19 @@
   --font-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
 
+  /* Type scale — modular, fluid where it earns it. The display + stat sizes
+     clamp smoothly from mobile to desktop so hero/number headlines are one
+     consistent step everywhere (no per-page `text-[2.1rem] sm:text-6xl`).
+     text-2xs is the single micro-label size (pills/badges), replacing the
+     scattered text-[10px]/text-[11px]. */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-display: clamp(2.1rem, 1.1rem + 4.4vw, 3.4rem);
+  --text-display--line-height: 1.04;
+  --text-display--letter-spacing: -0.02em;
+  --text-stat: clamp(2rem, 1.4rem + 2.2vw, 2.75rem);
+  --text-stat--line-height: 1;
+
   /* Radii — generous, Apple-ish */
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
@@ -52,6 +65,7 @@
   --radius-xl: 1.375rem;
   --radius-2xl: 1.75rem;
   --radius-3xl: 2.25rem;
+  --radius-panel: 2rem; /* the big obsidian hero/CTA panels (was rounded-[2rem]) */
 
   /* Elevation — soft, diffuse */
   --shadow-xs: var(--elev-xs);

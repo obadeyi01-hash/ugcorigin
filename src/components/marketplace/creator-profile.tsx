@@ -191,7 +191,7 @@ export function CreatorProfile({ data }: { data: ProfileData }) {
                     className="aspect-[9/16] w-full rounded-xl border border-line bg-obsidian object-cover"
                   />
                   {v.verified && (
-                    <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-success/90 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+                    <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-success/90 px-2 py-0.5 text-2xs font-semibold text-white shadow-sm">
                       <ShieldCheck className="size-3" /> Verified
                     </span>
                   )}

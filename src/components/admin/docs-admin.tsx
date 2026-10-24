@@ -64,8 +64,8 @@ function DocRow({ doc, readonly }: { doc: DocRowData; readonly: boolean }) {
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-medium text-ink">{doc.title}</span>
-          <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] text-ink-3">{doc.category}</span>
-          {!doc.published && <span className="rounded-full bg-warning/14 px-2 py-0.5 text-[11px] font-medium text-warning">Draft</span>}
+          <span className="rounded-full bg-surface-2 px-2 py-0.5 text-2xs text-ink-3">{doc.category}</span>
+          {!doc.published && <span className="rounded-full bg-warning/14 px-2 py-0.5 text-2xs font-medium text-warning">Draft</span>}
         </div>
         <p className="mt-0.5 text-xs text-ink-3">
           /docs/{doc.slug} · updated {new Date(doc.updated_at).toLocaleDateString()}

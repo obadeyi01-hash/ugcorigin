@@ -73,7 +73,7 @@ async function BriefsInner() {
               <div className="mt-1 flex items-center gap-2">
                 <p className="text-xs text-ink-3">{b.brand?.company_name || "A brand"}</p>
                 {boosted.has(b.id) && (
-                  <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-ink">Featured</span>
+                  <span className="rounded-full bg-accent px-2 py-0.5 text-2xs font-semibold text-accent-ink">Featured</span>
                 )}
               </div>
               {b.description && <p className="mt-2 line-clamp-2 text-sm text-ink-2">{b.description}</p>}

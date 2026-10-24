@@ -15,7 +15,7 @@ export function VerifiedBadge({
     <span
       className={cn(
         "inline-flex items-center gap-1 rounded-full font-medium text-accent-hover bg-accent-tint",
-        compact ? "px-1.5 py-0.5 text-[11px]" : "px-2.5 py-1 text-xs",
+        compact ? "px-1.5 py-0.5 text-2xs" : "px-2.5 py-1 text-xs",
         className,
       )}
       title="Identity-verified real human creator"

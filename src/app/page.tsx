@@ -126,7 +126,7 @@ export default function Home() {
       <main className="flex-1">
         {/* Hero — full-bleed on mobile (edge to edge), a contained card on desktop */}
         <Container className="pt-3 sm:pt-8">
-          <section className="relative -mx-4 overflow-hidden rounded-none bg-obsidian px-5 py-8 text-chalk sm:mx-0 sm:rounded-[2rem] sm:px-10 sm:py-14">
+          <section className="relative -mx-4 overflow-hidden rounded-none bg-obsidian px-5 py-8 text-chalk sm:mx-0 sm:rounded-panel sm:px-10 sm:py-14">
             <div className="u-grain pointer-events-none absolute inset-0 opacity-30" />
             {/* Soft brand glows for depth */}
             <div className="pointer-events-none absolute -right-24 -top-24 size-[32rem] rounded-full bg-accent/25 blur-[120px]" />
@@ -138,7 +138,7 @@ export default function Home() {
                 </span>
               </Reveal>
               <Reveal delay={60}>
-                <h1 className="mt-4 text-balance font-display text-[2.1rem] font-bold leading-[1.03] tracking-tight text-chalk sm:text-[3.25rem]">
+                <h1 className="mt-4 text-balance font-display text-display font-bold text-chalk">
                   Original content from{" "}
                   <span className="text-accent-bright">real humans</span>.
                 </h1>
@@ -321,7 +321,7 @@ export default function Home() {
         {/* Final CTA */}
         <section className="pb-20">
           <Container>
-            <div className="relative overflow-hidden rounded-[2rem] bg-obsidian px-8 py-16 text-center text-chalk sm:px-12">
+            <div className="relative overflow-hidden rounded-panel bg-obsidian px-8 py-16 text-center text-chalk sm:px-12">
               <div className="u-grain pointer-events-none absolute inset-0 opacity-30" />
               <div className="relative">
                 <h2 className="mx-auto max-w-2xl text-balance font-display text-3xl font-bold tracking-tight text-chalk sm:text-4xl">

@@ -69,7 +69,7 @@ export function RecommendationsPopup({ creators }: { creators: RecCreator[] }) {
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1.5">
                     <span className="truncate font-medium text-ink">{c.name}</span>
-                    {c.newbie && <span className="rounded-full bg-success/14 px-1.5 py-0.5 text-[10px] font-semibold text-success">New</span>}
+                    {c.newbie && <span className="rounded-full bg-success/14 px-1.5 py-0.5 text-2xs font-semibold text-success">New</span>}
                   </span>
                   <span className="block truncate text-xs text-ink-3">{c.niches.slice(0, 2).join(" · ")}</span>
                 </span>

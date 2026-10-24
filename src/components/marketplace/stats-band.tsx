@@ -22,7 +22,7 @@ export function StatsBand() {
       {facts.map((s, i) => (
         <Reveal key={s.label} delay={i * 60} className="bg-surface">
           <div className="p-6 text-center sm:p-8">
-            <p className="font-display text-3xl font-bold text-ink sm:text-[2.5rem]">
+            <p className="font-display text-stat font-bold text-ink">
               {s.value}
             </p>
             <p className="mt-1 text-sm font-medium text-ink">{s.label}</p>

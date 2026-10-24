@@ -177,7 +177,7 @@ export function ChatPanel({
                 {m.attachment_url && (
                   <Attachment message={m} att={att} mine={mine} />
                 )}
-                <span className={cn("mt-0.5 block text-[10px]", mine ? "text-accent-ink/70" : "text-ink-3")}>
+                <span className={cn("mt-0.5 block text-2xs", mine ? "text-accent-ink/70" : "text-ink-3")}>
                   {timeOf(m.created_at)}
                   {m.flagged && " · contact hidden"}
                 </span>
@@ -291,7 +291,7 @@ function DownloadLink({ url, label, mine }: { url: string; label: string; mine: 
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className={cn("mt-1 inline-flex items-center gap-1 text-[11px] font-medium hover:underline", mine ? "text-accent-ink/80" : "text-ink-3")}
+      className={cn("mt-1 inline-flex items-center gap-1 text-2xs font-medium hover:underline", mine ? "text-accent-ink/80" : "text-ink-3")}
     >
       <Download className="size-3" /> {label}
     </a>

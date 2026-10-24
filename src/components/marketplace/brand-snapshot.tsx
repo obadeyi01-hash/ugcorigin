@@ -46,7 +46,7 @@ export function BrandSnapshot({ metrics, compact = false }: { metrics: BrandMetr
           <div key={it.label} className="text-center">
             <it.icon className="mx-auto size-4 text-accent" />
             <p className="mt-1 font-display text-lg font-bold text-ink">{it.value}</p>
-            <p className="text-[11px] text-ink-3">{it.label}</p>
+            <p className="text-2xs text-ink-3">{it.label}</p>
           </div>
         ))}
       </div>

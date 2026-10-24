@@ -61,7 +61,7 @@ export default function ForBrandsPage() {
       <main className="flex-1">
         {/* Hero */}
         <Container className="pt-3 sm:pt-6">
-          <section className="relative -mx-4 overflow-hidden rounded-none bg-obsidian px-5 py-11 text-chalk sm:mx-0 sm:rounded-[2rem] sm:px-10 sm:py-20">
+          <section className="relative -mx-4 overflow-hidden rounded-none bg-obsidian px-5 py-11 text-chalk sm:mx-0 sm:rounded-panel sm:px-10 sm:py-20">
             <div className="u-grain pointer-events-none absolute inset-0 opacity-30" />
             <div className="pointer-events-none absolute -right-24 -top-24 size-[32rem] rounded-full bg-accent/25 blur-[120px]" />
             <div className="pointer-events-none absolute -left-32 bottom-0 size-[28rem] rounded-full bg-accent-bright/10 blur-[120px]" />
@@ -72,7 +72,7 @@ export default function ForBrandsPage() {
                 </span>
               </Reveal>
               <Reveal delay={60}>
-                <h1 className="mt-4 text-balance font-display text-[2.1rem] font-bold leading-[1.05] tracking-tight text-chalk sm:mt-5 sm:text-6xl">
+                <h1 className="mt-4 text-balance font-display text-display font-bold text-chalk sm:mt-5">
                   Authentic UGC from <span className="text-accent-bright">real humans</span> that converts.
                 </h1>
               </Reveal>
@@ -104,7 +104,7 @@ export default function ForBrandsPage() {
                 </div>
                 <div className="p-2 text-center">
                   <p className="truncate text-xs font-semibold text-ink">{c.name}</p>
-                  <p className="truncate text-[11px] text-ink-3">{c.niches[0]}</p>
+                  <p className="truncate text-2xs text-ink-3">{c.niches[0]}</p>
                 </div>
               </div>
             ))}
@@ -173,7 +173,7 @@ export default function ForBrandsPage() {
 
         {/* Final CTA */}
         <Container className="pb-20">
-          <section className="rounded-[2rem] bg-obsidian px-6 py-14 text-center text-chalk sm:py-16">
+          <section className="rounded-panel bg-obsidian px-6 py-14 text-center text-chalk sm:py-16">
             <h2 className="font-display text-3xl font-bold tracking-tight text-chalk sm:text-4xl">Get content that actually converts</h2>
             <p className="mx-auto mt-3 max-w-md text-chalk/75">Post your first brief free and meet verified creators ready to make it.</p>
             <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">

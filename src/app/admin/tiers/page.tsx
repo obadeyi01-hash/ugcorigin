@@ -74,7 +74,7 @@ async function TiersInner() {
                         {c.display_name || `@${c.handle}`}
                       </Link>
                       <TierBadge tier={c.tier} />
-                      {!c.is_live && <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] text-ink-3">Not live</span>}
+                      {!c.is_live && <span className="rounded-full bg-surface-2 px-2 py-0.5 text-2xs text-ink-3">Not live</span>}
                     </div>
                     <p className="mt-0.5 text-xs text-ink-3">
                       ERS {Number(c.earned_reputation ?? 0).toFixed(0)} · {m?.gigs_completed ?? 0} gigs ·{" "}
