@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { guardWrite } from "@/lib/admin/rbac";
 import { notifyUser } from "@/lib/notify";
+import { sendEmail, emailConfigured } from "@/lib/email/send";
+import { brandApprovedEmail } from "@/lib/email/templates";
 
 type Res = { ok?: boolean; error?: string };
 
@@ -47,6 +49,9 @@ export async function reviewBrandVerification(brandId: string, decision: "verifi
   if (e) return { error: e.message };
 
   await admin.from("audit_log").insert({ actor_id: ctx.userId, action: `brand.${decision === "verified" ? "verified" : "rejected"}`, target_type: "brand_profile", target_id: brandId, after: { verification_status: decision } });
+
+  // In-app notification (always). On approval, skip the generic email and send
+  // the dedicated welcome email instead; on rejection keep the generic email.
   await notifyUser(admin, brandId, {
     type: "product",
     title: decision === "verified" ? "Your brand is verified" : "Brand verification update",
@@ -54,7 +59,19 @@ export async function reviewBrandVerification(brandId: string, decision: "verifi
       ? "Your business is verified. Creators now see a Verified brand badge on your offers."
       : `We couldn't verify your business yet. ${note.trim() || "Please resubmit with a valid CAC/RC number."}`,
     href: "/settings",
+    skipEmail: decision === "verified",
   });
+
+  if (decision === "verified" && emailConfigured()) {
+    const [{ data: profile }, { data: bp }] = await Promise.all([
+      admin.from("profiles").select("email").eq("id", brandId).maybeSingle(),
+      admin.from("brand_profiles").select("company_name").eq("id", brandId).maybeSingle(),
+    ]);
+    if (profile?.email) {
+      await sendEmail(brandApprovedEmail(profile.email, { companyName: bp?.company_name }));
+    }
+  }
+
   revalidatePath("/admin/verification");
   return { ok: true };
 }
