@@ -68,11 +68,6 @@ export default function ForCreatorsPage() {
             <div className="pointer-events-none absolute -left-32 bottom-0 size-[28rem] rounded-full bg-accent-bright/10 blur-[120px]" />
             <div className="relative mx-auto max-w-3xl text-left sm:text-center">
               <Reveal>
-                <span className="inline-flex items-center rounded-full border border-chalk/15 bg-chalk/[0.06] px-3.5 py-1 text-[0.7rem] font-medium uppercase tracking-[0.12em] text-chalk/75 sm:text-xs">
-                  For creators
-                </span>
-              </Reveal>
-              <Reveal delay={60}>
                 <h1 className="mt-4 text-balance font-display text-display font-bold text-chalk sm:mt-5">
                   Get paid well for the content you <span className="text-accent-bright">already make</span>.
                 </h1>
