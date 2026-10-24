@@ -41,18 +41,6 @@ export function WorkspaceStill({ priority = false, rounded = "rounded-2xl" }: { 
   );
 }
 
-/** Hero strip tile — the product moment, sized to sit beside the creator faces. */
-export function ProductMomentCard() {
-  return (
-    <div className="u-lift overflow-hidden rounded-2xl border border-chalk/10 bg-surface p-2.5 shadow-lg">
-      <WorkspaceStill priority />
-      <p className="px-1 pb-0.5 pt-2 text-2xs font-medium text-ink-3">
-        Review on-platform · pay only when approved
-      </p>
-    </div>
-  );
-}
-
 /** Mini brief-wizard surface (step 1) — real brief language, human + local. */
 function BriefMock() {
   return (

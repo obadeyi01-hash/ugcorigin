@@ -28,7 +28,9 @@ import { HeroSearch } from "@/components/marketplace/hero-search";
 import { StatsBand } from "@/components/marketplace/stats-band";
 import { SAMPLE_CREATORS, NICHES } from "@/lib/sample-data";
 import { topRankedCreators } from "@/lib/creators/top";
-import { ProductMomentCard, HowItWorks } from "@/components/marketplace/product-moments";
+import { HowItWorks } from "@/components/marketplace/product-moments";
+import { ProductMomentFeature } from "@/components/marketplace/product-moment-feature";
+import { CategoryTiles } from "@/components/marketplace/category-tiles";
 
 const steps = [
   {
@@ -85,9 +87,9 @@ async function HeroStrip() {
   const strip = await getStrip();
   return (
     <>
-      {strip.slice(0, 3).map((c, i) => (
+      {strip.slice(0, 4).map((c, i) => (
         <Reveal key={c.handle ?? c.name} delay={i * 60}>
-          <CreatorCard creator={{ ...c, priority: i < 2 }} />
+          <CreatorCard creator={{ ...c, priority: i < 2 }} variant="overlay" />
         </Reveal>
       ))}
     </>
@@ -100,19 +102,19 @@ async function MidStrip() {
     <>
       {strip.slice(2, 8).map((c, i) => (
         <Reveal key={c.handle ?? c.name} delay={i * 50}>
-          <CreatorCard creator={c} />
+          <CreatorCard creator={c} variant="overlay" />
         </Reveal>
       ))}
     </>
   );
 }
 
-function SampleStrip({ from, to, priorityCount = 0 }: { from: number; to: number; priorityCount?: number }) {
+function SampleStrip({ from, to, priorityCount = 0, variant = "overlay" }: { from: number; to: number; priorityCount?: number; variant?: "grid" | "overlay" }) {
   return (
     <>
       {SAMPLE_CREATORS.slice(from, to).map((c, i) => (
         <Reveal key={c.name} delay={i * 60}>
-          <CreatorCard creator={{ ...c, priority: i < priorityCount }} />
+          <CreatorCard creator={{ ...c, priority: i < priorityCount }} variant={variant} />
         </Reveal>
       ))}
     </>
@@ -164,12 +166,18 @@ export default function Home() {
 
             {/* Creator strip — brings real faces into the first view */}
             <CardScroller gridClass="mt-7 grid-cols-2 lg:grid-cols-4" className="relative">
-              <ProductMomentCard />
-              <Suspense fallback={<SampleStrip from={0} to={3} priorityCount={1} />}>
+              <Suspense fallback={<SampleStrip from={0} to={4} priorityCount={2} />}>
                 <HeroStrip />
               </Suspense>
             </CardScroller>
           </section>
+        </Container>
+
+        {/* Headline product moment — the review → approve → release story, live */}
+        <Container className="pt-10 sm:pt-14">
+          <Reveal>
+            <ProductMomentFeature />
+          </Reveal>
         </Container>
 
         {/* Stats / product facts */}
@@ -220,6 +228,27 @@ export default function Home() {
                 );
               })}
             </div>
+          </Container>
+        </section>
+
+        {/* Shop by category — human category tiles in the locked pastel palette */}
+        <section className="pb-16 sm:pb-24">
+          <Container>
+            <div className="flex items-end justify-between gap-4">
+              <SectionHeading
+                eyebrow="Browse by category"
+                title="Find your niche"
+                subtitle="Real creators across the categories brands hire most. Tap in to see live rates and work."
+              />
+              <Link href="/creators" className="hidden shrink-0 sm:block">
+                <Button variant="ghost" size="sm">
+                  All categories <ArrowRight className="size-4" />
+                </Button>
+              </Link>
+            </div>
+            <Reveal className="mt-8">
+              <CategoryTiles />
+            </Reveal>
           </Container>
         </section>
 
