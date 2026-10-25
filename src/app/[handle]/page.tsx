@@ -10,7 +10,7 @@ import { tierMeta, isInfluencer } from "@/lib/tiers";
 import { displayNameFor, publicName } from "@/lib/names";
 import { createClient } from "@/lib/supabase/server";
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://ugcorigin.com";
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }): Promise<Metadata> {
   const { handle: raw } = await params;

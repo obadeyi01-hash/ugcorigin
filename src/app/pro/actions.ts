@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { initTransaction, paystackConfigured } from "@/lib/payments/paystack";
 import { PRO_PLAN, PRO_PRICE_NAIRA } from "@/lib/pro";
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://ugcorigin.com";
 
 /** Start a Paystack checkout to subscribe to Creator Pro. */
 export async function startSubscription(): Promise<{ url?: string; configured?: boolean; error?: string }> {

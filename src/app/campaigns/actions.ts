@@ -52,7 +52,7 @@ export async function fundCampaignAction(campaignId: string): Promise<{ url?: st
   if (!paystackConfigured()) return { configured: false };
 
   const amount = c.pool_naira + feeFor(c.pool_naira);
-  const site = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://ugcorigin.com";
   try {
     const { authorizationUrl } = await initTransaction({
       email: user.email ?? `brand+${user.id}@ugcorigin.com`,

@@ -119,7 +119,7 @@ export async function fundOfferAction(offerId: string): Promise<{ url?: string; 
   if (!paystackConfigured()) return { configured: false };
 
   const amount = offer.price_naira + feeFor(offer.price_naira);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://ugcorigin.com";
   try {
     const { authorizationUrl } = await initTransaction({
       email: user.email ?? `brand+${user.id}@ugcorigin.com`,

@@ -75,7 +75,7 @@ export async function createBoostCheckout(input: {
     .single();
   if (error || !boost) return { error: error?.message ?? "Could not start the boost." };
 
-  const site = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://ugcorigin.com";
   try {
     const { authorizationUrl } = await initTransaction({
       email: user.email ?? `user+${user.id}@ugcorigin.com`,
