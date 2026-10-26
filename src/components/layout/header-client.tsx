@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { cn } from "@/lib/utils";
+import { Notice } from "@/components/ui/notice";
+import { Tooltip } from "@/components/ui/tooltip";
 import { createClient, supabaseConfigured } from "@/lib/supabase/client";
 
 type NavItem = { label: string; href: string };
@@ -19,6 +21,9 @@ type NavItem = { label: string; href: string };
 type Account = {
   isCreator: boolean;
   isBrand: boolean;
+  creatorLive: boolean;
+  brandVerified: boolean;
+  creatorSuspended: boolean;
   display: string;
   handle: string | null;
   avatarUrl: string | null;
@@ -64,8 +69,8 @@ export function HeaderClient({ nav }: { nav: NavItem[] }) {
         return;
       }
       const [{ data: creator }, { data: brand }] = await Promise.all([
-        supabase.from("creator_profiles").select("display_name, handle").eq("id", user.id).maybeSingle(),
-        supabase.from("brand_profiles").select("company_name, logo_url").eq("id", user.id).maybeSingle(),
+        supabase.from("creator_profiles").select("display_name, handle, is_live, suspended").eq("id", user.id).maybeSingle(),
+        supabase.from("brand_profiles").select("company_name, logo_url, verification_status").eq("id", user.id).maybeSingle(),
       ]);
       if (cancelled) return;
       const isCreator = !!creator;
@@ -76,6 +81,9 @@ export function HeaderClient({ nav }: { nav: NavItem[] }) {
       setAccount({
         isCreator,
         isBrand,
+        creatorLive: !!creator?.is_live && !creator?.suspended,
+        brandVerified: brand?.verification_status === "verified",
+        creatorSuspended: !!creator?.suspended,
         display,
         handle: creator?.handle ?? null,
         avatarUrl: isCreator ? null : brand?.logo_url ?? null,
@@ -242,6 +250,38 @@ export function HeaderClient({ nav }: { nav: NavItem[] }) {
             )}
           </Container>
         </div>
+      )}
+      {account?.creatorSuspended && (
+        <Container className="pb-3">
+          <Notice tone="error" title="This creator profile was taken offline">
+            Going through verification again will not undo a moderation takedown.
+          </Notice>
+        </Container>
+      )}
+      {account && !account.creatorSuspended && ((account.isCreator && !account.creatorLive) || (account.isBrand && !account.brandVerified)) && (
+        <Container className="pb-3">
+          <div className="flex flex-wrap items-start gap-2">
+            {account.isCreator && !account.creatorLive && (
+              <div className="min-w-[16rem] flex-1">
+                <Notice tone="warning" title="Creators stay hidden until they are live" href="/verify" action="Finish verification">
+                  You cannot apply to briefs or campaigns, and brands cannot find this profile.
+                </Notice>
+              </div>
+            )}
+            {account.isBrand && !account.brandVerified && (
+              <div className="min-w-[16rem] flex-1">
+                <Notice tone="warning" title="Brands cannot post until they are verified" href="/settings" action="Verify your brand">
+                  <span className="inline-flex items-center gap-1">
+                    Briefs, campaigns, and offers stay closed.
+                    <Tooltip label="A person on the team checks the registered business name and CAC/RC number. The badge is what creators see on your posts.">
+                      <button type="button" className="font-medium text-ink underline decoration-dotted">Why?</button>
+                    </Tooltip>
+                  </span>
+                </Notice>
+              </div>
+            )}
+          </div>
+        </Container>
       )}
     </header>
   );

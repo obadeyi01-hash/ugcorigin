@@ -20,13 +20,22 @@ async function NewBriefInner() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { isBrand } = await getViewer();
+  const { isBrand, brandVerified } = await getViewer();
   if (!isBrand) {
     return (
       <AccessNotice
         title="Brands post briefs"
         message="You're signed in as a creator. Briefs are posted by brands — add a brand account to post one, or browse open briefs to apply."
         cta={{ label: "Add a brand account", href: "/onboarding?role=brand" }}
+      />
+    );
+  }
+  if (!brandVerified) {
+    return (
+      <AccessNotice
+        title="Verify your brand first"
+        message="Briefs stay off the marketplace until your CAC/RC number is approved."
+        cta={{ label: "Verify your brand", href: "/settings" }}
       />
     );
   }

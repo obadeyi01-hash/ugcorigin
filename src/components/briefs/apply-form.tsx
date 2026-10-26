@@ -7,23 +7,33 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea, Field } from "@/components/ui/input";
 import { Card, CardBody } from "@/components/ui/card";
 import { applyToBriefAction } from "@/app/briefs/actions";
+import { Notice } from "@/components/ui/notice";
+import { useToast } from "@/components/ui/toaster";
 
 export function ApplyForm({ briefId }: { briefId: string }) {
   const [pitch, setPitch] = useState("");
   const [sampleUrl, setSampleUrl] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [href, setHref] = useState<string | null>(null);
+  const toast = useToast();
   const [needsCreator, setNeedsCreator] = useState(false);
   const [done, setDone] = useState(false);
   const [pending, start] = useTransition();
 
   function submit() {
     setErr(null);
+    setHref(null);
     setNeedsCreator(false);
     start(async () => {
       const res = await applyToBriefAction(briefId, pitch, sampleUrl);
       if (res?.needsCreator) setNeedsCreator(true);
-      else if (res?.error) setErr(res.error);
-      else if (res?.ok) setDone(true);
+      else if (res?.error) {
+        setErr(res.error);
+        setHref(res.href ?? null);
+      } else if (res?.ok) {
+        toast("Application sent", "success");
+        setDone(true);
+      }
     });
   }
 
@@ -56,7 +66,11 @@ export function ApplyForm({ briefId }: { briefId: string }) {
             Set up a creator profile to apply. <Link href="/onboarding?role=creator" className="font-medium text-accent hover:underline">Get started →</Link>
           </div>
         )}
-        {err && !needsCreator && <p className="mt-2 text-sm text-error">{err}</p>}
+        {err && !needsCreator && (
+          <div className="mt-3">
+            <Notice tone="error" href={href ?? undefined} action={href ? "Finish verification" : undefined}>{err}</Notice>
+          </div>
+        )}
         <Button onClick={submit} loading={pending} className="mt-4">Apply</Button>
       </CardBody>
     </Card>

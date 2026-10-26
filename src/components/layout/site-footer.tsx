@@ -34,6 +34,7 @@ const columns = [
       ["Trust & Safety", "/trust"],
       ["Help & Support", "/support"],
       ["Documentation", "/docs"],
+      ["Journal", "/journal"],
       ["Services", "/services"],
     ],
   },

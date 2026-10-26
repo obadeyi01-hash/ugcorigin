@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fundOfferAction } from "@/app/offers/actions";
+import { requireLiveCreator, requireVerifiedBrand } from "@/lib/verification/gates";
 
 async function auth() {
   const supabase = await createClient();
@@ -23,12 +24,12 @@ export type BriefInput = {
   slots: number;
 };
 
-export async function postBriefAction(input: BriefInput): Promise<{ error?: string; needsBrand?: boolean }> {
+export async function postBriefAction(input: BriefInput): Promise<{ error?: string; needsBrand?: boolean; href?: string }> {
   const { supabase, user } = await auth();
   if (!user) return { error: "Please sign in to post a brief." };
 
-  const { data: brand } = await supabase.from("brand_profiles").select("id").eq("id", user.id).maybeSingle();
-  if (!brand) return { error: "Create a brand account first.", needsBrand: true };
+  const gate = await requireVerifiedBrand(supabase, user.id);
+  if (!gate.ok) return { error: gate.error, needsBrand: gate.needsBrand, href: gate.href };
 
   if (!input.title.trim()) return { error: "Add a title." };
   if (!(input.budget > 0)) return { error: "Set a budget per creator." };
@@ -58,12 +59,12 @@ export async function applyToBriefAction(
   briefId: string,
   pitch: string,
   sampleUrl: string,
-): Promise<{ error?: string; ok?: boolean; needsCreator?: boolean }> {
+): Promise<{ error?: string; ok?: boolean; needsCreator?: boolean; href?: string }> {
   const { supabase, user } = await auth();
   if (!user) return { error: "Please sign in to apply." };
 
-  const { data: creator } = await supabase.from("creator_profiles").select("id").eq("id", user.id).maybeSingle();
-  if (!creator) return { error: "Set up a creator profile first.", needsCreator: true };
+  const gate = await requireLiveCreator(supabase, user.id);
+  if (!gate.ok) return { error: gate.error, needsCreator: gate.needsCreator, href: gate.href };
 
   const { data: brief } = await supabase.from("briefs").select("id, status").eq("id", briefId).maybeSingle();
   if (!brief || brief.status !== "open") return { error: "This brief is no longer open." };
@@ -102,6 +103,8 @@ export async function selectApplicantAction(applicationId: string): Promise<{ ur
     .eq("id", app.brief_id)
     .maybeSingle();
   if (!brief || brief.brand_id !== user.id) return { error: "Not allowed." };
+  const gate = await requireVerifiedBrand(supabase, user.id);
+  if (!gate.ok) return { error: gate.error };
 
   const admin = createAdminClient();
 

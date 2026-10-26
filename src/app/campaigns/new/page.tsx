@@ -20,13 +20,22 @@ async function Inner() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { isBrand } = await getViewer();
+  const { isBrand, brandVerified } = await getViewer();
   if (!isBrand) {
     return (
       <AccessNotice
         title="Brands run campaigns"
         message="You're signed in as a creator. Per-view campaigns are funded by brands — add a brand account to create one, or browse open campaigns to submit."
         cta={{ label: "Add a brand account", href: "/onboarding?role=brand" }}
+      />
+    );
+  }
+  if (!brandVerified) {
+    return (
+      <AccessNotice
+        title="Verify your brand first"
+        message="Campaigns stay hidden until your CAC/RC number is approved. Creators only work with verified businesses."
+        cta={{ label: "Verify your brand", href: "/settings" }}
       />
     );
   }

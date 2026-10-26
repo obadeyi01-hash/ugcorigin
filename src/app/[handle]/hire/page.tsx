@@ -26,13 +26,22 @@ async function HireInner({ params, searchParams }: { params: Promise<{ handle: s
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { isBrand } = await getViewer();
+  const { isBrand, brandVerified } = await getViewer();
   if (!isBrand) {
     return (
       <AccessNotice
         title="Only brands can make offers"
         message="Hiring a creator is a brand action. You're signed in as a creator — add a brand account to send offers."
         cta={{ label: "Add a brand account", href: "/onboarding?role=brand" }}
+      />
+    );
+  }
+  if (!brandVerified) {
+    return (
+      <AccessNotice
+        title="Verify your brand first"
+        message="Offers are only available to verified businesses. Submit your CAC/RC number, then come back to hire."
+        cta={{ label: "Verify your brand", href: "/settings" }}
       />
     );
   }

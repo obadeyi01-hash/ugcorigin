@@ -9,6 +9,7 @@ import { feeFor } from "@/lib/fees";
 import { payCampaignSubmission } from "@/lib/payments/settle";
 import { guardWrite } from "@/lib/admin/rbac";
 import { detectPlatform } from "@/lib/social/detect";
+import { requireLiveCreator, requireVerifiedBrand } from "@/lib/verification/gates";
 
 async function auth() {
   const supabase = await createClient();
@@ -20,11 +21,11 @@ async function auth() {
 
 export type CampaignInput = { title: string; description: string; niches: string[]; pool: number; ratePer1000: number };
 
-export async function postCampaignAction(input: CampaignInput): Promise<{ error?: string; needsBrand?: boolean }> {
+export async function postCampaignAction(input: CampaignInput): Promise<{ error?: string; needsBrand?: boolean; href?: string }> {
   const { supabase, user } = await auth();
   if (!user) return { error: "Please sign in to create a campaign." };
-  const { data: brand } = await supabase.from("brand_profiles").select("id").eq("id", user.id).maybeSingle();
-  if (!brand) return { error: "Create a brand account first.", needsBrand: true };
+  const gate = await requireVerifiedBrand(supabase, user.id);
+  if (!gate.ok) return { error: gate.error, needsBrand: gate.needsBrand, href: gate.href };
   if (!input.title.trim()) return { error: "Add a title." };
   if (!(input.pool > 0) || !(input.ratePer1000 > 0)) return { error: "Set a pool and a rate per 1,000 views." };
 
@@ -50,6 +51,8 @@ export async function fundCampaignAction(campaignId: string): Promise<{ url?: st
   if (!user) return { error: "Please sign in again." };
   const { data: c } = await supabase.from("campaigns").select("id, brand_id, pool_naira, funded").eq("id", campaignId).maybeSingle();
   if (!c || c.brand_id !== user.id) return { error: "Not allowed." };
+  const gate = await requireVerifiedBrand(supabase, user.id);
+  if (!gate.ok) return { error: gate.error };
   if (c.funded) return { error: "This campaign is already funded." };
   if (!paystackConfigured()) return { configured: false };
 
@@ -69,11 +72,11 @@ export async function fundCampaignAction(campaignId: string): Promise<{ url?: st
   }
 }
 
-export async function submitToCampaignAction(campaignId: string, url: string, claimedViews: number): Promise<{ error?: string; ok?: boolean; needsCreator?: boolean }> {
+export async function submitToCampaignAction(campaignId: string, url: string, claimedViews: number): Promise<{ error?: string; ok?: boolean; needsCreator?: boolean; href?: string }> {
   const { supabase, user } = await auth();
   if (!user) return { error: "Please sign in to submit." };
-  const { data: creator } = await supabase.from("creator_profiles").select("id").eq("id", user.id).maybeSingle();
-  if (!creator) return { error: "Set up a creator profile first.", needsCreator: true };
+  const gate = await requireLiveCreator(supabase, user.id);
+  if (!gate.ok) return { error: gate.error, needsCreator: gate.needsCreator, href: gate.href };
 
   const { data: c } = await supabase.from("campaigns").select("id, status, funded").eq("id", campaignId).maybeSingle();
   if (!c || c.status !== "open" || !c.funded) return { error: "This campaign isn't open for submissions." };

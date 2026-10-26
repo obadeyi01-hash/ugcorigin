@@ -26,6 +26,10 @@ export type Viewer = {
   showBrandCtas: boolean;
   /** Whether to surface creator-only actions (Apply to a brief, Submit to a campaign). */
   showCreatorCtas: boolean;
+  /** Brand profile exists and a reviewer has approved it. */
+  brandVerified: boolean;
+  /** Creator profile exists, is live, and is not suspended. */
+  creatorLive: boolean;
 };
 
 const GUEST: Viewer = {
@@ -38,6 +42,8 @@ const GUEST: Viewer = {
   activeRole: "guest",
   showBrandCtas: true,
   showCreatorCtas: true,
+  brandVerified: false,
+  creatorLive: false,
 };
 
 /**
@@ -57,8 +63,8 @@ export async function getViewer(): Promise<Viewer> {
   if (!user) return GUEST;
 
   const [{ data: creator }, { data: brand }, adminCtx] = await Promise.all([
-    supabase.from("creator_profiles").select("id").eq("id", user.id).maybeSingle(),
-    supabase.from("brand_profiles").select("id").eq("id", user.id).maybeSingle(),
+    supabase.from("creator_profiles").select("id, is_live, suspended").eq("id", user.id).maybeSingle(),
+    supabase.from("brand_profiles").select("id, verification_status").eq("id", user.id).maybeSingle(),
     getAdminContext(),
   ]);
 
@@ -83,5 +89,7 @@ export async function getViewer(): Promise<Viewer> {
     // other user-side role. Admins and dual accounts see both.
     showBrandCtas: !(isCreator && !isBrand) || isAdmin,
     showCreatorCtas: !(isBrand && !isCreator) || isAdmin,
+    brandVerified: brand?.verification_status === "verified",
+    creatorLive: !!creator?.is_live && !creator?.suspended,
   };
 }

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { PillRow } from "@/components/ui/pill-row";
 import { Input, Textarea, Field } from "@/components/ui/input";
 import { Chip } from "@/components/ui/chip";
+import { Notice } from "@/components/ui/notice";
 import { NICHES } from "@/lib/sample-data";
 import { postBriefAction } from "@/app/briefs/actions";
 
@@ -18,6 +19,7 @@ export function BriefForm() {
   const [slots, setSlots] = useState(1);
   const [deadline, setDeadline] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [href, setHref] = useState<string | null>(null);
   const [needsBrand, setNeedsBrand] = useState(false);
   const [pending, start] = useTransition();
 
@@ -27,11 +29,15 @@ export function BriefForm() {
 
   function submit() {
     setErr(null);
+    setHref(null);
     setNeedsBrand(false);
     start(async () => {
       const res = await postBriefAction({ title, description, niches, budget, deadline, slots });
       if (res?.needsBrand) setNeedsBrand(true);
-      if (res?.error) setErr(res.error);
+      if (res?.error) {
+        setErr(res.error);
+        setHref(res.href ?? null);
+      }
     });
   }
 
@@ -69,7 +75,9 @@ export function BriefForm() {
           You need a brand account to post. <Link href="/onboarding?role=brand" className="font-medium text-accent hover:underline">Set one up →</Link>
         </div>
       )}
-      {err && !needsBrand && <p className="text-sm text-error">{err}</p>}
+      {err && !needsBrand && (
+        <Notice tone="error" href={href ?? undefined} action={href ? "Verify your brand" : undefined}>{err}</Notice>
+      )}
 
       <Button onClick={submit} loading={pending} disabled={!title.trim() || !(budget > 0)}>
         Post brief <ArrowRight className="size-4" />

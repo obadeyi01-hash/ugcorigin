@@ -7,22 +7,31 @@ import { Button } from "@/components/ui/button";
 import { Input, Field } from "@/components/ui/input";
 import { Card, CardBody } from "@/components/ui/card";
 import { submitToCampaignAction } from "@/app/campaigns/actions";
+import { Notice } from "@/components/ui/notice";
+import { useToast } from "@/components/ui/toaster";
 
 export function CampaignSubmit({ campaignId }: { campaignId: string }) {
   const [url, setUrl] = useState("");
   const [views, setViews] = useState(0);
   const [err, setErr] = useState<string | null>(null);
+  const [href, setHref] = useState<string | null>(null);
+  const toast = useToast();
   const [needsCreator, setNeedsCreator] = useState(false);
   const [done, setDone] = useState(false);
   const [pending, start] = useTransition();
 
   function submit() {
-    setErr(null); setNeedsCreator(false);
+    setErr(null); setHref(null); setNeedsCreator(false);
     start(async () => {
       const res = await submitToCampaignAction(campaignId, url, views);
       if (res?.needsCreator) setNeedsCreator(true);
-      else if (res?.error) setErr(res.error);
-      else if (res?.ok) setDone(true);
+      else if (res?.error) {
+        setErr(res.error);
+        setHref(res.href ?? null);
+      } else if (res?.ok) {
+        toast("Submission sent", "success");
+        setDone(true);
+      }
     });
   }
 
@@ -43,7 +52,11 @@ export function CampaignSubmit({ campaignId }: { campaignId: string }) {
           </Field>
         </div>
         {needsCreator && <div className="mt-3 rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm text-ink-2">Set up a creator profile to submit. <Link href="/onboarding?role=creator" className="font-medium text-accent hover:underline">Get started →</Link></div>}
-        {err && !needsCreator && <p className="mt-2 text-sm text-error">{err}</p>}
+        {err && !needsCreator && (
+          <div className="mt-3">
+            <Notice tone="error" href={href ?? undefined} action={href ? "Finish verification" : undefined}>{err}</Notice>
+          </div>
+        )}
         <Button onClick={submit} loading={pending} disabled={!url.trim()} className="mt-4">Submit</Button>
       </CardBody>
     </Card>

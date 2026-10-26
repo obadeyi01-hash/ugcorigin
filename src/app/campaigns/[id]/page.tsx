@@ -16,6 +16,7 @@ import { BoostButton } from "@/components/boost/boost-button";
 import { createClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/role";
 import { formatNaira } from "@/lib/utils";
+import { Notice } from "@/components/ui/notice";
 
 export const metadata: Metadata = { title: "Campaign" };
 
@@ -38,7 +39,7 @@ async function Inner({ params }: { params: Promise<{ id: string }> }) {
   } = await supabase.auth.getUser();
   const isOwner = !!user && c.brand_id === user.id;
   // Submitting is a creator action — hide the form from brand-only accounts.
-  const { showCreatorCtas } = await getViewer();
+  const { showCreatorCtas, isCreator, creatorLive } = await getViewer();
   const company = (c as unknown as { brand?: { company_name: string | null } }).brand?.company_name || "A brand";
   const remaining = c.pool_naira - c.spent_naira;
   const isOpen = c.funded && c.status === "open";
@@ -101,7 +102,12 @@ async function Inner({ params }: { params: Promise<{ id: string }> }) {
                   </div>
                 </div>
               )}
-              {!isOwner && isOpen && showCreatorCtas && (mySub ? (
+              {!isOwner && isOpen && showCreatorCtas && isCreator && !creatorLive && (
+                <Notice tone="warning" title="You're not live yet" href="/verify" action="Finish verification">
+                  Submissions stay closed until verification is done. Live creators are the only ones brands can hire.
+                </Notice>
+              )}
+              {!isOwner && isOpen && showCreatorCtas && (!isCreator || creatorLive) && (mySub ? (
                 <div className="rounded-xl border border-success/30 bg-success/10 p-3 text-sm text-ink">You submitted, status: <span className="font-medium capitalize">{mySub.status}</span>.</div>
               ) : (
                 <CampaignSubmit campaignId={id} />

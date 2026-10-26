@@ -12,7 +12,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/admin", "/dashboard", "/settings", "/verify", "/offers", "/onboarding", "/gigs", "/messages", "/auth", "/api"],
       },
     ],
-    sitemap: `${SITE_URL}/sitemap.xml`,
+    sitemap: [`${SITE_URL}/sitemap.xml`, `${SITE_URL}/journal/feed.xml`],
     host: SITE_URL,
   };
 }

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-label="A written brief">
+  <rect width="1200" height="630" fill="#f7f7f5"/>
+  <rect x="80" y="70" width="1040" height="490" rx="36" fill="#ffffff" stroke="#ececea"/>
+  <rect x="180" y="140" width="420" height="360" rx="24" fill="#fff" stroke="#ececea"/>
+  <rect x="220" y="190" width="240" height="22" rx="11" fill="#15161a"/>
+  <rect x="220" y="240" width="320" height="14" rx="7" fill="#ececea"/>
+  <rect x="220" y="270" width="280" height="14" rx="7" fill="#ececea"/>
+  <rect x="220" y="300" width="300" height="14" rx="7" fill="#ececea"/>
+  <rect x="220" y="400" width="140" height="40" rx="20" fill="#db2777"/>
+  <circle cx="860" cy="300" r="110" fill="#fce7f3"/>
+  <path d="M820 300h80M860 260v80" stroke="#db2777" stroke-width="14" stroke-linecap="round"/>
+</svg>

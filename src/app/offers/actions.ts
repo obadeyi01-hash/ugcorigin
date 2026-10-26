@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { initTransaction, paystackConfigured } from "@/lib/payments/paystack";
 import { feeFor } from "@/lib/fees";
+import { requireLiveCreator, requireVerifiedBrand } from "@/lib/verification/gates";
 
 async function auth() {
   const supabase = await createClient();
@@ -26,12 +27,12 @@ export type SendOfferInput = {
   locationAddress?: string;
 };
 
-export async function sendOfferAction(input: SendOfferInput): Promise<{ error?: string; needsBrand?: boolean }> {
+export async function sendOfferAction(input: SendOfferInput): Promise<{ error?: string; needsBrand?: boolean; href?: string }> {
   const { supabase, user } = await auth();
   if (!user) return { error: "Please sign in to send an offer." };
 
-  const { data: brand } = await supabase.from("brand_profiles").select("id").eq("id", user.id).maybeSingle();
-  if (!brand) return { error: "Create a brand account first.", needsBrand: true };
+  const gate = await requireVerifiedBrand(supabase, user.id);
+  if (!gate.ok) return { error: gate.error, needsBrand: gate.needsBrand, href: gate.href };
 
   const handle = input.handle.replace(/^@/, "").toLowerCase();
   const { data: creator } = await supabase
@@ -39,7 +40,7 @@ export async function sendOfferAction(input: SendOfferInput): Promise<{ error?: 
     .select("id, is_live")
     .eq("handle", handle)
     .maybeSingle();
-  if (!creator) return { error: "That creator could not be found." };
+  if (!creator || !creator.is_live) return { error: "That creator could not be found. Only live profiles can be hired." };
   if (creator.id === user.id) return { error: "You can't hire your own creator profile." };
 
   if (!input.title.trim()) return { error: "Add a short title." };
@@ -67,7 +68,7 @@ export async function sendOfferAction(input: SendOfferInput): Promise<{ error?: 
   redirect("/offers?sent=1");
 }
 
-export async function acceptOfferAction(offerId: string): Promise<{ error?: string }> {
+export async function acceptOfferAction(offerId: string): Promise<{ error?: string; href?: string }> {
   const { supabase, user } = await auth();
   if (!user) return { error: "Please sign in again." };
 
@@ -81,6 +82,8 @@ export async function acceptOfferAction(offerId: string): Promise<{ error?: stri
   if (offer.expires_at && new Date(offer.expires_at).getTime() < Date.now()) {
     return { error: "This offer has expired." };
   }
+  const gate = await requireLiveCreator(supabase, user.id);
+  if (!gate.ok) return { error: gate.error, href: gate.href };
 
   const { error } = await supabase.from("offers").update({ status: "accepted" }).eq("id", offerId);
   if (error) return { error: error.message };
@@ -117,6 +120,8 @@ export async function fundOfferAction(offerId: string): Promise<{ url?: string; 
     .eq("id", offerId)
     .maybeSingle();
   if (!offer || offer.brand_id !== user.id) return { error: "Offer not found." };
+  const gate = await requireVerifiedBrand(supabase, user.id);
+  if (!gate.ok) return { error: gate.error };
   if (offer.status !== "accepted") return { error: "This offer isn't ready to fund yet." };
 
   if (!paystackConfigured()) return { configured: false };

@@ -55,8 +55,14 @@ is dropped and sign-in looks like it did nothing:
 - any preview origin you actually open, with `/auth/callback`
 
 `localhost` and `127.0.0.1` are different sites. The Google Cloud redirect is
-`https://<project-ref>.supabase.co/auth/v1/callback`, not the app URL. The
-templates rely on `{{ .ConfirmationURL }}`, which Supabase builds from this list.
+`https://<project-ref>.supabase.co/auth/v1/callback`, not the app URL. Google's
+sign-in page prints that host in "to continue to …" because that is the address
+it is sending the browser back to. The product name on that screen is the
+OAuth consent screen app name (set it to UGCOrigin, with home page
+`https://ugcorigin.com`). The host itself changes only when Supabase Auth is
+served on a custom domain such as `auth.ugcorigin.com`, and that same host is
+what you register in Google Cloud. The templates rely on `{{ .ConfirmationURL }}`,
+which Supabase builds from this list.
 
 ---
 

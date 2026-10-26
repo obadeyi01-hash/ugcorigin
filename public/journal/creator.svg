@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-label="A creator profile card">
+  <rect width="1200" height="630" fill="#f7f7f5"/>
+  <rect x="80" y="70" width="1040" height="490" rx="36" fill="#ffffff" stroke="#ececea"/>
+  <circle cx="340" cy="270" r="80" fill="#fce7f3"/>
+  <circle cx="340" cy="250" r="28" fill="#db2777"/>
+  <path d="M280 340c20-40 120-40 140 0" fill="#db2777"/>
+  <rect x="480" y="200" width="360" height="26" rx="13" fill="#15161a"/>
+  <rect x="480" y="250" width="240" height="16" rx="8" fill="#ececea"/>
+  <rect x="480" y="290" width="280" height="16" rx="8" fill="#ececea"/>
+  <rect x="480" y="360" width="120" height="40" rx="20" fill="#db2777"/>
+  <rect x="620" y="360" width="120" height="40" rx="20" fill="#fce7f3"/>
+</svg>

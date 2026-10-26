@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { PillRow } from "@/components/ui/pill-row";
 import { Input, Textarea, Field } from "@/components/ui/input";
 import { Chip } from "@/components/ui/chip";
+import { Notice } from "@/components/ui/notice";
+import { Tooltip } from "@/components/ui/tooltip";
 import { NICHES } from "@/lib/sample-data";
 import { formatNaira } from "@/lib/utils";
 import { postCampaignAction } from "@/app/campaigns/actions";
@@ -18,6 +20,7 @@ export function CampaignForm() {
   const [pool, setPool] = useState(0);
   const [ratePer1000, setRate] = useState(0);
   const [err, setErr] = useState<string | null>(null);
+  const [href, setHref] = useState<string | null>(null);
   const [needsBrand, setNeedsBrand] = useState(false);
   const [pending, start] = useTransition();
 
@@ -25,11 +28,14 @@ export function CampaignForm() {
     setNiches((p) => (p.includes(n) ? p.filter((x) => x !== n) : p.length < 5 ? [...p, n] : p));
   }
   function submit() {
-    setErr(null); setNeedsBrand(false);
+    setErr(null); setHref(null); setNeedsBrand(false);
     start(async () => {
       const res = await postCampaignAction({ title, description, niches, pool, ratePer1000 });
       if (res?.needsBrand) setNeedsBrand(true);
-      if (res?.error) setErr(res.error);
+      if (res?.error) {
+        setErr(res.error);
+        setHref(res.href ?? null);
+      }
     });
   }
 
@@ -54,8 +60,10 @@ export function CampaignForm() {
         <Field label="Total pool (₦)">
           <Input type="number" inputMode="numeric" value={pool || ""} onChange={(e) => setPool(Number(e.target.value))} />
         </Field>
-        <Field label="Rate per 1,000 views (₦)">
-          <Input type="number" inputMode="numeric" value={ratePer1000 || ""} onChange={(e) => setRate(Number(e.target.value))} />
+        <Field label="Rate per 1,000 views (₦)" hint="Capped by whatever is left in the pool.">
+          <Tooltip label="Creators are paid this rate for approved views. A second approval cannot spend money the pool no longer has.">
+            <Input type="number" inputMode="numeric" value={ratePer1000 || ""} onChange={(e) => setRate(Number(e.target.value))} />
+          </Tooltip>
         </Field>
       </div>
 
@@ -69,7 +77,9 @@ export function CampaignForm() {
           You need a brand account. <Link href="/onboarding?role=brand" className="font-medium text-accent hover:underline">Set one up →</Link>
         </div>
       )}
-      {err && !needsBrand && <p className="text-sm text-error">{err}</p>}
+      {err && !needsBrand && (
+        <Notice tone="error" href={href ?? undefined} action={href ? "Continue verification" : undefined}>{err}</Notice>
+      )}
 
       <Button onClick={submit} loading={pending} disabled={!title.trim() || !(pool > 0) || !(ratePer1000 > 0)}>
         Create campaign <ArrowRight className="size-4" />

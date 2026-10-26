@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-label="Views and a pool of money">
+  <rect width="1200" height="630" fill="#f7f7f5"/>
+  <rect x="80" y="70" width="1040" height="490" rx="36" fill="#ffffff" stroke="#ececea"/>
+  <path d="M180 460l160-120 140 60 180-200 200 80" fill="none" stroke="#db2777" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="860" cy="280" r="16" fill="#15161a"/>
+  <rect x="180" y="160" width="220" height="48" rx="24" fill="#15161a"/>
+  <rect x="420" y="160" width="180" height="48" rx="24" fill="#fce7f3"/>
+</svg>

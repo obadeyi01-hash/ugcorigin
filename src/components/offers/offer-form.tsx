@@ -8,6 +8,7 @@ import { Input, Textarea, Field } from "@/components/ui/input";
 import { sendOfferAction } from "@/app/offers/actions";
 import { feeFor } from "@/lib/fees";
 import { formatNaira } from "@/lib/utils";
+import { Notice } from "@/components/ui/notice";
 
 export function OfferForm({
   handle,
@@ -30,6 +31,7 @@ export function OfferForm({
   const [needsLocation, setNeedsLocation] = useState(false);
   const [locationAddress, setLocationAddress] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [href, setHref] = useState<string | null>(null);
   const [needsBrand, setNeedsBrand] = useState(false);
   const [pending, start] = useTransition();
 
@@ -38,11 +40,15 @@ export function OfferForm({
 
   function submit() {
     setError(null);
+    setHref(null);
     setNeedsBrand(false);
     start(async () => {
       const res = await sendOfferAction({ handle, title, brief, price, deadline, needsProduct, needsLocation, locationAddress });
       if (res?.needsBrand) setNeedsBrand(true);
-      if (res?.error) setError(res.error);
+      if (res?.error) {
+        setError(res.error);
+        setHref(res.href ?? null);
+      }
       // success redirects server-side
     });
   }
@@ -112,7 +118,9 @@ export function OfferForm({
           <Link href="/onboarding?role=brand" className="font-medium text-accent hover:underline">Set one up →</Link>
         </div>
       )}
-      {error && !needsBrand && <p className="text-sm text-error">{error}</p>}
+      {error && !needsBrand && (
+        <Notice tone="error" href={href ?? undefined} action={href ? "Verify your brand" : undefined}>{error}</Notice>
+      )}
 
       <Button onClick={submit} loading={pending} disabled={!title.trim() || !(price > 0)}>
         Send offer to {creatorName} <ArrowRight className="size-4" />

@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Inter, Space_Grotesk } from "next/font/google";
 import { JsonLd, SITE_URL } from "@/components/seo/json-ld";
 import { Analytics } from "@/components/analytics/analytics";
+import { Toaster } from "@/components/ui/toaster";
 import { SmoothScroll } from "@/components/layout/smooth-scroll";
 import "./globals.css";
 
@@ -96,7 +97,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col bg-paper text-ink">
         <SmoothScroll />
         <JsonLd data={[orgLd, siteLd]} />
-        {children}
+        <Toaster>{children}</Toaster>
         {/* usePathname() inside Analytics is runtime-only; stream it in so the
             rest of each route can still be prerendered (Next 16 cacheComponents). */}
         <Suspense fallback={null}>

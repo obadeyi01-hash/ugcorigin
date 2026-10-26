@@ -15,6 +15,7 @@ import { BoostButton } from "@/components/boost/boost-button";
 import { createClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/role";
 import { formatNaira } from "@/lib/utils";
+import { Notice } from "@/components/ui/notice";
 
 export const metadata: Metadata = { title: "Brief" };
 
@@ -45,7 +46,7 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
   } = await supabase.auth.getUser();
   const isOwner = !!user && brief.brand_id === user.id;
   // Applying is a creator action — hide the form from brand-only accounts.
-  const { showCreatorCtas } = await getViewer();
+  const { showCreatorCtas, isCreator, creatorLive } = await getViewer();
   const company = (brief as unknown as { brand?: { company_name: string | null } }).brand?.company_name || "A brand";
 
   let apps: AppRow[] = [];
@@ -105,7 +106,14 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
               </div>
             )}
 
-            {!isOwner && brief.status === "open" && showCreatorCtas && (
+            {!isOwner && brief.status === "open" && showCreatorCtas && isCreator && !creatorLive && (
+              <div className="mt-5">
+                <Notice tone="warning" title="You're not live yet" href="/verify" action="Finish verification">
+                  Brands cannot see you, and applications stay closed until verification is done.
+                </Notice>
+              </div>
+            )}
+            {!isOwner && brief.status === "open" && showCreatorCtas && (!isCreator || creatorLive) && (
               <div className="mt-5">
                 {myAppStatus ? (
                   <div className="rounded-xl border border-success/30 bg-success/10 p-3 text-sm text-ink">

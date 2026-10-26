@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-label="Trust between a brand and a creator">
+  <rect width="1200" height="630" fill="#f7f7f5"/>
+  <rect x="80" y="70" width="1040" height="490" rx="36" fill="#ffffff" stroke="#ececea"/>
+  <circle cx="420" cy="315" r="90" fill="#fce7f3"/>
+  <circle cx="780" cy="315" r="90" fill="#15161a"/>
+  <path d="M510 315h180" stroke="#db2777" stroke-width="14" stroke-linecap="round"/>
+  <path d="M560 250l-40 65h50l-20 70 70-90h-46l36-45z" fill="#db2777"/>
+</svg>
