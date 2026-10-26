@@ -1,12 +1,12 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { destroyAsset } from "@/lib/cloudinary-server";
 
 // Scheduled cleanup: reclaim Cloudinary storage from deliverables that are no
-// longer needed. Safe to run often (idempotent). Protect with CRON_SECRET and
-// call it from a scheduler (Vercel Cron, GitHub Action, cron-job.org):
-//   GET /api/cron/prune-deliverables   Authorization: Bearer <CRON_SECRET>
-//   (or ?key=<CRON_SECRET>)
+// longer needed. Safe to run often (idempotent). Protect with CRON_SECRET.
+// Vercel Cron sends Authorization: Bearer <CRON_SECRET>. An unset secret
+// fails closed. The query-string form is not accepted.
 //
 // We prune, only after a grace window past the gig's last update:
 //   - every deliverable of a cancelled/declined gig
@@ -18,11 +18,19 @@ const GRACE_DAYS = 14;
 const FINISHED = ["approved", "released", "completed"];
 const DEAD = ["cancelled", "declined"];
 
-export async function GET(req: Request) {
+function cronAuthorized(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
-  const auth = req.headers.get("authorization");
-  const key = new URL(req.url).searchParams.get("key");
-  if (!secret || (auth !== `Bearer ${secret}` && key !== secret)) {
+  if (!secret) return false;
+  const header = req.headers.get("authorization") ?? "";
+  const expected = `Bearer ${secret}`;
+  const got = Buffer.from(header);
+  const want = Buffer.from(expected);
+  if (got.length !== want.length) return false;
+  return timingSafeEqual(got, want);
+}
+
+export async function GET(req: Request) {
+  if (!cronAuthorized(req)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

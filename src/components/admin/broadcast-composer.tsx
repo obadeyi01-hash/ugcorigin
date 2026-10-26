@@ -15,12 +15,36 @@ import {
 
 const AUDIENCES: { value: Audience; label: string }[] = [
   { value: "all_creators", label: "All creators" },
+  { value: "unverified_creators", label: "Creators not live yet" },
   { value: "all_brands", label: "All brands" },
+  { value: "unverified_brands", label: "Brands not verified" },
   { value: "all_users", label: "Everyone" },
   { value: "user", label: "A specific person" },
 ];
 
-const TIERS = ["origin", "rising", "pro", "elite", "signature"];
+const TIERS = ["origin", "rising", "pro", "elite", "signature", "standout", "luminary"];
+
+const REMIND_CREATORS: BroadcastInput = {
+  audience: "unverified_creators",
+  title: "Finish verification to go live",
+  body: "Your profile stays hidden until bank, identity, and the agreement are done. It only takes a few minutes.",
+  href: "/verify",
+  category: "announcement",
+  sendEmail: true,
+  ctaLabel: "Continue verification",
+  emailSubject: "Finish verification to go live on UGCOrigin",
+};
+
+const REMIND_BRANDS: BroadcastInput = {
+  audience: "unverified_brands",
+  title: "Verify your brand",
+  body: "Submit your registered business name and CAC/RC number. The Verified brand badge shows on your offers once it's approved.",
+  href: "/settings",
+  category: "announcement",
+  sendEmail: true,
+  ctaLabel: "Verify your brand",
+  emailSubject: "Verify your brand on UGCOrigin",
+};
 const BRAND_STATUSES = ["unverified", "pending", "verified"];
 
 export function BroadcastComposer() {
@@ -80,6 +104,13 @@ export function BroadcastComposer() {
   const canCompose = form.title.trim() && form.body.trim();
   const cat = BROADCAST_CATEGORIES.find((c) => c.value === form.category);
 
+  function applyPreset(preset: BroadcastInput) {
+    setForm((f) => ({ ...f, ...preset }));
+    setCount(null);
+    setDone(null);
+    setErr(null);
+  }
+
   return (
     <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
       {/* Audience */}
@@ -95,6 +126,15 @@ export function BroadcastComposer() {
               {AUDIENCES.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
             </Select>
           </Field>
+
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="secondary" onClick={() => applyPreset(REMIND_CREATORS)}>
+              Remind unverified creators
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={() => applyPreset(REMIND_BRANDS)}>
+              Remind unverified brands
+            </Button>
+          </div>
 
           {form.audience === "user" && (
             <Field label="Handle or email" hint="e.g. @ada or ada@brand.com">

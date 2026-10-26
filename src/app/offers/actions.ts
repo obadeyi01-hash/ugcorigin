@@ -73,11 +73,14 @@ export async function acceptOfferAction(offerId: string): Promise<{ error?: stri
 
   const { data: offer } = await supabase
     .from("offers")
-    .select("id, creator_id, status")
+    .select("id, creator_id, status, expires_at")
     .eq("id", offerId)
     .maybeSingle();
   if (!offer || offer.creator_id !== user.id) return { error: "Offer not found." };
   if (offer.status !== "pending") return { error: "This offer can no longer be accepted." };
+  if (offer.expires_at && new Date(offer.expires_at).getTime() < Date.now()) {
+    return { error: "This offer has expired." };
+  }
 
   const { error } = await supabase.from("offers").update({ status: "accepted" }).eq("id", offerId);
   if (error) return { error: error.message };

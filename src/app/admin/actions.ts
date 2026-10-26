@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { guardWrite, type AdminRole } from "@/lib/admin/rbac";
-import { paystackConfigured, initiateTransfer, createRefund } from "@/lib/payments/paystack";
+import { paystackConfigured, initiateTransfer } from "@/lib/payments/paystack";
 import { feeFor } from "@/lib/fees";
+import { refundHeldGig, releaseHeldGig } from "@/lib/payments/settle";
 import { placeCreator } from "@/lib/tiering/placement";
 import { notifyUser, notifyMany } from "@/lib/notify";
 import { logAudit } from "@/lib/admin/audit";
@@ -152,7 +153,7 @@ export async function adminSetLive(creatorId: string, live: boolean): Promise<Re
   const { ctx, error } = await guardWrite("verification");
   if (error) return { error };
   const admin = createAdminClient();
-  const { error: e } = await admin.from("creator_profiles").update({ is_live: live }).eq("id", creatorId);
+  const { error: e } = await admin.from("creator_profiles").update({ is_live: live, ...(live ? { suspended: false } : {}) }).eq("id", creatorId);
   if (e) return { error: e.message };
   // When an admin sets a creator live, place them on the tier ladder too.
   if (live) await placeCreator(creatorId);
@@ -230,100 +231,31 @@ export async function adminSetFeatured(creatorId: string, featured: boolean): Pr
 // approval action (large amounts) — never twice for the same gig thanks to the
 // compare-and-swaps on gig/escrow status.
 
-/** Actually release escrow → ledger + one payout (idempotent). Audits as the given actor. */
+/** Actually release escrow → ledger + one payout. Audits as the given actor. */
 async function executeRelease(admin: Admin, gigId: string, actorId: string): Promise<Res> {
-  const { data: gig } = await admin.from("gigs").select("id, creator_id, title, price_naira, status").eq("id", gigId).maybeSingle();
-  if (!gig) return { error: "Gig not found." };
-  if (gig.status === "completed") return { error: "This gig is already completed." };
-
-  // Compare-and-swap: only the call that flips the gig completes the release,
-  // so a double-click can't double-pay. Mirrors the brand-side approve path.
-  const { data: claimed } = await admin
-    .from("gigs")
-    .update({ status: "completed" })
-    .eq("id", gigId)
-    .neq("status", "completed")
-    .select("id")
-    .maybeSingle();
-  if (!claimed) return { error: "This gig was just completed." };
-
-  // Release escrow only from a held state.
-  const { data: esc } = await admin
-    .from("escrow_transactions")
-    .update({ status: "released" })
-    .eq("gig_id", gigId)
-    .eq("status", "held")
-    .select("id")
-    .maybeSingle();
-  await admin.from("ledger_entries").insert([
-    { gig_id: gigId, escrow_id: esc?.id, user_id: gig.creator_id, entry_type: "release", amount_naira: gig.price_naira, memo: "Admin released escrow" },
-    { gig_id: gigId, escrow_id: esc?.id, user_id: gig.creator_id, entry_type: "payout", amount_naira: gig.price_naira, memo: "Admin queued payout" },
-  ]);
-
-  const { data: creator } = await admin.from("creator_profiles").select("payout_recipient_code").eq("id", gig.creator_id).maybeSingle();
-
-  // One payout per gig (also DB-enforced by payouts_gig_id_unique).
-  const { data: existingPayout } = await admin.from("payouts").select("id, status").eq("gig_id", gigId).maybeSingle();
-  const { data: payout } = existingPayout
-    ? { data: existingPayout }
-    : await admin
-        .from("payouts")
-        .insert({ creator_id: gig.creator_id, gig_id: gigId, provider: "paystack", amount_naira: gig.price_naira, status: "pending" })
-        .select("id, status")
-        .single();
-
-  if (paystackConfigured() && creator?.payout_recipient_code && payout && payout.status === "pending") {
-    try {
-      const t = await initiateTransfer({ amountNaira: gig.price_naira, recipientCode: creator.payout_recipient_code, reason: `UGCOrigin payout, ${gig.title}`, reference: `pay_${payout.id}` });
-      await admin.from("payouts").update({ status: "processing", provider_ref: t.reference }).eq("id", payout.id);
-    } catch {
-      /* leave pending for manual retry */
-    }
-  }
-
-  await logAudit(admin, actorId, "escrow.release", { targetType: "gig", targetId: gigId, after: { amount_naira: gig.price_naira, payout_id: payout?.id ?? null } });
+  const released = await releaseHeldGig(admin, gigId, { memo: "Admin released escrow" });
+  if (!released.ok) return { error: released.error ?? "Could not release escrow." };
+  await logAudit(admin, actorId, "escrow.release", { targetType: "gig", targetId: gigId, after: { payout_queued: !!released.payoutQueued } });
   return { ok: true };
 }
 
-/** Actually refund escrow → Paystack + ledger + notify brand (idempotent). Audits as the given actor. */
+/** Actually refund escrow via Paystack. Audits as the given actor. */
 async function executeRefund(admin: Admin, gigId: string, actorId: string): Promise<Res> {
-  const { data: gig } = await admin.from("gigs").select("id, brand_id, title, price_naira, status").eq("id", gigId).maybeSingle();
+  const { data: gig } = await admin.from("gigs").select("id, brand_id, title, price_naira").eq("id", gigId).maybeSingle();
   if (!gig) return { error: "Gig not found." };
-
-  // Release escrow only from a held state — don't refund money already paid out.
-  const { data: esc } = await admin
-    .from("escrow_transactions")
-    .update({ status: "refunded" })
-    .eq("gig_id", gigId)
-    .eq("status", "held")
-    .select("id, provider_ref")
-    .maybeSingle();
-  if (!esc) return { error: "No held escrow to refund (already released or refunded)." };
-
+  const refunded = await refundHeldGig(admin, gigId, `Admin refund, ${gig.title}`);
+  if (!refunded.ok) return { error: refunded.error ?? "Could not refund escrow." };
   const total = gig.price_naira + feeFor(gig.price_naira);
-
-  // Actually return the money to the brand via Paystack (not just a ledger note).
-  let refundStarted = false;
-  if (paystackConfigured() && esc.provider_ref) {
-    try {
-      await createRefund({ reference: esc.provider_ref, amountNaira: total, reason: `UGCOrigin refund, ${gig.title}` });
-      refundStarted = true;
-    } catch {
-      /* fall back to a manual refund; the ledger + audit still record intent */
-    }
-  }
-
-  await admin.from("ledger_entries").insert({ gig_id: gigId, escrow_id: esc.id, user_id: gig.brand_id, entry_type: "refund", amount_naira: total, memo: refundStarted ? "Admin refunded brand (Paystack)" : "Admin refund — manual return pending" });
-  await admin.from("gigs").update({ status: "cancelled" }).eq("id", gigId);
   await notifyUser(admin, gig.brand_id, {
     type: "gig_update",
-    title: "Your payment was refunded",
-    body: `"${gig.title}" was cancelled and ₦${total.toLocaleString("en-NG")} is being returned to your original payment method.`,
+    title: refunded.refundStarted ? "Your payment was refunded" : "Refund recorded",
+    body: refunded.refundStarted
+      ? `"${gig.title}" was cancelled and ₦${total.toLocaleString("en-NG")} is being returned to your original payment method.`
+      : `"${gig.title}" was cancelled. Paystack isn't connected here, so the ₦${total.toLocaleString("en-NG")} return has to be sent manually.`,
     href: `/gigs/${gigId}`,
     ctaLabel: "View the gig",
   });
-
-  await logAudit(admin, actorId, "escrow.refund", { targetType: "gig", targetId: gigId, after: { amount_naira: total, refund_started: refundStarted } });
+  await logAudit(admin, actorId, "escrow.refund", { targetType: "gig", targetId: gigId, after: { amount_naira: total, refund_started: !!refunded.refundStarted } });
   return { ok: true };
 }
 
@@ -533,7 +465,7 @@ export async function adminRetryPayout(payoutId: string): Promise<Res> {
       amountNaira: payout.amount_naira,
       recipientCode: creator.payout_recipient_code,
       reason: "UGCOrigin payout retry",
-      reference: `pay_${payout.id}`,
+      reference: `pay_${payout.id}_r${(payout.retries ?? 0) + 1}`,
     });
     await admin
       .from("payouts")

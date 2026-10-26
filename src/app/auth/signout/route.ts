@@ -1,11 +1,15 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { requestOrigin, supabaseForRequest } from "@/lib/supabase/auth-response";
 
-export async function POST(request: Request) {
-  const supabase = await createClient();
-  // Scope "local" revokes only THIS device's session. The default ("global")
-  // revokes every refresh token for the user, which signed them out of all
-  // their other devices too — not what signing out of one browser should do.
-  await supabase.auth.signOut({ scope: "local" });
-  return NextResponse.redirect(new URL("/", request.url), { status: 303 });
+export async function POST(request: NextRequest) {
+  const origin = requestOrigin(request);
+  const redirect = NextResponse.redirect(new URL("/", origin), { status: 303 });
+  const bound = supabaseForRequest(request);
+  if (bound) {
+    // Scope "local" revokes only this browser. The default ("global") signs the
+    // person out of every other device too.
+    await bound.client.auth.signOut({ scope: "local" });
+    bound.apply(redirect);
+  }
+  return redirect;
 }

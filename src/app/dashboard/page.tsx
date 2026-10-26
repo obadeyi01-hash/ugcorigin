@@ -14,10 +14,10 @@ import { TierBadge } from "@/components/ui/tier-badge";
 import { BoostButton } from "@/components/boost/boost-button";
 import { tierMeta } from "@/lib/tiers";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { publicName } from "@/lib/names";
 import { RecommendationsPopup, type RecCreator } from "@/components/dashboard/recommendations-popup";
 import { UpsellNudge } from "@/components/upsell/upsell-nudge";
+import { VerifyBanner } from "@/components/dashboard/verify-banner";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -73,12 +73,11 @@ async function DashboardInner() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // select("*") pulls PII columns (phone, rc_number) whose SELECT is revoked
-  // from anon/authenticated; read the owner's own rows via the service role.
-  const admin = createAdminClient();
+  // Named columns only. phone, bank fields, and rc_number are not selectable
+  // by the signed-in role, and select("*") would fail once that migration is applied.
   const [{ data: creator }, { data: brand }] = await Promise.all([
-    admin.from("creator_profiles").select("*").eq("id", user.id).maybeSingle(),
-    admin.from("brand_profiles").select("*").eq("id", user.id).maybeSingle(),
+    supabase.from("creator_profiles").select("id, handle, display_name, location, tier, is_live, suspended, completeness, identity_verified, bank_verified").eq("id", user.id).maybeSingle(),
+    supabase.from("brand_profiles").select("id, company_name, website, verification_status").eq("id", user.id).maybeSingle(),
   ]);
 
   if (!creator && !brand) redirect("/onboarding");
@@ -165,6 +164,29 @@ async function DashboardInner() {
       )}
       <TopBar signedIn />
       <Container className="py-12">
+        {creator && !creator.is_live && !creator.suspended && (
+          <VerifyBanner
+            role="creator"
+            href="/verify"
+            title="You're not live yet"
+            body="Brands can't find this profile until bank, identity, and the agreement are done. We'll email the steps too."
+          />
+        )}
+        {creator?.suspended && (
+          <div className="mt-6 max-w-2xl rounded-2xl border border-error/30 bg-error/10 px-4 py-4 text-sm text-ink">
+            This creator profile was taken offline by moderation. Going live again won't undo that. Contact support if you think it's a mistake.
+          </div>
+        )}
+        {brand && brand.verification_status !== "verified" && (
+          <VerifyBanner
+            role="brand"
+            href="/settings"
+            title={brand.verification_status === "pending" ? "Brand verification is in review" : "Verify your brand"}
+            body={brand.verification_status === "pending"
+              ? "We have your CAC/RC number. You'll get an email when the badge is on."
+              : "A verified business gets a badge on every offer and brief. Submit your CAC/RC number from settings."}
+          />
+        )}
         <h1 className="font-display text-2xl font-bold tracking-tight text-ink">
           Welcome{creator?.display_name ? `, ${creator.display_name}` : brand?.company_name ? `, ${brand.company_name}` : ""}.
         </h1>

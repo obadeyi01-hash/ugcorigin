@@ -44,6 +44,43 @@ export function creatorApprovedEmail(to: string, opts: { name?: string | null; h
   };
 }
 
+/**
+ * Points a new or unverified account at the right verification screen.
+ * Creators go to /verify. Brands go to /settings for the business check.
+ */
+export function verifyPromptEmail(
+  to: string,
+  opts: { name?: string | null; role: "creator" | "brand" },
+): EmailInput {
+  const name = opts.name?.trim() ? esc(opts.name.trim().split(/\s+/)[0]) : "there";
+  const creator = opts.role === "creator";
+  const bodyHtml = creator
+    ? `
+    <p style="${P}">Hi ${name}, your creator profile is set up. It stays hidden from brands until you finish verification.</p>
+    <p style="${P}">Three things, then you go live:</p>
+    ${nextSteps([
+      "Add the bank account payouts should land in.",
+      "Submit a photo of yourself and your NIN. A person on the team reviews it.",
+      "Accept the creator agreement.",
+    ])}
+    <p style="${P}">Once those are approved, your card shows up in the directory and brands can hire you.</p>`
+    : `
+    <p style="${P}">Hi ${name}, your brand account is ready. Creators trust a verified business more, and the badge shows on every offer and brief you post.</p>
+    <p style="${P}">Submit your registered business name and CAC/RC number from settings. We review it and turn the badge on.</p>`;
+  return {
+    to,
+    subject: creator ? "Finish verification to go live on UGCOrigin" : "Verify your brand on UGCOrigin",
+    heading: creator ? "Verify your profile to go live" : "Verify your brand",
+    body: creator
+      ? "Your creator profile stays hidden until bank, identity, and the agreement are done."
+      : "Submit your CAC/RC number so creators see a Verified brand badge.",
+    bodyHtml,
+    preheader: creator ? "Bank, identity, agreement. Then brands can find you." : "The Verified brand badge sits on your offers.",
+    ctaLabel: creator ? "Continue verification" : "Verify your brand",
+    ctaUrl: creator ? `${SITE}/verify` : `${SITE}/settings`,
+  };
+}
+
 /** Brand business verification approved → Verified brand badge. */
 export function brandApprovedEmail(to: string, opts: { companyName?: string | null }): EmailInput {
   const company = opts.companyName?.trim() ? esc(opts.companyName.trim()) : "your business";

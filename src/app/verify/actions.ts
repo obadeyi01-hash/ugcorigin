@@ -9,6 +9,7 @@ import { getKycProvider, type KycInitiation } from "@/lib/kyc";
 import { placeCreator } from "@/lib/tiering/placement";
 import { signedUpload, type SignedUpload } from "@/lib/cloudinary-server";
 import { identityFolder } from "@/lib/cloudinary";
+import { notifyAdminsPendingReview } from "@/lib/notify";
 
 const MIN_COMPLETENESS = 80;
 
@@ -127,7 +128,7 @@ export async function submitIdentityAction(input: {
 
   const nin = input.nin.replace(/\D/g, "");
   if (!/^\d{11}$/.test(nin)) return { error: "Enter your 11-digit NIN." };
-  if (!input.selfieRef || !input.selfieRef.startsWith("cld:")) {
+  if (!input.selfieRef || !input.selfieRef.startsWith("cld:") || !input.selfieRef.includes(identityFolder(user.id))) {
     return { error: "Please add a clear photo of yourself before submitting." };
   }
 
@@ -181,6 +182,11 @@ export async function submitIdentityAction(input: {
     await admin.from("verifications").insert({ user_id: user.id, kind: "identity", provider: "manual", status: "pending" });
   }
   await admin.from("creator_profiles").update({ verification_status: "pending" }).eq("id", user.id);
+  await notifyAdminsPendingReview(admin, {
+    title: "Identity submission waiting",
+    body: "A creator submitted a selfie and NIN for review.",
+    href: "/admin/verification",
+  });
 
   revalidatePath("/verify");
   return { ok: true };
@@ -192,11 +198,12 @@ export async function goLiveAction(): Promise<{ ok?: boolean; missing?: string[]
 
   const { data: p } = await supabase
     .from("creator_profiles")
-    .select("completeness, bank_verified, identity_verified, photo_verified, agreements_accepted_at, is_live")
+    .select("completeness, bank_verified, identity_verified, photo_verified, agreements_accepted_at, is_live, suspended")
     .eq("id", user.id)
     .maybeSingle();
 
   if (!p) return { error: "Create your creator profile first." };
+  if (p.suspended) return { error: "This profile was taken offline by moderation. Contact support to restore it." };
   if (p.is_live) redirect("/dashboard");
 
   const missing: string[] = [];

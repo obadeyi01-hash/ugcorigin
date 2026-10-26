@@ -43,9 +43,20 @@ Supabase → Authentication → **Rate Limits** → bump the email rate limit on
 custom SMTP is on (the tiny default is only for Supabase's built-in sender).
 
 ### d) Set the Site URL + redirect URLs
-Authentication → **URL Configuration** → Site URL = `https://ugcorigin.com`, and
-add any redirect URLs you use. The templates rely on `{{ .ConfirmationURL }}`
-which Supabase builds from these.
+Authentication → **URL Configuration**.
+
+Site URL = `https://ugcorigin.com` in production. Locally the app sends the
+browser origin, so both of these must be on the allow list or the PKCE cookie
+is dropped and sign-in looks like it did nothing:
+
+- `http://localhost:3000/auth/callback`
+- `http://127.0.0.1:3000/auth/callback`
+- `https://ugcorigin.com/auth/callback`
+- any preview origin you actually open, with `/auth/callback`
+
+`localhost` and `127.0.0.1` are different sites. The Google Cloud redirect is
+`https://<project-ref>.supabase.co/auth/v1/callback`, not the app URL. The
+templates rely on `{{ .ConfirmationURL }}`, which Supabase builds from this list.
 
 ---
 

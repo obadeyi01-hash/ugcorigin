@@ -40,12 +40,12 @@ async function SettingsInner() {
   const [{ data: creator }, { data: brand }, { data: settings }] = await Promise.all([
     admin
       .from("creator_profiles")
-      .select("handle, first_name, last_name, display_name, bio, location, phone, niches, content_formats, starting_rate_naira, avatar_url, tier, identity_verified, verification_status")
+      .select("handle, first_name, last_name, display_name, bio, location, niches, content_formats, starting_rate_naira, avatar_url, tier, identity_verified, verification_status")
       .eq("id", user.id)
       .maybeSingle(),
     admin
       .from("brand_profiles")
-      .select("company_name, contact_first_name, contact_last_name, website, store_url, phone, logo_url, verification_status, rc_number, goal, ad_platforms, content_types, business_type, contact_role, team_size")
+      .select("company_name, contact_first_name, contact_last_name, website, store_url, logo_url, verification_status, goal, ad_platforms, content_types, business_type, contact_role, team_size")
       .eq("id", user.id)
       .maybeSingle(),
     supabase
@@ -56,6 +56,13 @@ async function SettingsInner() {
   ]);
 
   if (!creator && !brand) redirect("/onboarding");
+
+  const [{ data: creatorPrivate }, { data: brandPrivate }] = await Promise.all([
+    creator ? admin.from("creator_profiles").select("phone").eq("id", user.id).maybeSingle() : Promise.resolve({ data: null }),
+    brand ? admin.from("brand_profiles").select("phone, rc_number").eq("id", user.id).maybeSingle() : Promise.resolve({ data: null }),
+  ]);
+  const creatorForForm = creator ? { ...creator, phone: creatorPrivate?.phone ?? null } : null;
+  const brandForForm = brand ? { ...brand, phone: brandPrivate?.phone ?? null, rc_number: brandPrivate?.rc_number ?? null } : null;
 
   const prefs = settings ?? {
     notify_offers: true,
@@ -73,8 +80,8 @@ async function SettingsInner() {
           userId={user.id}
           email={user.email ?? ""}
           role={creator ? "creator" : "brand"}
-          creator={creator ?? null}
-          brand={brand ?? null}
+          creator={creatorForForm}
+          brand={brandForForm}
           prefs={prefs}
         />
       </div>

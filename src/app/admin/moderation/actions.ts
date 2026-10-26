@@ -43,7 +43,7 @@ export async function takedownProfile(reportId: string): Promise<Res> {
   const r = await loadReport(admin, reportId);
   if (!r || r.target_type !== "profile") return { error: "Not a profile report." };
 
-  const { error: e } = await admin.from("creator_profiles").update({ is_live: false }).eq("id", r.target_id);
+  const { error: e } = await admin.from("creator_profiles").update({ is_live: false, suspended: true }).eq("id", r.target_id);
   if (e) return { error: e.message };
   await admin.from("audit_log").insert({ actor_id: ctx.userId, action: "moderation.profile_takedown", target_type: "creator_profile", target_id: r.target_id, after: { is_live: false } });
   await markResolved(admin, reportId, ctx.userId, "actioned", "Profile taken offline.");

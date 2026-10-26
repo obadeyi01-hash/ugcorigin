@@ -157,11 +157,19 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+site_url = "http://localhost:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
-# A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+# Exact URLs auth providers may redirect to. localhost and 127.0.0.1 are different
+# sites for cookies, so both are listed. Hosted projects must add the same paths
+# in the dashboard (Authentication → URL configuration), including the production
+# https origin. A mismatch is the usual reason Google returns to /login unsigned-in.
+additional_redirect_urls = [
+  "http://localhost:3000/auth/callback",
+  "http://127.0.0.1:3000/auth/callback",
+  "http://localhost:3000/**",
+  "http://127.0.0.1:3000/**",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -301,8 +309,8 @@ max_enrolled_factors = 10
 
 # Control MFA via App Authenticator (TOTP)
 [auth.mfa.totp]
-enroll_enabled = false
-verify_enabled = false
+enroll_enabled = true
+verify_enabled = true
 
 # Configure MFA via Phone Messaging
 [auth.mfa.phone]
@@ -320,6 +328,21 @@ max_frequency = "5s"
 # Use an external OAuth provider. The full list of providers are: `apple`, `azure`, `bitbucket`,
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
 # `twitter`, `x`, `slack`, `spotify`, `workos`, `zoom`.
+# Google. Hosted projects enable this in the dashboard, not from this file.
+# Local `supabase start` reads it. Leave the secret in the env, never in git.
+# The provider callback Supabase itself receives is
+# https://<project-ref>.supabase.co/auth/v1/callback — that URL goes in Google
+# Cloud, not in additional_redirect_urls. additional_redirect_urls is where
+# Supabase sends the browser afterwards (/auth/callback on this app).
+[auth.external.google]
+enabled = false
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
+redirect_uri = ""
+url = ""
+skip_nonce_check = false
+email_optional = false
+
 [auth.external.apple]
 enabled = false
 client_id = ""

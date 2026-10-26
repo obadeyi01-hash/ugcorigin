@@ -4,8 +4,10 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { paystackConfigured, initTransaction, initiateTransfer } from "@/lib/payments/paystack";
+import { paystackConfigured, initTransaction } from "@/lib/payments/paystack";
 import { feeFor } from "@/lib/fees";
+import { payCampaignSubmission } from "@/lib/payments/settle";
+import { guardWrite } from "@/lib/admin/rbac";
 import { detectPlatform } from "@/lib/social/detect";
 
 async function auth() {
@@ -102,37 +104,25 @@ export async function approveAndPayAction(submissionId: string, approvedViews: n
   if (sub.status === "paid") return { ok: true };
 
   const admin = createAdminClient();
-  const { data: c } = await admin.from("campaigns").select("id, brand_id, title, pool_naira, spent_naira, rate_per_1000_naira").eq("id", sub.campaign_id).maybeSingle();
+  const { data: c } = await admin.from("campaigns").select("id, brand_id, title").eq("id", sub.campaign_id).maybeSingle();
   if (!c) return { error: "Campaign not found." };
   if (c.brand_id !== user.id) {
-    const { data: isAdmin } = await admin.from("admin_users").select("user_id").eq("user_id", user.id).maybeSingle();
-    if (!isAdmin) return { error: "Not allowed." };
+    const { error } = await guardWrite("finance");
+    if (error) return { error: "Not allowed." };
   }
 
-  const remaining = c.pool_naira - c.spent_naira;
-  const views = Math.max(0, Math.round(approvedViews || 0));
-  const payout = Math.min(remaining, Math.floor((views / 1000) * c.rate_per_1000_naira));
-  if (payout <= 0) return { error: "No pool left, or views too low to pay." };
-
-  await admin.from("campaign_submissions").update({ approved_views: views, payout_naira: payout, status: "paid" }).eq("id", submissionId);
-  const newSpent = c.spent_naira + payout;
-  await admin.from("campaigns").update({ spent_naira: newSpent, status: newSpent >= c.pool_naira ? "completed" : "open" }).eq("id", c.id);
-
-  // Payout to the creator.
-  const { data: creator } = await admin.from("creator_profiles").select("payout_recipient_code").eq("id", sub.creator_id).maybeSingle();
-  const { data: payoutRow } = await admin.from("payouts").insert({ creator_id: sub.creator_id, provider: "paystack", amount_naira: payout, status: "pending" }).select("id").single();
-  await admin.from("ledger_entries").insert({ user_id: sub.creator_id, entry_type: "payout", amount_naira: payout, memo: `Per-view payout, ${c.title}` });
-  if (paystackConfigured() && creator?.payout_recipient_code && payoutRow) {
-    try {
-      const t = await initiateTransfer({ amountNaira: payout, recipientCode: creator.payout_recipient_code, reason: `UGCOrigin campaign payout, ${c.title}`, reference: `pay_${payoutRow.id}` });
-      await admin.from("payouts").update({ status: "processing", provider_ref: t.reference }).eq("id", payoutRow.id);
-    } catch {
-      /* leave pending */
-    }
+  const paid = await payCampaignSubmission(admin, submissionId, approvedViews);
+  if (!paid.ok) return { error: paid.error ?? "Could not pay this submission." };
+  if (paid.payout && paid.creatorId && paid.campaignId) {
+    await admin.from("notifications").insert({
+      user_id: paid.creatorId,
+      type: "campaign_paid",
+      title: "You got paid",
+      body: `Your submission to "${paid.title}" earned ₦${paid.payout.toLocaleString()}.`,
+      href: `/campaigns/${paid.campaignId}`,
+    });
+    revalidatePath(`/campaigns/${paid.campaignId}`);
   }
-  await admin.from("notifications").insert({ user_id: sub.creator_id, type: "campaign_paid", title: "You got paid", body: `Your submission to "${c.title}" earned ₦${payout.toLocaleString()}.`, href: `/campaigns/${c.id}` });
-
-  revalidatePath(`/campaigns/${c.id}`);
   return { ok: true };
 }
 
@@ -146,8 +136,8 @@ export async function forfeitSubmissionAction(submissionId: string, reason: stri
   const { data: c } = await admin.from("campaigns").select("id, brand_id, title").eq("id", sub.campaign_id).maybeSingle();
   if (!c) return { error: "Campaign not found." };
   if (c.brand_id !== user.id) {
-    const { data: isAdmin } = await admin.from("admin_users").select("user_id").eq("user_id", user.id).maybeSingle();
-    if (!isAdmin) return { error: "Not allowed." };
+    const { error } = await guardWrite("moderation");
+    if (error) return { error: "Not allowed." };
   }
 
   await admin.from("campaign_submissions").update({ status: "forfeited", forfeit_reason: reason.trim() || "Inflated or ineligible views" }).eq("id", submissionId);

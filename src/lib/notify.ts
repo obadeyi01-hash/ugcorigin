@@ -1,6 +1,7 @@
 import "server-only";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail, emailConfigured } from "@/lib/email/send";
+import { verifyPromptEmail } from "@/lib/email/templates";
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -82,6 +83,78 @@ export async function notifyUser(admin: Admin, userId: string, p: NotifyPayload)
 /** Insert several in-app notifications + emails. */
 export async function notifyMany(admin: Admin, items: { userId: string; payload: NotifyPayload }[]): Promise<void> {
   for (const it of items) await notifyUser(admin, it.userId, it.payload);
+}
+
+const VERIFY_COOLDOWN_MS = 20 * 60 * 60 * 1000;
+
+/**
+ * In-app note plus the branded verify email. Skips a repeat if one was sent
+ * in the last 20 hours, so a dashboard click and onboarding don't double up.
+ */
+export async function sendVerifyPrompt(
+  admin: Admin,
+  userId: string,
+  role: "creator" | "brand",
+): Promise<{ sent: boolean }> {
+  const since = new Date(Date.now() - VERIFY_COOLDOWN_MS).toISOString();
+  const { data: recent } = await admin
+    .from("notifications")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("type", "verify_prompt")
+    .gte("created_at", since)
+    .limit(1);
+  if (recent && recent.length > 0) return { sent: false };
+
+  const creator = role === "creator";
+  const href = creator ? "/verify" : "/settings";
+  const title = creator ? "Finish verification to go live" : "Verify your brand";
+  const body = creator
+    ? "Add your bank, submit your photo and NIN, and accept the agreement. Brands can't find you until that's done."
+    : "Submit your registered business name and CAC/RC number. The Verified brand badge shows on your offers once it's approved.";
+
+  await notifyUser(admin, userId, {
+    type: "verify_prompt",
+    title,
+    body,
+    href,
+    ctaLabel: creator ? "Continue verification" : "Verify your brand",
+    skipEmail: true,
+  });
+
+  if (emailConfigured()) {
+    const [{ data: authUser }, { data: creatorRow }, { data: brandRow }] = await Promise.all([
+      admin.auth.admin.getUserById(userId),
+      creator ? admin.from("creator_profiles").select("first_name, display_name").eq("id", userId).maybeSingle() : Promise.resolve({ data: null }),
+      creator ? Promise.resolve({ data: null }) : admin.from("brand_profiles").select("contact_first_name, company_name").eq("id", userId).maybeSingle(),
+    ]);
+    const email = authUser.user?.email;
+    const name = creator
+      ? creatorRow?.first_name || creatorRow?.display_name
+      : brandRow?.contact_first_name || brandRow?.company_name;
+    if (email) await sendEmail(verifyPromptEmail(email, { name, role }));
+  }
+  return { sent: true };
+}
+
+/** Tell trust & safety (and super admins) that a review is waiting. */
+export async function notifyAdminsPendingReview(
+  admin: Admin,
+  payload: { title: string; body: string; href: string },
+): Promise<void> {
+  const { data: admins } = await admin
+    .from("admin_users")
+    .select("user_id")
+    .in("role", ["super_admin", "trust_safety"]);
+  const ids = (admins ?? []).map((a) => a.user_id as string).filter(Boolean);
+  if (ids.length === 0) return;
+  await notifyMany(
+    admin,
+    ids.map((userId) => ({
+      userId,
+      payload: { type: "admin_review", title: payload.title, body: payload.body, href: payload.href, ctaLabel: "Open the queue" },
+    })),
+  );
 }
 
 const INSERT_CHUNK = 500;

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { paystackConfigured, initiateTransfer } from "@/lib/payments/paystack";
+import { releaseHeldGig } from "@/lib/payments/settle";
 import { deliverableFolder } from "@/lib/cloudinary";
 import { signedUpload, type SignedUpload } from "@/lib/cloudinary-server";
 import { notifyUser, notifyMany } from "@/lib/notify";
@@ -40,8 +40,14 @@ export async function recordDeliverableAction(
   const { supabase, user } = await auth();
   if (!user) return { error: "Please sign in again." };
 
-  const { data: gig } = await supabase.from("gigs").select("id, creator_id, brand_id, title").eq("id", gigId).maybeSingle();
+  const { data: gig } = await supabase.from("gigs").select("id, creator_id, brand_id, title, status").eq("id", gigId).maybeSingle();
   if (!gig || gig.creator_id !== user.id) return { error: "Not allowed." };
+  if (!["funded", "in_progress", "in_review", "revision"].includes(gig.status)) {
+    return { error: "This gig isn't accepting a draft." };
+  }
+  if (!path.includes(deliverableFolder(gigId))) {
+    return { error: "That file isn't attached to this gig." };
+  }
 
   const admin = createAdminClient();
   const { count } = await admin.from("deliverables").select("id", { count: "exact", head: true }).eq("gig_id", gigId);
@@ -56,7 +62,7 @@ export async function recordDeliverableAction(
   });
   if (error) return { error: error.message };
 
-  await admin.from("gigs").update({ status: "in_review" }).eq("id", gigId);
+  await admin.from("gigs").update({ status: "in_review" }).eq("id", gigId).in("status", ["funded", "in_progress", "in_review", "revision"]);
   await notifyUser(admin, gig.brand_id, {
     type: "draft_submitted",
     title: "A draft is ready to review",
@@ -126,70 +132,14 @@ export async function approveReleaseAction(
     .eq("id", gigId)
     .maybeSingle();
   if (!gig || gig.brand_id !== user.id) return { error: "Not allowed." };
-  if (gig.status === "completed") return { ok: true };
 
   const admin = createAdminClient();
-
-  // Compare-and-swap: claim the completion. Only the request that flips the gig
-  // out of a non-completed state proceeds — this makes release + payout fire
-  // exactly once even if two approvals land concurrently.
-  const { data: claimed } = await admin
-    .from("gigs")
-    .update({ status: "completed" })
-    .eq("id", gigId)
-    .neq("status", "completed")
-    .select("id")
-    .maybeSingle();
-  if (!claimed) return { ok: true }; // already completed by a concurrent request
-
-  // Approve the deliverable (bound to this gig so a stray id can't be flipped).
-  await admin.from("deliverables").update({ status: "approved" }).eq("id", deliverableId).eq("gig_id", gigId);
-
-  // Release escrow (only from a held state) + ledger.
-  const { data: esc } = await admin
-    .from("escrow_transactions")
-    .update({ status: "released" })
-    .eq("gig_id", gigId)
-    .eq("status", "held")
-    .select("id")
-    .maybeSingle();
-  await admin.from("ledger_entries").insert([
-    { gig_id: gigId, escrow_id: esc?.id, user_id: gig.creator_id, entry_type: "release", amount_naira: gig.price_naira, memo: "Released to creator on approval" },
-    { gig_id: gigId, escrow_id: esc?.id, user_id: gig.creator_id, entry_type: "payout", amount_naira: gig.price_naira, memo: "Payout queued to creator" },
-  ]);
-
-  // Create the payout record; attempt the transfer if Paystack + a recipient exist.
-  const { data: creator } = await admin
-    .from("creator_profiles")
-    .select("payout_recipient_code")
-    .eq("id", gig.creator_id)
-    .maybeSingle();
-
-  // One payout per gig — guard against a re-run creating a second transfer.
-  const { data: existingPayout } = await admin.from("payouts").select("id, status, provider_ref").eq("gig_id", gigId).maybeSingle();
-  const { data: payout } = existingPayout
-    ? { data: existingPayout }
-    : await admin
-        .from("payouts")
-        .insert({ creator_id: gig.creator_id, gig_id: gigId, provider: "paystack", amount_naira: gig.price_naira, status: "pending" })
-        .select("id, status, provider_ref")
-        .single();
-
-  let payoutQueued = payout?.status === "processing" || payout?.status === "paid";
-  if (paystackConfigured() && creator?.payout_recipient_code && payout && payout.status === "pending") {
-    try {
-      const t = await initiateTransfer({
-        amountNaira: gig.price_naira,
-        recipientCode: creator.payout_recipient_code,
-        reason: `UGCOrigin payout, ${gig.title}`,
-        reference: `pay_${payout.id}`,
-      });
-      await admin.from("payouts").update({ status: "processing", provider_ref: t.reference }).eq("id", payout.id);
-      payoutQueued = true;
-    } catch {
-      // leave payout pending for manual retry
-    }
-  }
+  const released = await releaseHeldGig(admin, gigId, {
+    deliverableId,
+    memo: "Released to creator on approval",
+  });
+  if (!released.ok) return { error: released.error ?? "Could not release escrow." };
+  const payoutQueued = !!released.payoutQueued;
 
   await notifyMany(admin, [
     { userId: gig.creator_id, payload: { type: "payout", title: "Your work was approved", body: `"${gig.title}" was approved, your payout is on the way.`, href: `/gigs/${gigId}`, ctaLabel: "View the gig" } },

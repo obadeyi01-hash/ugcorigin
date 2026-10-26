@@ -41,7 +41,9 @@ export async function signVideoUpload(): Promise<
 export async function saveProfileVideo(publicId: string): Promise<{ ok?: boolean; error?: string }> {
   const { supabase, creatorId } = await creator();
   if (!creatorId) return { error: "Set up a creator profile first." };
-  if (!/^[\w/-]{3,200}$/.test(publicId)) return { error: "Invalid upload reference." };
+  if (!/^[\w/-]{3,200}$/.test(publicId) || !publicId.startsWith(`${creatorVideoFolder(creatorId)}/`)) {
+    return { error: "Invalid upload reference." };
+  }
 
   // Only free, off-platform showcase clips count toward the cap. Verified works
   // (tied to completed gigs) are uncapped.
@@ -83,7 +85,9 @@ export async function saveVerifiedWork(
 ): Promise<{ ok?: boolean; error?: string }> {
   const { supabase, creatorId } = await creator();
   if (!creatorId) return { error: "Set up a creator profile first." };
-  if (!/^[\w/-]{3,200}$/.test(publicId)) return { error: "Invalid upload reference." };
+  if (!/^[\w/-]{3,200}$/.test(publicId) || !publicId.startsWith(`${creatorVideoFolder(creatorId)}/`)) {
+    return { error: "Invalid upload reference." };
+  }
 
   const { data: gig } = await supabase
     .from("gigs")
@@ -94,7 +98,8 @@ export async function saveVerifiedWork(
   if (gig.status !== "completed") return { error: "You can feature a gig once it's completed." };
 
   const url = cloudinaryUrl(publicId, "video", "c_limit,w_1080");
-  const { error } = await supabase.from("profile_videos").insert({
+  const admin = createAdminClient();
+  const { error } = await admin.from("profile_videos").insert({
     creator_id: creatorId,
     public_id: publicId,
     url,

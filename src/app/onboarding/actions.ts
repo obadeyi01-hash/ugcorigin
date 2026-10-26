@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateUniqueHandle } from "@/lib/username";
+import { sendVerifyPrompt } from "@/lib/notify";
 
 const configured = () => !!process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -99,6 +100,7 @@ export async function createCreatorProfile(input: CreatorInput): Promise<ActionR
     return { error: error.message };
   }
 
+  await sendVerifyPrompt(admin, user.id, "creator");
   revalidatePath("/dashboard");
   redirect("/dashboard");
 }
@@ -133,6 +135,8 @@ export async function createBrandProfile(input: BrandInput): Promise<ActionResul
     return { error: error.message };
   }
 
+  const admin = createAdminClient();
+  await sendVerifyPrompt(admin, user.id, "brand");
   revalidatePath("/dashboard");
   redirect("/dashboard");
 }

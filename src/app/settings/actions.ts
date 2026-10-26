@@ -104,13 +104,27 @@ export async function updateCreatorSettings(input: CreatorSettingsInput): Promis
   if (!nameLocked && !first) return { error: "First name can’t be empty." };
   const display = `${first} ${last}`.trim() || input.displayName.trim();
 
-  const { error } = await supabase
+  const admin = createAdminClient();
+  // Handle, legal name, and the change counters are not granted to the user
+  // role. The quota check above is what makes this write legitimate.
+  const { error: lockedError } = await admin
     .from("creator_profiles")
     .update({
       handle,
       username_changes: nextChanges,
       first_name: first,
       last_name: last || null,
+      ...(avatarChanged ? { avatar_changes: avatarChanges, avatar_last_changed_at: new Date().toISOString() } : {}),
+    })
+    .eq("id", user.id);
+  if (lockedError) {
+    if (lockedError.code === "23505") return { error: "That username is taken, try another." };
+    return { error: lockedError.message };
+  }
+
+  const { error } = await supabase
+    .from("creator_profiles")
+    .update({
       display_name: display,
       location: input.location.trim() || null,
       phone: input.phone || null,
@@ -119,7 +133,6 @@ export async function updateCreatorSettings(input: CreatorSettingsInput): Promis
       content_formats: input.contentFormats,
       starting_rate_naira: input.startingRate > 0 ? Math.round(input.startingRate) : null,
       avatar_url: input.avatarUrl,
-      ...(avatarChanged ? { avatar_changes: avatarChanges, avatar_last_changed_at: new Date().toISOString() } : {}),
       completeness: creatorCompleteness(input),
     })
     .eq("id", user.id);
@@ -136,7 +149,6 @@ export async function updateCreatorSettings(input: CreatorSettingsInput): Promis
 
   // Anti-AI: flag + warn if the bio claims AI-generated / not-the-real-creator work.
   const aiClaim = detectAiClaim(input.bio);
-  const admin = createAdminClient();
   await admin.from("creator_profiles").update({ ai_flagged: aiClaim }).eq("id", user.id);
   if (mediaFlag) {
     await admin.from("creator_profiles").update({ media_flagged: true }).eq("id", user.id);

@@ -56,6 +56,22 @@ const enabledSet = new Set<Provider>(
 );
 const providers = ALL_PROVIDERS.filter((p) => enabledSet.has(p.id));
 
+function describeAuthError(code: string | null, detail: string | null): string | null {
+  if (!code && !detail) return null;
+  const text = (detail || "").trim();
+  if (/redirect/i.test(text) || /not allowed/i.test(text)) {
+    return "This site's address isn't on the Supabase redirect allow list yet. Add this exact origin's /auth/callback URL in Authentication → URL configuration, then try again.";
+  }
+  if (code === "provider" && text) return text;
+  if (code === "auth_callback") {
+    return text
+      ? `Sign-in didn't finish: ${text}`
+      : "Sign-in didn't finish. The session couldn't be saved. Try again from this same address (don't switch between localhost and 127.0.0.1).";
+  }
+  if (code === "config") return text || "Sign-in isn't configured on this server yet.";
+  return text || "Sign-in didn't finish. Please try again.";
+}
+
 export function AuthForm({ mode }: { mode: Mode }) {
   const params = useSearchParams();
   // Role is chosen in onboarding, not here. We only carry a role through when a
@@ -65,10 +81,14 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [status, setStatus] = useState<"idle" | "loading" | "sent" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
 
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    (typeof window !== "undefined" ? window.location.origin : "");
-  const redirectTo = `${siteUrl}/auth/callback${roleParam === "brand" || roleParam === "creator" ? `?role=${roleParam}` : ""}`;
+  // Built at click time, never during render. The host the person is actually
+  // on must match the PKCE cookie. NEXT_PUBLIC_SITE_URL is often still
+  // localhost in a deployed env, and a different host drops the session.
+  function redirectTo(): string {
+    const roleQuery = roleParam === "brand" || roleParam === "creator" ? `?role=${roleParam}` : "";
+    return `${window.location.origin}/auth/callback${roleQuery}`;
+  }
+  const urlError = describeAuthError(params.get("error"), params.get("detail"));
 
   async function oauth(provider: Provider) {
     if (!supabaseConfigured) return setError("Backend isn't connected yet.");
@@ -76,7 +96,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo },
+      options: { redirectTo: redirectTo() },
     });
     if (error) setError(error.message);
   }
@@ -89,7 +109,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: redirectTo },
+      options: { emailRedirectTo: redirectTo() },
     });
     if (error) {
       setError(error.message);
@@ -155,7 +175,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
         </form>
       )}
 
-      {error && <p className="mt-3 text-sm text-error">{error}</p>}
+      {(error || urlError) && (
+        <p className="mt-3 text-sm text-error" role="alert">
+          {error || urlError}
+        </p>
+      )}
 
       <p className="mt-6 text-center text-sm text-ink-2">
         {mode === "signup" ? (

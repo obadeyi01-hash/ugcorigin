@@ -9,9 +9,9 @@ import { logAudit } from "@/lib/admin/audit";
 // it out to a resolved audience. The composer calls previewAudience first to
 // show the admin how many people a target reaches, then sendBroadcast.
 
-export type Audience = "user" | "all_users" | "all_creators" | "all_brands";
+export type Audience = "user" | "all_users" | "all_creators" | "all_brands" | "unverified_creators" | "unverified_brands";
 
-const CREATOR_TIERS = ["origin", "rising", "pro", "elite", "signature"] as const;
+const CREATOR_TIERS = ["origin", "rising", "pro", "elite", "signature", "standout", "luminary"] as const;
 const BRAND_STATUSES = ["unverified", "pending", "verified", "rejected"] as const;
 
 // Notification categories the admin can pick. The `type` maps to the pref the
@@ -63,6 +63,16 @@ async function resolveAudience(admin: Admin, input: BroadcastInput): Promise<str
 
   if (input.audience === "all_users") {
     const { data } = await admin.from("profiles").select("id");
+    return (data ?? []).map((r) => r.id as string);
+  }
+
+  if (input.audience === "unverified_creators") {
+    const { data } = await admin.from("creator_profiles").select("id").eq("is_live", false).eq("suspended", false);
+    return (data ?? []).map((r) => r.id as string);
+  }
+
+  if (input.audience === "unverified_brands") {
+    const { data } = await admin.from("brand_profiles").select("id").neq("verification_status", "verified");
     return (data ?? []).map((r) => r.id as string);
   }
 

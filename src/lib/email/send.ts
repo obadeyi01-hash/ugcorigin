@@ -29,21 +29,40 @@ export type EmailInput = {
   ctaUrl?: string;
 };
 
+function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+/** http(s) only, or a same-site path turned into an absolute link. */
+function safeHref(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  const site = (process.env.NEXT_PUBLIC_SITE_URL || "https://ugcorigin.com").replace(/\/$/, "");
+  if (url.startsWith("/") && !url.startsWith("//") && !url.includes("\\")) return `${site}${url}`;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === "https:" || parsed.protocol === "http:") return parsed.href;
+  } catch {
+    return undefined;
+  }
+  return undefined;
+}
+
 function render({ heading, body, bodyHtml, preheader, ctaLabel, ctaUrl }: EmailInput): string {
+  const href = safeHref(ctaUrl);
   const button =
-    ctaLabel && ctaUrl
-      ? `<a href="${ctaUrl}" style="display:inline-block;margin-top:20px;padding:12px 22px;background:#ec4899;color:#fff;border-radius:999px;font-weight:600;text-decoration:none">${ctaLabel}</a>`
+    ctaLabel && href
+      ? `<a href="${esc(href)}" style="display:inline-block;margin-top:20px;padding:12px 22px;background:#ec4899;color:#fff;border-radius:999px;font-weight:600;text-decoration:none">${esc(ctaLabel)}</a>`
       : "";
-  const content = bodyHtml ?? `<p style="margin:0;color:#3f3f46;font-size:15px;line-height:1.6">${body}</p>`;
+  const content = bodyHtml ?? `<p style="margin:0;color:#3f3f46;font-size:15px;line-height:1.6">${esc(body)}</p>`;
   const hidden = preheader
-    ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0">${preheader}</div>`
+    ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(preheader)}</div>`
     : "";
   return `<!doctype html><html><body style="margin:0;background:#f6f6f4;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
   ${hidden}
   <div style="max-width:520px;margin:0 auto;padding:32px 20px">
     <div style="font-weight:800;font-size:20px;letter-spacing:-0.3px"><span style="color:#ec4899">UGC</span>ORIGIN</div>
     <div style="margin-top:20px;background:#fff;border:1px solid #ececea;border-radius:16px;padding:28px">
-      <h1 style="margin:0 0 12px;font-size:20px;color:#141519">${heading}</h1>
+      <h1 style="margin:0 0 12px;font-size:20px;color:#141519">${esc(heading)}</h1>
       ${content}
       ${button}
     </div>

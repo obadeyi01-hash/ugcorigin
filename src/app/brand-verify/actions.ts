@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { guardWrite } from "@/lib/admin/rbac";
-import { notifyUser } from "@/lib/notify";
+import { notifyAdminsPendingReview, notifyUser } from "@/lib/notify";
 import { sendEmail, emailConfigured } from "@/lib/email/send";
 import { brandApprovedEmail } from "@/lib/email/templates";
 
@@ -31,6 +31,12 @@ export async function submitBrandVerification(input: { companyName: string; rcNu
     .update({ company_name: company, rc_number: rc, verification_status: "pending", verification_submitted_at: new Date().toISOString() })
     .eq("id", user.id);
   if (error) return { error: error.message };
+
+  await notifyAdminsPendingReview(admin, {
+    title: "Brand verification waiting",
+    body: `${company} submitted a CAC/RC number for review.`,
+    href: "/admin/verification",
+  });
 
   revalidatePath("/settings");
   revalidatePath("/dashboard");

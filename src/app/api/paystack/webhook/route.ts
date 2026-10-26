@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyWebhookSignature, verifyTransaction } from "@/lib/payments/paystack";
+import { refundStrayCharge } from "@/lib/payments/settle";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { feeFor } from "@/lib/fees";
 import { notifyUser, notifyMany } from "@/lib/notify";
@@ -73,11 +74,31 @@ export async function POST(request: Request) {
   if (subscriptionId) {
     const { data: s } = await admin
       .from("subscriptions")
-      .select("id, user_id, status, amount_naira")
+      .select("id, user_id, status, amount_naira, provider_ref, current_period_end")
       .eq("id", subscriptionId)
       .maybeSingle();
+    if (s && s.status !== "pending") {
+      if (s.provider_ref === reference) return NextResponse.json({ received: true, already: true });
+      if (paid < s.amount_naira) {
+        const refunded = await refundStrayCharge(reference, "Underpaid Creator Pro charge");
+        if (!refunded) return new NextResponse("refund failed", { status: 500 });
+        return NextResponse.json({ received: true, ignored: "underpaid" });
+      }
+      const start = s.current_period_end && new Date(s.current_period_end).getTime() > Date.now()
+        ? new Date(s.current_period_end)
+        : new Date();
+      start.setUTCDate(start.getUTCDate() + 30);
+      const periodEnd = start.toISOString();
+      await admin.from("subscriptions").update({ status: "active", current_period_end: periodEnd, provider_ref: reference, updated_at: new Date().toISOString() }).eq("id", subscriptionId);
+      await admin.from("creator_profiles").update({ pro_until: periodEnd }).eq("id", s.user_id);
+      return NextResponse.json({ received: true, extended: true });
+    }
     if (s && s.status === "pending") {
-      if (paid < s.amount_naira) return NextResponse.json({ received: true, ignored: "underpaid" });
+      if (paid < s.amount_naira) {
+        const refunded = await refundStrayCharge(reference, "Underpaid Creator Pro charge");
+        if (!refunded) return new NextResponse("refund failed", { status: 500 });
+        return NextResponse.json({ received: true, ignored: "underpaid" });
+      }
       const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
       await admin
         .from("subscriptions")
@@ -101,11 +122,22 @@ export async function POST(request: Request) {
   if (boostId) {
     const { data: b } = await admin
       .from("boosts")
-      .select("id, owner_id, target_type, target_id, days, amount_naira, status")
+      .select("id, owner_id, target_type, target_id, days, amount_naira, status, provider_ref")
       .eq("id", boostId)
       .maybeSingle();
+    if (b && b.status !== "pending") {
+      if (b.provider_ref !== reference) {
+        const refunded = await refundStrayCharge(reference, "Duplicate boost charge");
+        if (!refunded) return new NextResponse("refund failed", { status: 500 });
+      }
+      return NextResponse.json({ received: true, already: true });
+    }
     if (b && b.status === "pending") {
-      if (paid < b.amount_naira) return NextResponse.json({ received: true, ignored: "underpaid" });
+      if (paid < b.amount_naira) {
+        const refunded = await refundStrayCharge(reference, "Underpaid boost charge");
+        if (!refunded) return new NextResponse("refund failed", { status: 500 });
+        return NextResponse.json({ received: true, ignored: "underpaid" });
+      }
       const ends = new Date(Date.now() + b.days * 24 * 60 * 60 * 1000).toISOString();
       await admin
         .from("boosts")
@@ -125,9 +157,20 @@ export async function POST(request: Request) {
 
   // Campaign pool funding.
   if (campaignId) {
-    const { data: c } = await admin.from("campaigns").select("id, funded, pool_naira").eq("id", campaignId).maybeSingle();
+    const { data: c } = await admin.from("campaigns").select("id, funded, pool_naira, provider_ref").eq("id", campaignId).maybeSingle();
+    if (c?.funded) {
+      if (c.provider_ref !== reference) {
+        const refunded = await refundStrayCharge(reference, "Duplicate campaign funding charge");
+        if (!refunded) return new NextResponse("refund failed", { status: 500 });
+      }
+      return NextResponse.json({ received: true, already: true });
+    }
     if (c && !c.funded) {
-      if (paid < c.pool_naira + feeFor(c.pool_naira)) return NextResponse.json({ received: true, ignored: "underpaid" });
+      if (paid < c.pool_naira + feeFor(c.pool_naira)) {
+        const refunded = await refundStrayCharge(reference, "Underpaid campaign funding charge");
+        if (!refunded) return new NextResponse("refund failed", { status: 500 });
+        return NextResponse.json({ received: true, ignored: "underpaid" });
+      }
       await admin.from("campaigns").update({ funded: true, status: "open", provider_ref: reference }).eq("id", campaignId).eq("funded", false);
       await admin.from("ledger_entries").insert({ entry_type: "escrow_in", amount_naira: c.pool_naira, memo: `Campaign pool funded (${campaignId})` });
     }
@@ -136,9 +179,19 @@ export async function POST(request: Request) {
 
   if (!offerId) return NextResponse.json({ received: true });
 
-  // Idempotency: only create one gig per offer.
+  // Idempotency: only one gig per offer. A second successful charge is refunded.
+  // A gig that exists without an escrow row (the insert failed last time) gets
+  // the escrow attached instead of dropping the money.
   const { data: existing } = await admin.from("gigs").select("id").eq("offer_id", offerId).maybeSingle();
-  if (existing) return NextResponse.json({ received: true, already: true });
+  if (existing) {
+    const { data: escRow } = await admin.from("escrow_transactions").select("id, provider_ref").eq("gig_id", existing.id).maybeSingle();
+    if (escRow?.provider_ref === reference) return NextResponse.json({ received: true, already: true });
+    if (escRow) {
+      const refunded = await refundStrayCharge(reference, "Duplicate offer charge");
+      if (!refunded) return new NextResponse("refund failed", { status: 500 });
+      return NextResponse.json({ received: true, already: true, refunded: true });
+    }
+  }
 
   const { data: offer } = await admin.from("offers").select("*").eq("id", offerId).maybeSingle();
   if (!offer) return NextResponse.json({ received: true });
@@ -146,31 +199,41 @@ export async function POST(request: Request) {
   const fee = feeFor(offer.price_naira);
   // The brand must have paid at least the rate + platform fee, else don't bind escrow.
   if (paid < offer.price_naira + fee) {
+    const refunded = await refundStrayCharge(reference, "Underpaid offer charge");
+    if (!refunded) return new NextResponse("refund failed", { status: 500 });
     return NextResponse.json({ received: true, ignored: "underpaid" });
   }
 
-  const { data: gig, error: gigErr } = await admin
-    .from("gigs")
-    .insert({
-      brand_id: offer.brand_id,
-      creator_id: offer.creator_id,
-      offer_id: offer.id,
-      title: offer.title,
-      price_naira: offer.price_naira,
-      fee_naira: fee,
-      status: "funded",
-      review_window_days: 7,
-      deadline: offer.deadline ?? null,
-      needs_product: !!offer.needs_product,
-      shipping_status: offer.needs_product ? "awaiting_address" : null,
-      needs_location: !!offer.needs_location,
-      location_address: offer.location_address ?? null,
-      location_status: offer.needs_location ? "scheduled" : null,
-    })
-    .select("id")
-    .single();
-  // A concurrent webhook delivery may have created the gig first (unique offer_id).
-  if (gigErr || !gig) return NextResponse.json({ received: true, already: true });
+  let gig = existing;
+  if (!gig) {
+    const inserted = await admin
+      .from("gigs")
+      .insert({
+        brand_id: offer.brand_id,
+        creator_id: offer.creator_id,
+        offer_id: offer.id,
+        title: offer.title,
+        price_naira: offer.price_naira,
+        fee_naira: fee,
+        status: "funded",
+        review_window_days: 7,
+        deadline: offer.deadline ?? null,
+        needs_product: !!offer.needs_product,
+        shipping_status: offer.needs_product ? "awaiting_address" : null,
+        needs_location: !!offer.needs_location,
+        location_address: offer.location_address ?? null,
+        location_status: offer.needs_location ? "scheduled" : null,
+      })
+      .select("id")
+      .single();
+    if (inserted.error || !inserted.data) {
+      const { data: raced } = await admin.from("gigs").select("id").eq("offer_id", offerId).maybeSingle();
+      if (!raced) return NextResponse.json({ received: true, already: true });
+      gig = raced;
+    } else {
+      gig = inserted.data;
+    }
+  }
 
   const { data: esc } = await admin
     .from("escrow_transactions")
