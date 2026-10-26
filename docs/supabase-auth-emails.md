@@ -52,7 +52,12 @@ is dropped and sign-in looks like it did nothing:
 - `http://localhost:3000/auth/callback`
 - `http://127.0.0.1:3000/auth/callback`
 - `https://ugcorigin.com/auth/callback`
+- `https://www.ugcorigin.com/auth/callback`
 - any preview origin you actually open, with `/auth/callback`
+
+`www` and the bare domain are different sites. The address in the browser
+must be on this list, or Supabase ignores it and sends the person (and the
+error) to the Site URL instead of `/auth/callback`.
 
 `localhost` and `127.0.0.1` are different sites. The Google Cloud redirect is
 `https://<project-ref>.supabase.co/auth/v1/callback`, not the app URL. Google's

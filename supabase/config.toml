@@ -161,9 +161,10 @@ site_url = "http://localhost:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # Exact URLs auth providers may redirect to. localhost and 127.0.0.1 are different
-# sites for cookies, so both are listed. Hosted projects must add the same paths
-# in the dashboard (Authentication → URL configuration), including the production
-# https origin. A mismatch is the usual reason Google returns to /login unsigned-in.
+# sites for cookies, so both are listed. Do not `config push` this file to the
+# hosted project: site_url here is local, and a push would also turn Google off.
+# The hosted allow list is https://www.ugcorigin.com/auth/callback and
+# https://ugcorigin.com/auth/callback. The live site is www; apex redirects there.
 additional_redirect_urls = [
   "http://localhost:3000/auth/callback",
   "http://127.0.0.1:3000/auth/callback",

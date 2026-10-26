@@ -62,6 +62,9 @@ function describeAuthError(code: string | null, detail: string | null): string |
   if (/redirect/i.test(text) || /not allowed/i.test(text)) {
     return "This site's address isn't on the Supabase redirect allow list yet. Add this exact origin's /auth/callback URL in Authentication → URL configuration, then try again.";
   }
+  if (/user not found/i.test(text)) {
+    return "Google still has a sign-in record for an account that was removed. Try again. If it happens a second time, that leftover record needs to be cleared.";
+  }
   if (code === "provider" && text) return text;
   if (code === "auth_callback") {
     return text
