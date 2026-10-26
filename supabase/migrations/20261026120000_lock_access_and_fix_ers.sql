@@ -6,6 +6,7 @@
 -- Admin membership is readable. Role changes are service-role only, so a
 -- support session cannot PATCH itself to super_admin.
 drop policy if exists admin_all on public.admin_users;
+drop policy if exists admin_select on public.admin_users;
 create policy admin_select on public.admin_users
   for select to authenticated
   using (user_id = auth.uid() or public.is_admin());
