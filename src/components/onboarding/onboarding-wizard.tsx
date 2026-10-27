@@ -16,6 +16,7 @@ import {
   type CreatorInput,
   type BrandInput,
 } from "@/app/onboarding/actions";
+import { RateNudge } from "@/components/onboarding/rate-nudge";
 
 type Role = "creator" | "brand" | null;
 
@@ -92,7 +93,7 @@ export function OnboardingWizard({
   // brand fields
   const [b, setB] = useState<BrandInput>({
     companyName: "", contactFirstName: "", contactLastName: "", website: "", storeUrl: "", phone: null,
-    goal: "", adPlatforms: [], contentTypes: [], businessType: "", contactRole: "", teamSize: "",
+    goal: [], adPlatforms: [], contentTypes: [], businessType: "", contactRole: "", teamSize: "",
   });
   const toggleIn = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
@@ -172,21 +173,28 @@ export function OnboardingWizard({
         ))}
       </div>
     );
-    const Multi = ({ options, values, onToggle }: { options: { value: string; label: string }[]; values: string[]; onToggle: (v: string) => void }) => (
+    const Multi = ({ options, values, onToggle }: { options: { value: string; label: string; hint?: string }[]; values: string[]; onToggle: (v: string) => void }) => (
       <div className="grid gap-2.5">
-        {options.map((o) => (
-          <button
-            key={o.value}
-            type="button"
-            onClick={() => onToggle(o.value)}
-            className={cn("flex items-center justify-between gap-3 rounded-xl border p-3.5 text-left transition-colors", values.includes(o.value) ? "border-accent bg-accent-tint" : "border-line bg-surface hover:border-line-strong")}
-          >
-            <span className="font-medium text-ink">{o.label}</span>
-            <span className={cn("grid size-4 shrink-0 place-items-center rounded border", values.includes(o.value) ? "border-accent bg-accent text-accent-ink" : "border-line")}>
-              {values.includes(o.value) && <Check className="size-3" />}
-            </span>
-          </button>
-        ))}
+        {options.map((o) => {
+          const on = values.includes(o.value);
+          return (
+            <button
+              key={o.value}
+              type="button"
+              aria-pressed={on}
+              onClick={() => onToggle(o.value)}
+              className={cn("flex items-center justify-between gap-3 rounded-xl border p-3.5 text-left transition-colors", on ? "border-accent bg-accent-tint" : "border-line bg-surface hover:border-line-strong")}
+            >
+              <span>
+                <span className="block font-medium text-ink">{o.label}</span>
+                {o.hint && <span className="block text-xs text-ink-3">{o.hint}</span>}
+              </span>
+              <span className={cn("grid size-4 shrink-0 place-items-center rounded border", on ? "border-accent bg-accent text-accent-ink" : "border-line")}>
+                {on && <Check className="size-3" />}
+              </span>
+            </button>
+          );
+        })}
       </div>
     );
 
@@ -202,9 +210,9 @@ export function OnboardingWizard({
       >
         {bstep === "goal" && (
           <>
-            <Radio options={BRAND_GOALS} value={b.goal} onPick={(goal) => setB({ ...b, goal })} />
+            <Multi options={BRAND_GOALS} values={b.goal} onToggle={(v) => setB({ ...b, goal: toggleIn(b.goal, v) })} />
             <div className="mt-5 flex justify-end">
-              <Button onClick={() => go("brand", "channels")} disabled={!b.goal}>Continue <ArrowRight className="size-4" /></Button>
+              <Button onClick={() => go("brand", "channels")} disabled={b.goal.length === 0}>Continue <ArrowRight className="size-4" /></Button>
             </div>
           </>
         )}
@@ -325,13 +333,20 @@ export function OnboardingWizard({
 
       {cstep === "rate" && (
         <div className="grid gap-4">
-          <Field label="Starting rate (₦)" hint="Your lowest package price. You can add more packages later.">
+          <RateNudge
+            niches={c.niches}
+            location={c.location}
+            rate={c.startingRate}
+            tier="origin"
+            onUse={(amount) => setC({ ...c, startingRate: amount })}
+          />
+          <Field label="Starting rate (₦)" hint="Your lowest package price. New profiles start at Origin.">
             <Input
               type="number"
               inputMode="numeric"
               value={c.startingRate || ""}
               onChange={(e) => setC({ ...c, startingRate: Number(e.target.value) })}
-              placeholder="e.g. 45000"
+              placeholder="e.g. 12000"
             />
           </Field>
           <Field label="Short bio" hint="Optional, a line about your content.">
@@ -356,7 +371,7 @@ const CREATOR_TITLES: Record<(typeof CREATOR_STEPS)[number], { title: string; su
   rate: { title: "Your starting rate", subtitle: "Almost done." },
 };
 const BRAND_TITLES: Record<(typeof BRAND_STEPS)[number], { title: string; subtitle: string }> = {
-  goal: { title: "What are you trying to do?", subtitle: "Most brands use more than one. Pick your main focus." },
+  goal: { title: "What are you trying to do?", subtitle: "Most brands use more than one. Select all that apply." },
   channels: { title: "Where do your ads run?", subtitle: "And what content do you need? Select all that apply." },
   about: { title: "Tell us about you", subtitle: "So we can tailor your recommendations." },
   details: { title: "Your brand details", subtitle: "This is what creators see when you reach out." },

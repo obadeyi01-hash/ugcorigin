@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { adminSetEntrySignals } from "@/app/admin/actions";
+import { entryTierFromSignals } from "@/lib/tiering/entry-tier";
+import { tierMeta } from "@/lib/tiers";
 
 /**
  * Reviewer input for a creator's VERIFIED external credibility — the entry
@@ -27,11 +29,14 @@ export function EntrySignalsControl({
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const placement = entryTierFromSignals({ followers: Number(f) || 0, priorWork: Number(p) || 0 });
+  const level = tierMeta(placement.tier).label;
 
   if (readonly) {
+    const fixed = entryTierFromSignals({ followers, priorWork });
     return (
       <p className="text-xs text-ink-3">
-        Verified followers: {followers ?? 0} · Prior-work: {priorWork ?? 0}/100
+        Entry level {tierMeta(fixed.tier).label} · {followers ?? 0} verified followers
       </p>
     );
   }
@@ -49,7 +54,7 @@ export function EntrySignalsControl({
         />
       </label>
       <label className="text-xs text-ink-2">
-        Prior-work score (0–100)
+        Off-platform work (feeds Origin, Rising or Pro)
         <input
           type="number"
           min={0}
@@ -77,6 +82,7 @@ export function EntrySignalsControl({
       >
         {saved ? "Saved" : "Save credibility"}
       </Button>
+      <p className="w-full text-xs text-ink-3">Places at {level}. Entry stops at Pro. Standout and above are earned from completed work.</p>
       {err && <span className="text-xs text-error">{err}</span>}
     </div>
   );

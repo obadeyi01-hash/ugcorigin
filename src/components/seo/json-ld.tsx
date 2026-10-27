@@ -13,4 +13,4 @@ export function JsonLd({ data }: { data: object | object[] }) {
   );
 }
 
-export const SITE_URL = "https://ugcorigin.com";
+export const SITE_URL = "https://www.ugcorigin.com";

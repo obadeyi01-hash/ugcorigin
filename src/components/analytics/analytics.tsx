@@ -9,7 +9,7 @@ import { Cookie } from "lucide-react";
 /**
  * Privacy-first analytics. NOTHING loads until the visitor explicitly accepts,
  * and each provider only loads if its env ID is set, so with no keys and/or no
- * consent, zero third-party scripts run. GA4 + Microsoft Clarity + Meta Pixel.
+ * consent, zero third-party scripts run. GA4, Microsoft Clarity, Meta Pixel, Bing UET.
  * The footer's "Cookie preferences" link reopens the banner via a custom event.
  */
 
@@ -17,7 +17,8 @@ const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID; // Google Tag Manager container (
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 const CLARITY_ID = process.env.NEXT_PUBLIC_CLARITY_ID;
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
-const HAS_ANY = !!(GTM_ID || GA_ID || CLARITY_ID || META_PIXEL_ID);
+const BING_UET_ID = /^\d{5,20}$/.test(process.env.NEXT_PUBLIC_BING_UET_ID ?? "") ? process.env.NEXT_PUBLIC_BING_UET_ID : "";
+const HAS_ANY = !!(GTM_ID || GA_ID || CLARITY_ID || META_PIXEL_ID || BING_UET_ID);
 
 const KEY = "ugc:consent"; // "accepted" | "declined"
 type Consent = "accepted" | "declined" | null;
@@ -84,7 +85,7 @@ export function Analytics() {
         </Script>
       )}
 
-      {loadScripts && GA_ID && (
+      {loadScripts && GA_ID && !GTM_ID && (
         <>
           <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
           <Script id="ga-init" strategy="afterInteractive">
@@ -96,6 +97,12 @@ export function Analytics() {
       {loadScripts && CLARITY_ID && (
         <Script id="clarity-init" strategy="afterInteractive">
           {`(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","${CLARITY_ID}");`}
+        </Script>
+      )}
+
+      {loadScripts && BING_UET_ID && (
+        <Script id="bing-uet-init" strategy="afterInteractive">
+          {`(function(w,d,t,r,u){var f,n,i;w[u]=w[u]||[],f=function(){var o={ti:"${BING_UET_ID}",enableAutoSpaTracking:true};o.q=w[u],w[u]=new UET(o),w[u].push("pageLoad")},n=d.createElement(t),n.src=r,n.async=1,n.onload=n.onreadystatechange=function(){var s=this.readyState;s&&s!=="loaded"&&s!=="complete"||(f(),n.onload=n.onreadystatechange=null)},i=d.getElementsByTagName(t)[0],i.parentNode.insertBefore(n,i)})(window,document,"script","https://bat.bing.com/bat.js","uetq");`}
         </Script>
       )}
 

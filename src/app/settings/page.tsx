@@ -79,7 +79,6 @@ async function SettingsInner() {
         <SettingsForm
           userId={user.id}
           email={user.email ?? ""}
-          role={creator ? "creator" : "brand"}
           creator={creatorForForm}
           brand={brandForForm}
           prefs={prefs}

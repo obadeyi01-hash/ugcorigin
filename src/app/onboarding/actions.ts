@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { serializeGoals } from "@/lib/brand-options";
 import { generateUniqueHandle } from "@/lib/username";
 import { sendVerifyPrompt } from "@/lib/notify";
 
@@ -29,7 +30,7 @@ export type BrandInput = {
   website: string;
   storeUrl: string;
   phone: string | null;
-  goal: string;
+  goal: string[];
   adPlatforms: string[];
   contentTypes: string[];
   businessType: string;
@@ -122,7 +123,7 @@ export async function createBrandProfile(input: BrandInput): Promise<ActionResul
     website: input.website.trim() || null,
     store_url: input.storeUrl.trim() || null,
     phone: input.phone || null,
-    goal: input.goal || null,
+    goal: serializeGoals(input.goal ?? []),
     ad_platforms: input.adPlatforms ?? [],
     content_types: input.contentTypes ?? [],
     business_type: input.businessType || null,

@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, type FormEvent, type ReactElement } from "react";
+import { useRef, useState, type FormEvent, type ReactElement } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Mail, ArrowRight } from "lucide-react";
+import { deliverEmailLink, requestEmailLink } from "@/app/(auth)/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { describeOtpError, normalizeEmail, shouldFallbackToAppMailer } from "@/lib/auth/email-link";
 import { createClient, supabaseConfigured } from "@/lib/supabase/client";
 
 type Mode = "login" | "signup";
@@ -81,8 +83,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
   // deep link (e.g. "Become a creator") already expressed intent.
   const roleParam = params.get("role");
   const [email, setEmail] = useState("");
+  const [sentTo, setSentTo] = useState("");
+  const [notice, setNotice] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "sent" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const busy = useRef(false);
 
   // Built at click time, never during render. The host the person is actually
   // on must match the PKCE cookie. NEXT_PUBLIC_SITE_URL is often still
@@ -104,21 +109,56 @@ export function AuthForm({ mode }: { mode: Mode }) {
     if (error) setError(error.message);
   }
 
+  function showError(message: string) {
+    setNotice(null);
+    setError(message);
+    setStatus("error");
+  }
+
+  function showSent(address: string, nextNotice: string | null) {
+    setSentTo(address);
+    setNotice(nextNotice);
+    setError(null);
+    setStatus("sent");
+  }
+
   async function emailLink(e: FormEvent) {
     e.preventDefault();
+    if (busy.current) return;
     if (!supabaseConfigured) return setError("Backend isn't connected yet.");
+    const address = normalizeEmail(email);
+    if (!address) return showError("Enter a valid email address.");
+
+    busy.current = true;
     setStatus("loading");
     setError(null);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: redirectTo() },
-    });
-    if (error) {
-      setError(error.message);
-      setStatus("error");
-    } else {
-      setStatus("sent");
+    setNotice(null);
+    try {
+      const destination = redirectTo();
+      const outcome = await requestEmailLink({ email: address, redirectTo: destination, mode });
+      if (outcome.status === "error") return showError(outcome.message);
+      if (outcome.status === "sent") return showSent(address, outcome.notice);
+
+      const supabase = createClient();
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: address,
+        options: {
+          emailRedirectTo: destination,
+          shouldCreateUser: outcome.shouldCreateUser,
+        },
+      });
+      if (!otpError) return showSent(address, outcome.notice);
+      if (shouldFallbackToAppMailer(otpError.message)) {
+        const fallback = await deliverEmailLink({ email: address, redirectTo: destination, mode });
+        if (fallback.status === "sent") return showSent(address, fallback.notice);
+        if (fallback.status === "error") return showError(fallback.message);
+      }
+      const code = "code" in otpError && typeof otpError.code === "string" ? otpError.code : null;
+      showError(describeOtpError(otpError.message, code, mode));
+    } catch {
+      showError("Sign-in didn't finish. Please try again.");
+    } finally {
+      busy.current = false;
     }
   }
 
@@ -159,7 +199,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
       {status === "sent" ? (
         <div className="rounded-xl border border-success/30 bg-success/10 p-4 text-sm text-ink">
           <Mail className="mb-1 size-5 text-success" />
-          Check <span className="font-medium">{email}</span> for a magic link to finish signing in.
+          Check <span className="font-medium">{sentTo}</span> for a sign-in link.
+          {notice && <p className="mt-2 text-ink-2">{notice}</p>}
         </div>
       ) : (
         <form onSubmit={emailLink} className="grid gap-3">

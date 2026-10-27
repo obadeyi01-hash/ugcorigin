@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea, Field, Select } from "@/components/ui/input";
 import { PhoneField } from "@/components/ui/phone-field";
 import { BrandVerifyCard } from "@/components/settings/brand-verify-card";
-import { BRAND_GOALS, AD_PLATFORMS, CONTENT_TYPES, BUSINESS_TYPES, CONTACT_ROLES, TEAM_SIZES } from "@/lib/brand-options";
+import { BRAND_GOALS, AD_PLATFORMS, CONTENT_TYPES, BUSINESS_TYPES, CONTACT_ROLES, TEAM_SIZES, parseGoals } from "@/lib/brand-options";
 import { NG_STATES } from "@/lib/categories";
 import { CONTENT_FORMATS } from "@/lib/content-formats";
 import { Chip } from "@/components/ui/chip";
@@ -22,8 +22,10 @@ import {
   updateCreatorSettings,
   updateBrandSettings,
   updateNotificationPrefs,
+  saveProfileImage,
   type NotificationPrefs,
 } from "@/app/settings/actions";
+import { RateNudge } from "@/components/onboarding/rate-nudge";
 
 type Creator = {
   handle: string | null;
@@ -51,7 +53,7 @@ type Brand = {
   contact_last_name?: string | null;
   verification_status?: string | null;
   rc_number?: string | null;
-  goal?: string | null;
+  goal?: string | null; // stored as one value or a comma-separated list
   ad_platforms?: string[] | null;
   content_types?: string[] | null;
   business_type?: string | null;
@@ -124,22 +126,33 @@ function LockedField({ label, value, note }: { label: string; value: ReactNode; 
 export function SettingsForm({
   userId,
   email,
-  role,
   creator,
   brand,
   prefs,
 }: {
   userId: string;
   email: string;
-  role: "creator" | "brand";
   creator: Creator | null;
   brand: Brand | null;
   prefs: NotificationPrefs;
 }) {
+  const both = !!(creator && brand);
   return (
     <div>
-      {role === "creator" && creator && <CreatorSettings userId={userId} creator={creator} />}
-      {role === "brand" && brand && <BrandSettings userId={userId} brand={brand} />}
+      {creator && (
+        <section>
+          {both && <h2 className="font-display text-lg font-semibold text-ink">Creator profile</h2>}
+          {both && <p className="mb-4 mt-1 text-sm text-ink-3">What brands see when they hire you. Separate from the brand tools below.</p>}
+          <CreatorSettings userId={userId} creator={creator} />
+        </section>
+      )}
+      {brand && (
+        <section className={both ? "mt-10" : ""}>
+          {both && <h2 className="font-display text-lg font-semibold text-ink">Brand profile</h2>}
+          {both && <p className="mb-4 mt-1 text-sm text-ink-3">What you use to hire creators. Separate from the creator profile above.</p>}
+          <BrandSettings userId={userId} brand={brand} />
+        </section>
+      )}
       <NotificationSettings initial={prefs} />
       <AccountSection email={email} />
     </div>
@@ -194,8 +207,27 @@ function ImageUploader({
       return;
     }
     const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+    if (kind === "avatar" || kind === "logo") {
+      const saved = await saveProfileImage(kind, data.publicUrl);
+      if (saved.error) {
+        setErr(saved.error);
+        setBusy(false);
+        return;
+      }
+    }
     onChange(data.publicUrl);
     setBusy(false);
+  }
+
+  async function remove() {
+    setErr(null);
+    if (kind === "avatar" || kind === "logo") {
+      setBusy(true);
+      const saved = await saveProfileImage(kind, null);
+      setBusy(false);
+      if (saved.error) return setErr(saved.error);
+    }
+    onChange(null);
   }
 
   return (
@@ -222,7 +254,7 @@ function ImageUploader({
             <Camera className="size-4" /> {value ? "Change" : "Upload"} {label}
           </Button>
           {value && (
-            <Button type="button" variant="ghost" size="sm" onClick={() => onChange(null)} disabled={busy}>
+            <Button type="button" variant="ghost" size="sm" onClick={remove} disabled={busy}>
               <Trash2 className="size-4" /> Remove
             </Button>
           )}
@@ -296,7 +328,7 @@ function CreatorSettings({ userId, creator }: { userId: string; creator: Creator
 
   return (
     <form onSubmit={onSubmit}>
-      <Section title="Profile photo" description="A real photo of you builds trust with brands.">
+      <Section title="Profile photo" description="This is the photo on your public card. It saves as soon as the upload finishes. Until you add one, the face photo from verification is used.">
         <ImageUploader userId={userId} value={avatarUrl} onChange={setAvatarUrl} display={displayName || handle} label="photo" kind="avatar" />
       </Section>
 
@@ -369,22 +401,25 @@ function CreatorSettings({ userId, creator }: { userId: string; creator: Creator
           <Field label="Bio" hint="A short line on what you make and who for.">
             <Textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="I make beauty & skincare UGC for Nigerian brands…" />
           </Field>
-          <Field
-            label="Starting rate (₦)"
-            hint={`Your ${meta.label}-tier floor is ${formatNaira(floor)}. Brands can still send custom offers above it.`}
-          >
-            <Input
-              type="number"
-              inputMode="numeric"
-              min={floor}
-              value={rate}
-              onChange={(e) => setRate(e.target.value)}
-              onBlur={() => {
-                if (rate && Number(rate) < floor) setRate(String(floor));
-              }}
-              placeholder={String(floor)}
-            />
-          </Field>
+          <div id="starting-rate" className="grid gap-3">
+            <Field
+              label="Starting rate (₦)"
+              hint={`Your ${meta.label}-tier floor is ${formatNaira(floor)}. Brands can still send custom offers above it.`}
+            >
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={floor}
+                value={rate}
+                onChange={(e) => setRate(e.target.value)}
+                onBlur={() => {
+                  if (rate && Number(rate) < floor) setRate(String(floor));
+                }}
+                placeholder={String(floor)}
+              />
+            </Field>
+            <RateNudge niches={niches} location={location} tier={creator.tier ?? "origin"} rate={Number(rate) || 0} onUse={(amount) => setRate(String(amount))} />
+          </div>
           <Field label="Niches" hint="Pick the categories you create in.">
             <div className="flex flex-wrap gap-2">
               {NICHES.map((n) => (
@@ -425,7 +460,7 @@ function BrandSettings({ userId, brand }: { userId: string; brand: Brand }) {
   const [website, setWebsite] = useState(brand.website ?? "");
   const [storeUrl, setStoreUrl] = useState(brand.store_url ?? "");
   const [phone, setPhone] = useState<string | null>(brand.phone ?? null);
-  const [goal, setGoal] = useState(brand.goal ?? "");
+  const [goals, setGoals] = useState<string[]>(parseGoals(brand.goal));
   const [adPlatforms, setAdPlatforms] = useState<string[]>(brand.ad_platforms ?? []);
   const [contentTypes, setContentTypes] = useState<string[]>(brand.content_types ?? []);
   const [businessType, setBusinessType] = useState(brand.business_type ?? "");
@@ -440,7 +475,7 @@ function BrandSettings({ userId, brand }: { userId: string; brand: Brand }) {
     e.preventDefault();
     setError(null);
     start(async () => {
-      const res = await updateBrandSettings({ companyName, contactFirstName, contactLastName, website, storeUrl, phone, logoUrl, goal, adPlatforms, contentTypes, businessType, contactRole, teamSize });
+      const res = await updateBrandSettings({ companyName, contactFirstName, contactLastName, website, storeUrl, phone, logoUrl, goal: goals, adPlatforms, contentTypes, businessType, contactRole, teamSize });
       if (res.error) {
         setError(res.error);
         setStatus("error");
@@ -488,11 +523,14 @@ function BrandSettings({ userId, brand }: { userId: string; brand: Brand }) {
 
       <Section title="Preferences" description="What you selected at sign-up — tweak anytime, it tunes your recommendations.">
         <div className="grid gap-4">
-          <Field label="Your main goal">
-            <Select value={goal} onChange={(e) => setGoal(e.target.value)}>
-              <option value="">Select a goal</option>
-              {BRAND_GOALS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
-            </Select>
+          <Field label="What you're trying to do" hint="Select all that apply.">
+            <div className="flex flex-wrap gap-2">
+              {BRAND_GOALS.map((g) => (
+                <button key={g.value} type="button" aria-pressed={goals.includes(g.value)} onClick={() => setGoals((current) => toggleIn(current, g.value))}>
+                  <Chip active={goals.includes(g.value)}>{g.label}</Chip>
+                </button>
+              ))}
+            </div>
           </Field>
           <Field label="Ad platforms">
             <div className="flex flex-wrap gap-2">

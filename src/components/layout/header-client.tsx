@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronDown, LayoutDashboard, IdCard, Inbox, BadgeCheck, Settings, LogOut, Megaphone, FileText, MessageSquare, Menu, X } from "lucide-react";
+import { ChevronDown, LayoutDashboard, IdCard, Inbox, BadgeCheck, Settings, LogOut, Megaphone, FileText, MessageSquare, Menu, X, Shield } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { Notice } from "@/components/ui/notice";
 import { Tooltip } from "@/components/ui/tooltip";
 import { createClient, supabaseConfigured } from "@/lib/supabase/client";
+import { ROLE_LABEL, type AdminRole } from "@/lib/admin/roles";
 
 type NavItem = { label: string; href: string };
 
@@ -21,6 +22,7 @@ type NavItem = { label: string; href: string };
 type Account = {
   isCreator: boolean;
   isBrand: boolean;
+  adminRole: AdminRole | null;
   creatorLive: boolean;
   brandVerified: boolean;
   creatorSuspended: boolean;
@@ -30,10 +32,11 @@ type Account = {
 };
 
 function roleLabel(a: Account) {
-  if (a.isCreator && a.isBrand) return "Brand + Creator";
-  if (a.isCreator) return "Creator";
-  if (a.isBrand) return "Brand";
-  return "Finish setup";
+  const parts: string[] = [];
+  if (a.isBrand) parts.push("Brand");
+  if (a.isCreator) parts.push("Creator");
+  if (a.adminRole && ROLE_LABEL[a.adminRole]) parts.push(ROLE_LABEL[a.adminRole]);
+  return parts.join(" · ") || "Finish setup";
 }
 
 function initials(name: string) {
@@ -68,25 +71,26 @@ export function HeaderClient({ nav }: { nav: NavItem[] }) {
         setLoading(false);
         return;
       }
-      const [{ data: creator }, { data: brand }] = await Promise.all([
-        supabase.from("creator_profiles").select("display_name, handle, is_live, suspended").eq("id", user.id).maybeSingle(),
+      const [{ data: creator }, { data: brand }, { data: adminRow }] = await Promise.all([
+        supabase.from("creator_profiles").select("display_name, handle, is_live, suspended, avatar_url").eq("id", user.id).maybeSingle(),
         supabase.from("brand_profiles").select("company_name, logo_url, verification_status").eq("id", user.id).maybeSingle(),
+        supabase.from("admin_users").select("role").eq("user_id", user.id).maybeSingle(),
       ]);
       if (cancelled) return;
       const isCreator = !!creator;
       const isBrand = !!brand;
-      // Prefer the creator identity for the display name/avatar when the
-      // account holds both, matching the rest of the app.
+      const adminRole = adminRow && adminRow.role in ROLE_LABEL ? (adminRow.role as AdminRole) : null;
       const display = creator?.display_name || creator?.handle || brand?.company_name || user.email?.split("@")[0] || "Account";
       setAccount({
         isCreator,
         isBrand,
+        adminRole,
         creatorLive: !!creator?.is_live && !creator?.suspended,
         brandVerified: brand?.verification_status === "verified",
         creatorSuspended: !!creator?.suspended,
         display,
         handle: creator?.handle ?? null,
-        avatarUrl: isCreator ? null : brand?.logo_url ?? null,
+        avatarUrl: creator?.avatar_url || brand?.logo_url || null,
       });
       setLoading(false);
     }
@@ -167,6 +171,15 @@ export function HeaderClient({ nav }: { nav: NavItem[] }) {
                       <p className="mt-0.5 text-xs text-ink-3">{roleLabel(account!)}</p>
                     </div>
                     <div className="py-1">
+                      {account!.adminRole && (
+                        <>
+                          <p className="px-4 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-ink-3">Admin</p>
+                          <MenuLink href="/admin" icon={Shield} onClick={() => setOpen(false)}>Admin workspace</MenuLink>
+                        </>
+                      )}
+                      {(account!.isCreator || account!.isBrand) && (
+                        <p className="px-4 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-ink-3">Account</p>
+                      )}
                       <MenuLink href="/dashboard" icon={LayoutDashboard} onClick={() => setOpen(false)}>Dashboard</MenuLink>
                       <MenuLink href="/messages" icon={MessageSquare} onClick={() => setOpen(false)}>Messages</MenuLink>
                       {account!.isCreator && account!.handle && (

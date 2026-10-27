@@ -27,6 +27,10 @@ export type RankCreator = {
   active_gigs?: number;
   /** Completed gigs — used to spot newcomers for the exploration slots. */
   gigs_completed?: number;
+  /** Entry Placement Score, 0–100. Cold start leans on this, capped at 60. */
+  entry_placement_score?: number | null;
+  /** Decaying head start from entry tier. 1.00 Origin, 1.15 Rising, 1.30 Pro. */
+  head_start_multiplier?: number | null;
   /** Active Creator Pro subscription — a small bounded tie-breaker only. */
   is_pro?: boolean;
 };
@@ -46,16 +50,22 @@ const PRO_NUDGE = 4;
 export function scoreCreator(c: RankCreator, { niche, q }: RankOpts): number {
   let s = 0;
 
-  // Outcome: earned reputation (0..100) is the biggest lever.
-  s += (c.earned_reputation ?? 0) * 0.6;
+  // Cold start leans on the entry score (capped so followers cannot dominate).
+  // After about three gigs, earned reputation takes over. The tier name is its
+  // own weight, so Origin, Rising and Pro separate even when reputation is 0.
+  const done = c.gigs_completed ?? 0;
+  const fresh = Math.max(0, Math.min(1, 1 - done / 3));
+  const entry = Math.min(c.entry_placement_score ?? tierMeta(c.tier).rank * 15, 60);
+  const blended = fresh * entry + (1 - fresh) * (c.earned_reputation ?? 0);
+  const headStart = Math.max(1, Math.min(1.3, c.head_start_multiplier ?? 1));
+  s += blended * 0.6 * headStart;
 
   // Reviews: quality weighted by volume (diminishing), capped.
   if (c.review_count && c.avg_rating) {
     s += Math.min(20, c.avg_rating * Math.log10(c.review_count + 1) * 4);
   }
 
-  // Tier (1..7) and verification.
-  s += tierMeta(c.tier).rank * 4;
+  s += tierMeta(c.tier).rank * 8;
   if (c.verification_status === "verified") s += 10;
 
   // Fit: exact niche match + text relevance to the query.

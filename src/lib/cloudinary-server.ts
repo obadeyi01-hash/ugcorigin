@@ -60,6 +60,18 @@ export function privateUrl(publicId: string, resourceType: "image" | "video" | "
   });
 }
 
+/** A square, face-cropped JPEG of a private verification photo. Signed, short-lived. */
+export function faceDeliveryUrl(publicId: string): string {
+  if (!ensure()) return "";
+  return cloudinary.url(publicId, {
+    resource_type: "image",
+    type: "authenticated",
+    sign_url: true,
+    secure: true,
+    transformation: [{ width: 800, height: 800, crop: "fill", gravity: "auto", quality: "auto", fetch_format: "jpg" }],
+  });
+}
+
 /** Resolve a stored reference (Cloudinary ref or null) to a signed URL. */
 export function privateUrlFromRef(ref: string | null | undefined): string | null {
   if (!ref) return null;

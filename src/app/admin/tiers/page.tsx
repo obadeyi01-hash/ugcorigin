@@ -5,11 +5,14 @@ import { AdminShell } from "@/components/admin/admin-shell";
 import { Card, CardBody } from "@/components/ui/card";
 import { TierBadge } from "@/components/ui/tier-badge";
 import { TierConfigEditor } from "@/components/admin/tier-config-editor";
+import { RateGuideEditor } from "@/components/admin/rate-guide-editor";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { FALLBACK_GUIDES, isRateTier, type RateGuide } from "@/lib/rates/guides";
+import { TIERS } from "@/lib/tiers";
 import { CreatorTierControls } from "@/components/admin/creator-tier-controls";
 import { requireSection, isReadonly } from "@/lib/admin/rbac";
 import { createClient } from "@/lib/supabase/server";
 import { formatNaira } from "@/lib/utils";
-import { tierMeta } from "@/lib/tiers";
 
 export const metadata: Metadata = { title: "Admin · Tiers" };
 
@@ -44,6 +47,16 @@ async function TiersInner() {
 
   const config = (configRaw ?? []) as ConfigRow[];
   const creators = (creatorsRaw ?? []) as unknown as CreatorRow[];
+  const admin = createAdminClient();
+  const { data: guideRaw } = await admin
+    .from("rate_guides")
+    .select("tier, niche, location, low_naira, typical_naira, high_naira")
+    .order("tier", { ascending: true })
+    .order("location", { ascending: true })
+    .order("niche", { ascending: true });
+  const guides: RateGuide[] = guideRaw?.length
+    ? guideRaw.flatMap((row) => isRateTier(row.tier) ? [{ tier: row.tier, niche: row.niche, location: row.location, low: row.low_naira, typical: row.typical_naira, high: row.high_naira }] : [])
+    : FALLBACK_GUIDES;
 
   return (
     <AdminShell role={role} active="tiers">
@@ -59,38 +72,56 @@ async function TiersInner() {
         <TierConfigEditor rows={config} readonly={readonly} />
       </div>
 
+      <h2 className="mt-10 font-display text-lg font-semibold text-ink">Suggested starting rates</h2>
+      <p className="mt-0.5 max-w-2xl text-sm text-ink-3">
+        One band per tier, niche and state. A new creator is Origin, so onboarding suggests the Origin number. Rising and Pro are higher because those levels are earned. Lagos and Abuja sit a step above the rest of the country.
+      </p>
+      <div className="mt-3">
+        <RateGuideEditor rows={guides} readonly={readonly} />
+      </div>
+
       <h2 className="mt-10 font-display text-lg font-semibold text-ink">Creators ({creators.length})</h2>
-      <p className="mt-0.5 text-sm text-ink-3">Ranked by earned reputation. Adjust a tier or re-run the scoring engine.</p>
-      <Card className="mt-3">
-        <CardBody className="p-0">
-          <ul className="divide-y divide-line">
-            {creators.map((c) => {
-              const m = c.metrics;
-              return (
-                <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Link href={`/${c.handle}`} className="font-medium text-ink hover:text-accent">
-                        {c.display_name || `@${c.handle}`}
-                      </Link>
-                      <TierBadge tier={c.tier} />
-                      {!c.is_live && <span className="rounded-full bg-surface-2 px-2 py-0.5 text-2xs text-ink-3">Not live</span>}
-                    </div>
-                    <p className="mt-0.5 text-xs text-ink-3">
-                      ERS {Number(c.earned_reputation ?? 0).toFixed(0)} · {m?.gigs_completed ?? 0} gigs ·{" "}
-                      {m?.review_count ? `${Number(m.avg_rating ?? 0).toFixed(1)}★ (${m.review_count})` : "no reviews"} ·
-                      floor {formatNaira(tierMeta(c.tier).floorNaira)}
-                      {c.starting_rate_naira ? ` · rate ${formatNaira(c.starting_rate_naira)}` : ""}
-                    </p>
-                  </div>
-                  <CreatorTierControls creatorId={c.id} currentTier={c.tier} isInfluencer={c.is_influencer} readonly={readonly} />
-                </li>
-              );
-            })}
-            {creators.length === 0 && <li className="p-6 text-center text-sm text-ink-3">No creators yet.</li>}
-          </ul>
-        </CardBody>
-      </Card>
+      <p className="mt-0.5 text-sm text-ink-3">Grouped by tier, from Luminary down to Origin. Reputation only orders people inside the same tier.</p>
+      {creators.length === 0 && <Card className="mt-3"><CardBody className="p-6 text-center text-sm text-ink-3">No creators yet.</CardBody></Card>}
+      {[...TIERS].reverse().map((tier) => {
+        const group = creators
+          .filter((c) => c.tier === tier.key)
+          .sort((a, b) => Number(b.earned_reputation ?? 0) - Number(a.earned_reputation ?? 0));
+        if (group.length === 0) return null;
+        return (
+          <div key={tier.key} className="mt-6">
+            <h3 className="font-display text-base font-semibold text-ink">{tier.label}</h3>
+            <p className="text-xs text-ink-3">{tier.tagline} Floor {formatNaira(tier.floorNaira)}.</p>
+            <Card className="mt-2">
+              <CardBody className="p-0">
+                <ul className="divide-y divide-line">
+                  {group.map((c) => {
+                    const m = c.metrics;
+                    return (
+                      <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Link href={`/${c.handle}`} className="font-medium text-ink hover:text-accent">
+                              {c.display_name || `@${c.handle}`}
+                            </Link>
+                            <TierBadge tier={c.tier} />
+                            {!c.is_live && <span className="rounded-full bg-surface-2 px-2 py-0.5 text-2xs text-ink-3">Not live</span>}
+                          </div>
+                          <p className="mt-0.5 text-xs text-ink-3">
+                            {m?.gigs_completed ?? 0} gigs · {m?.review_count ? `${Number(m.avg_rating ?? 0).toFixed(1)}★ (${m.review_count})` : "no reviews"}
+                            {c.starting_rate_naira ? ` · rate ${formatNaira(c.starting_rate_naira)}` : ""}
+                          </p>
+                        </div>
+                        <CreatorTierControls creatorId={c.id} currentTier={c.tier} isInfluencer={c.is_influencer} readonly={readonly} />
+                      </li>
+                    );
+                  })}
+                </ul>
+              </CardBody>
+            </Card>
+          </div>
+        );
+      })}
     </AdminShell>
   );
 }

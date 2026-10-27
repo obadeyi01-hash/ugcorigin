@@ -16,7 +16,7 @@ async function UsersInner() {
   const readonly = isReadonly(role);
 
   const [{ data: creators }, { data: brands }] = await Promise.all([
-    supabase.from("creator_profiles").select("id, handle, display_name, location, is_live, verification_status, featured").order("created_at", { ascending: false }).limit(100),
+    supabase.from("creator_profiles").select("id, handle, display_name, location, is_live, verification_status, featured, avatar_url").order("created_at", { ascending: false }).limit(100),
     supabase.from("brand_profiles").select("id, company_name, website, verification_status").order("created_at", { ascending: false }).limit(100),
   ]);
 
@@ -30,12 +30,23 @@ async function UsersInner() {
           <ul className="divide-y divide-line">
             {(creators ?? []).map((c) => (
               <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
-                <div className="min-w-0">
-                  <Link href={`/${c.handle}`} className="inline-flex items-center gap-1.5 font-medium text-ink hover:text-accent">
-                    {c.display_name || `@${c.handle}`}
-                    {c.verification_status === "verified" && <VerifiedBadge compact />}
-                  </Link>
-                  <p className="text-xs text-ink-3">@{c.handle} · {c.location || "Nigeria"} · {c.is_live ? "Live" : "Not live"}</p>
+                <div className="flex min-w-0 items-center gap-3">
+                  {c.avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={c.avatar_url} alt="" className="size-10 shrink-0 rounded-full object-cover" />
+                  ) : (
+                    <span className="grid size-10 shrink-0 place-items-center rounded-full bg-surface-2 text-xs text-ink-3">No photo</span>
+                  )}
+                  <div className="min-w-0">
+                    <Link href={`/admin/users/${c.id}`} className="inline-flex items-center gap-1.5 font-medium text-ink hover:text-accent">
+                      {c.display_name || `@${c.handle}`}
+                      {c.verification_status === "verified" && <VerifiedBadge compact />}
+                    </Link>
+                    <p className="text-xs text-ink-3">
+                      @{c.handle} · {c.location || "Nigeria"} · {c.is_live ? "Live" : "Not live"}
+                      {c.handle && <> · <Link href={`/${c.handle}`} className="hover:text-ink">Public card</Link></>}
+                    </p>
+                  </div>
                 </div>
                 <FeaturedToggle id={c.id} featured={!!c.featured} readonly={readonly} />
               </li>
@@ -52,7 +63,7 @@ async function UsersInner() {
             {(brands ?? []).map((b) => (
               <li key={b.id} className="flex items-center justify-between gap-3 p-4">
                 <div className="min-w-0">
-                  <p className="font-medium text-ink">{b.company_name || ", "}</p>
+                  <Link href={`/admin/users/${b.id}`} className="font-medium text-ink hover:text-accent">{b.company_name || "Unnamed business"}</Link>
                   {b.website && <p className="truncate text-xs text-ink-3">{b.website}</p>}
                 </div>
                 <span className="shrink-0 rounded-full bg-surface-2 px-2.5 py-0.5 text-xs capitalize text-ink-2">{b.verification_status}</span>

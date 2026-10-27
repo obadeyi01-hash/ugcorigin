@@ -105,7 +105,7 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
 
     if (!noPlatformMatch) {
       const SELECT =
-        "id, handle, display_name, first_name, last_name, location, niches, starting_rate_naira, featured, verification_status, tier, earned_reputation, pro_until, updated_at, avatar_url, strikes, benched, metrics:creator_metrics(avg_rating, review_count, gigs_completed, active_gigs)";
+        "id, handle, display_name, first_name, last_name, location, niches, starting_rate_naira, featured, verification_status, tier, earned_reputation, entry_placement_score, head_start_multiplier, pro_until, updated_at, avatar_url, strikes, benched, metrics:creator_metrics(avg_rating, review_count, gigs_completed, active_gigs)";
 
       // Reusable filtered base query, run twice: a top-by-reputation window and a
       // recency window. Unioning the two keeps newcomers reachable at scale so
@@ -150,6 +150,8 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
           verification_status: c.verification_status,
           tier: c.tier ?? "origin",
           earned_reputation: c.earned_reputation,
+          entry_placement_score: c.entry_placement_score,
+          head_start_multiplier: c.head_start_multiplier,
           updated_at: c.updated_at,
           avg_rating: m?.avg_rating ?? null,
           review_count: m?.review_count ?? 0,

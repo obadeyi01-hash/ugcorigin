@@ -8,6 +8,26 @@ export const BRAND_GOALS: { value: string; label: string; hint: string }[] = [
   { value: "other", label: "Something else", hint: "" },
 ];
 
+/** Known goals only, in the order shown on the form. Drops anything else. */
+export function cleanGoals(values: string[]): string[] {
+  const picked = new Set(values);
+  return BRAND_GOALS.map((goal) => goal.value).filter((value) => picked.has(value));
+}
+
+/**
+ * The column is a single text field. One older value ("ugc") and several
+ * ("ugc,sponsored") both come back as a list.
+ */
+export function parseGoals(value: string | null | undefined): string[] {
+  if (!value) return [];
+  return cleanGoals(value.split(",").map((part) => part.trim()));
+}
+
+export function serializeGoals(values: string[]): string | null {
+  const stored = cleanGoals(values);
+  return stored.length ? stored.join(",") : null;
+}
+
 export const AD_PLATFORMS: { value: string; label: string }[] = [
   { value: "meta", label: "Meta (Facebook / Instagram)" },
   { value: "tiktok", label: "TikTok" },

@@ -204,6 +204,7 @@ function IdentityStep({
   const [selfieRef, setSelfieRef] = useState<string | null>(null);
   const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
   const [nin, setNin] = useState("");
+  const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -215,7 +216,7 @@ function IdentityStep({
       ? "Under review — our team is confirming you're a real person. Usually within 24 hours."
       : status === "rejected"
         ? "Your last submission couldn't be approved. Please resubmit."
-        : "Add a clear photo of yourself and your NIN. Reviewed by a human — usually within 24 hours.";
+        : "Add a clear photo of your face and a Virtual NIN. Reviewed by a human — usually within 24 hours.";
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -256,9 +257,9 @@ function IdentityStep({
   function submit() {
     setErr(null);
     if (!selfieRef) return setErr("Please add a clear photo of yourself.");
-    if (!/^\d{11}$/.test(nin.replace(/\D/g, ""))) return setErr("Enter your 11-digit NIN.");
+    if (!consent) return setErr("Confirm you agree to the identity check before submitting.");
     start(async () => {
-      const res = await submitIdentityAction({ nin, selfieRef });
+      const res = await submitIdentityAction({ nin, selfieRef, consent });
       if (res.error) setErr(res.error);
       else {
         setStatus("pending");
@@ -314,21 +315,25 @@ function IdentityStep({
                 <Button type="button" size="sm" variant="secondary" disabled={busy || !cloudinaryConfigured} onClick={() => fileRef.current?.click()}>
                   <Camera className="size-4" /> {selfieRef || identity.hasSelfie ? "Change photo" : "Add photo"}
                 </Button>
-                <p className="mt-1 text-xs text-ink-3">A clear, well-lit photo of your face. Not shown publicly.</p>
+                <p className="mt-1 text-xs text-ink-3">A clear, well-lit photo of your face. This is the photo on your public profile. A teammate reviews it until face-match with NIMC is connected.</p>
                 {!cloudinaryConfigured && <p className="mt-1 text-xs text-warning">Photo upload activates once media hosting is configured.</p>}
               </div>
             </div>
           </div>
 
-          <Field label="National ID Number (NIN)" hint="Your 11-digit NIN. Kept private — only our verification team sees it.">
+          <Field label="Virtual NIN or Share Code" hint="From the NIMC app. Do not type your 11-digit NIN. The code is deleted after review.">
             <Input
-              inputMode="numeric"
               autoComplete="off"
-              placeholder="11 digits"
+              placeholder="Share Code or 16-character Virtual NIN"
               value={nin}
-              onChange={(e) => setNin(e.target.value.replace(/\D/g, "").slice(0, 11))}
+              onChange={(e) => setNin(e.target.value.replace(/[^A-Za-z0-9]/g, "").slice(0, 16).toUpperCase())}
             />
           </Field>
+          <IdentityCodeGuide />
+          <label className="flex items-start gap-2 text-xs text-ink-2">
+            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" />
+            <span>I agree UGCOrigin can use this Virtual NIN and my photo to confirm I am a real person. The code is deleted after review.</span>
+          </label>
 
           {err && <p className="text-sm text-error">{err}</p>}
 
@@ -343,6 +348,39 @@ function IdentityStep({
         </div>
       )}
     </Step>
+  );
+}
+
+function IdentityCodeGuide() {
+  return (
+    <details className="rounded-xl bg-surface-2 px-3 py-2.5 text-xs text-ink-2">
+      <summary className="cursor-pointer font-medium text-ink">How to get your code</summary>
+      <div className="mt-3 grid gap-3">
+        <div>
+          <p className="font-medium text-ink">Share Code</p>
+          <ol className="mt-1 list-decimal space-y-1 pl-4">
+            <li>Install the official NINAuth app from ninauth.nimc.gov.ng. Skip download links sent in chats.</li>
+            <li>Sign in with the NIN you already have.</li>
+            <li>On the home screen, tap Get a Share Code.</li>
+            <li>Paste that code here. It lasts up to 30 days, and you can revoke it in the app.</li>
+          </ol>
+        </div>
+        <div>
+          <p className="font-medium text-ink">Virtual NIN</p>
+          <ol className="mt-1 list-decimal space-y-1 pl-4">
+            <li>Install or update the NIMC MWS Mobile ID app.</li>
+            <li>Unlock it with your PIN, then tap GET VIRTUAL NIN.</li>
+            <li>Read the privacy notice, then tap the + button.</li>
+            <li>
+              Or, on your own phone, dial *346*3*your NIN*agent code# and wait for the SMS. The code is 16 characters and expires after 72 hours.
+            </li>
+          </ol>
+          <p className="mt-1.5">
+            NIMC ties a Virtual NIN to the business that asked for it. UGCOrigin does not have an enterprise code yet, so if the app asks for one, use a Share Code.
+          </p>
+        </div>
+      </div>
+    </details>
   );
 }
 

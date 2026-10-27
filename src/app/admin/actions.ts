@@ -13,6 +13,7 @@ import { requiresDualControl } from "@/lib/admin/security";
 import { sendEmail, emailConfigured } from "@/lib/email/send";
 import { creatorApprovedEmail } from "@/lib/email/templates";
 import { formatNaira } from "@/lib/utils";
+import { publishFacePhoto } from "@/lib/identity/face-photo";
 
 type Admin = ReturnType<typeof createAdminClient>;
 type Res = { error?: string; ok?: boolean; pendingApproval?: boolean };
@@ -83,6 +84,10 @@ export async function adminApproveIdentity(creatorId: string): Promise<Res> {
     .maybeSingle();
   if (!sub?.selfie_ref) return { error: "This creator hasn't submitted a photo yet." };
 
+  // The face photo becomes the public profile photo when they have not uploaded one.
+  await publishFacePhoto(creatorId, sub.selfie_ref);
+
+  const { data: profile } = await admin.from("creator_profiles").select("handle").eq("id", creatorId).maybeSingle();
   const { error: pe } = await admin
     .from("creator_profiles")
     .update({ identity_verified: true, photo_verified: true, verification_status: "verified", is_live: true })
@@ -91,7 +96,13 @@ export async function adminApproveIdentity(creatorId: string): Promise<Res> {
 
   await admin
     .from("identity_submissions")
-    .update({ status: "approved", reject_reason: null, reviewed_at: new Date().toISOString(), reviewer_id: ctx!.userId })
+    .update({
+      status: "approved",
+      nin: null,
+      reject_reason: null,
+      reviewed_at: new Date().toISOString(),
+      reviewer_id: ctx!.userId,
+    })
     .eq("user_id", creatorId);
   await admin
     .from("verifications")
@@ -115,6 +126,8 @@ export async function adminApproveIdentity(creatorId: string): Promise<Res> {
   await logAudit(admin, ctx!.userId, "creator.identity_approved", { targetType: "creator", targetId: creatorId });
   revalidatePath("/admin/verification");
   revalidatePath("/admin/users");
+  revalidatePath("/creators");
+  if (profile?.handle) revalidatePath(`/@${profile.handle}`);
   return { ok: true };
 }
 
@@ -129,7 +142,14 @@ export async function adminRejectIdentity(creatorId: string, reason: string): Pr
 
   const { error: se } = await admin
     .from("identity_submissions")
-    .update({ status: "rejected", reject_reason: note.slice(0, 300), reviewed_at: new Date().toISOString(), reviewer_id: ctx!.userId })
+    .update({
+      status: "rejected",
+      nin: null,
+      nin_hash: null,
+      reject_reason: note.slice(0, 300),
+      reviewed_at: new Date().toISOString(),
+      reviewer_id: ctx!.userId,
+    })
     .eq("user_id", creatorId);
   if (se) return { error: se.message };
 

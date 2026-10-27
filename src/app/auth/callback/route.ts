@@ -1,10 +1,54 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { pathAfterSignIn } from "@/lib/auth/after-sign-in";
 import { requestOrigin, supabaseForRequest } from "@/lib/supabase/auth-response";
 
-function safePath(raw: string | null, fallback: string): string {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.includes("\\")) return fallback;
-  return raw;
-}
+// Links we mint ourselves come back in the URL hash (implicit flow), which the
+// server never sees. This page reads the hash in the browser, strips it, and
+// posts the tokens to /auth/callback/session. PKCE (?code=) stays on the server.
+const IMPLICIT_CALLBACK_HTML = `<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>Signing in…</title>
+</head><body>
+<p style="font-family:sans-serif;color:#444">Finishing sign-in…</p>
+<script>
+(function () {
+  var hash = new URLSearchParams((location.hash || "").replace(/^#/, ""));
+  var query = new URLSearchParams(location.search);
+  history.replaceState(null, "", location.pathname + location.search);
+  var err = hash.get("error_description") || hash.get("error");
+  if (err) {
+    location.replace("/login?error=provider&detail=" + encodeURIComponent(String(err).slice(0, 180)));
+    return;
+  }
+  var access = hash.get("access_token");
+  var refresh = hash.get("refresh_token");
+  if (!access || !refresh) {
+    location.replace("/login?error=auth_callback");
+    return;
+  }
+  fetch("/auth/callback/session", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({ access_token: access, refresh_token: refresh, role: query.get("role") })
+  }).then(function (res) {
+    return res.json().then(function (body) { return { ok: res.ok, body: body }; });
+  }).then(function (result) {
+    var dest = result.body && result.body.redirect;
+    if (result.ok && typeof dest === "string" && dest.charAt(0) === "/" && dest.charAt(1) !== "/") {
+      location.replace(dest);
+    } else {
+      location.replace("/login?error=auth_callback");
+    }
+  }).catch(function () {
+    location.replace("/login?error=auth_callback");
+  });
+})();
+</script>
+</body></html>`;
 
 function loginError(origin: string, code: string, detail?: string | null) {
   const dest = new URL("/login", origin);
@@ -24,15 +68,22 @@ export async function GET(request: NextRequest) {
   const code = url.searchParams.get("code");
   const providerError = url.searchParams.get("error_description") || url.searchParams.get("error");
   const role = url.searchParams.get("role");
-  const roleQuery = role === "brand" || role === "creator" ? `?role=${role}` : "";
-  const fallback = `/onboarding${roleQuery}`;
-  const next = safePath(url.searchParams.get("next"), fallback);
+  const next = url.searchParams.get("next");
 
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     return loginError(origin, "config", "Sign-in isn't configured on this server yet.");
   }
   if (providerError && !code) return loginError(origin, "provider", providerError);
-  if (!code) return loginError(origin, "auth_callback");
+  if (!code) {
+    return new NextResponse(IMPLICIT_CALLBACK_HTML, {
+      status: 200,
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+        "referrer-policy": "no-referrer",
+      },
+    });
+  }
 
   const bound = supabaseForRequest(request);
   if (!bound) return loginError(origin, "config", "Sign-in isn't configured on this server yet.");
@@ -40,23 +91,7 @@ export async function GET(request: NextRequest) {
   const { error } = await bound.client.auth.exchangeCodeForSession(code);
   if (error) return loginError(origin, "auth_callback", error.message);
 
-  let destPath = next;
-  if (!url.searchParams.get("next")) {
-    const { data: { user } } = await bound.client.auth.getUser();
-    if (user) {
-      const [{ data: creator }, { data: brand }] = await Promise.all([
-        bound.client.from("creator_profiles").select("id").eq("id", user.id).maybeSingle(),
-        bound.client.from("brand_profiles").select("id").eq("id", user.id).maybeSingle(),
-      ]);
-      const hasCreator = !!creator;
-      const hasBrand = !!brand;
-      if ((role === "creator" && hasCreator) || (role === "brand" && hasBrand) || (!role && (hasCreator || hasBrand))) {
-        destPath = "/dashboard";
-      } else {
-        destPath = fallback;
-      }
-    }
-  }
+  const destPath = await pathAfterSignIn(bound.client, role, next);
 
   const redirect = NextResponse.redirect(new URL(destPath, origin));
   bound.apply(redirect);

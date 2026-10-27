@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { guardWrite } from "@/lib/admin/rbac";
+import { CATEGORIES, NG_STATES } from "@/lib/categories";
+import { ANY, isRateTier } from "@/lib/rates/guides";
 import type { TierKey } from "@/lib/tiers";
 
 type Res = { error?: string; ok?: boolean };
@@ -112,5 +114,74 @@ export async function adminUpdateTierConfig(
   await audit(admin, ctx.userId, "tier_config.update", null, { tier, ...before }, { tier, floor_naira: floor, label, tagline });
   revalidatePath("/admin/tiers");
   revalidatePath("/settings");
+  return { ok: true };
+}
+
+type RateGuideInput = { tier: string; niche: string; location: string; low: number; typical: number; high: number };
+
+/** Replace the suggested starting-rate bands. Creators see these on onboarding, settings, and the dashboard. */
+export async function saveRateGuides(rows: RateGuideInput[]): Promise<Res> {
+  const { ctx, error } = await guardWrite("tiers");
+  if (error || !ctx) return { error: error ?? "Not permitted." };
+  if (!Array.isArray(rows) || rows.length === 0 || rows.length > 400) {
+    return { error: "Add between 1 and 400 rate bands." };
+  }
+
+  const niches = new Set<string>([ANY, ...CATEGORIES]);
+  const places = new Set<string>([ANY, ...NG_STATES]);
+  const seen = new Set<string>();
+  const cleaned = rows.map((row) => {
+    const tier = row.tier.trim();
+    const niche = row.niche.trim();
+    const location = row.location.trim() || ANY;
+    const low = Math.round(Number(row.low));
+    const typical = Math.round(Number(row.typical));
+    const high = Math.round(Number(row.high));
+    return { tier, niche, location, low, typical, high };
+  });
+
+  for (const row of cleaned) {
+    if (!isRateTier(row.tier) || !niches.has(row.niche) || !places.has(row.location)) return { error: "Use a tier, niche and state from the lists." };
+    if (!(row.low > 0 && row.typical >= row.low && row.high >= row.typical)) {
+      return { error: "Each band needs a low, a usual rate at or above it, and a high at or above that." };
+    }
+    const key = `${row.tier}|${row.niche}|${row.location}`;
+    if (seen.has(key)) return { error: "Two bands use the same tier, niche and state." };
+    seen.add(key);
+  }
+
+  const admin = createAdminClient();
+  const { data: before } = await admin.from("rate_guides").select("id, tier, niche, location, low_naira, typical_naira, high_naira");
+  const { error: inserted } = await admin.from("rate_guides").upsert(
+    cleaned.map((row) => ({
+      tier: row.tier,
+      niche: row.niche,
+      location: row.location,
+      low_naira: row.low,
+      typical_naira: row.typical,
+      high_naira: row.high,
+    })),
+    { onConflict: "tier,niche,location" },
+  );
+  if (inserted) return { error: inserted.message };
+  const keep = new Set(cleaned.map((row) => `${row.tier}|${row.niche}|${row.location}`));
+  const drop = (before ?? []).filter((row) => !keep.has(`${row.tier}|${row.niche}|${row.location}`)).map((row) => row.id);
+  if (drop.length > 0) {
+    const { error: removed } = await admin.from("rate_guides").delete().in("id", drop);
+    if (removed) return { error: removed.message };
+  }
+
+  await admin.from("audit_log").insert({
+    actor_id: ctx.userId,
+    action: "rate_guides.replace",
+    target_type: "rate_guides",
+    target_id: null,
+    before: before ?? [],
+    after: cleaned,
+  });
+  revalidatePath("/admin/tiers");
+  revalidatePath("/settings");
+  revalidatePath("/onboarding");
+  revalidatePath("/dashboard");
   return { ok: true };
 }

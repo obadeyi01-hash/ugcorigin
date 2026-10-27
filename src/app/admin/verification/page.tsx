@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import Link from "next/link";
 import { Check, X } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Card, CardBody } from "@/components/ui/card";
@@ -90,10 +91,10 @@ async function VerificationInner() {
       <p className="mt-1.5 text-sm text-ink-2">Creators who&apos;ve completed onboarding and are awaiting identity verification.</p>
 
       <h2 className="mt-7 font-display text-lg font-semibold text-ink">Identity submissions ({submissions.length})</h2>
-      <p className="mt-0.5 text-sm text-ink-2">Manual review: check the selfie against the NIN, then approve or reject.</p>
+      <p className="mt-0.5 text-sm text-ink-2">Manual review: check the face photo against the Virtual NIN, then approve or reject. The code is deleted once you decide.</p>
       <div className="mt-4 grid gap-3">
         {submissions.length === 0 && (
-          <Card variant="outline"><CardBody className="py-10 text-center text-ink-2">No photo/NIN submissions waiting.</CardBody></Card>
+          <Card variant="outline"><CardBody className="py-10 text-center text-ink-2">No photo submissions waiting.</CardBody></Card>
         )}
         {submissions.map((s) => (
           <Card key={s.user_id}>
@@ -107,10 +108,10 @@ async function VerificationInner() {
                     <div className="grid size-24 shrink-0 place-items-center rounded-xl bg-surface-2 text-xs text-ink-3">No photo</div>
                   )}
                   <div className="min-w-0">
-                    <p className="font-semibold text-ink">{s.displayName || `@${s.handle}`}</p>
-                    <p className="text-xs text-ink-3">@{s.handle}</p>
+                    <Link href={`/admin/users/${s.user_id}`} className="font-semibold text-ink hover:text-accent">{s.displayName || `@${s.handle}`}</Link>
+                    <p className="text-xs text-ink-3">@{s.handle} · full record</p>
                     <dl className="mt-2 grid gap-0.5 text-sm">
-                      <div className="flex gap-2"><dt className="text-ink-3">NIN</dt><dd className="font-mono text-ink">{s.nin || "—"}</dd></div>
+                      <div className="flex gap-2"><dt className="text-ink-3">Virtual NIN</dt><dd className="font-mono text-ink">{s.nin || "—"}</dd></div>
                       <div className="flex gap-2"><dt className="text-ink-3">Phone</dt><dd className="text-ink-2">{s.phone || "—"}</dd></div>
                       <div className="flex gap-2"><dt className="text-ink-3">Submitted</dt><dd className="text-ink-2">{s.submitted_at ? new Date(s.submitted_at).toLocaleString() : "—"}</dd></div>
                     </dl>
@@ -133,8 +134,8 @@ async function VerificationInner() {
             <CardBody>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="font-semibold text-ink">{c.display_name || `@${c.handle}`}</p>
-                  <p className="text-xs text-ink-3">@{c.handle} · {c.completeness}% complete</p>
+                  <Link href={`/admin/users/${c.id}`} className="font-semibold text-ink hover:text-accent">{c.display_name || `@${c.handle}`}</Link>
+                  <p className="text-xs text-ink-3">@{c.handle} · {c.completeness}% complete · full record</p>
                   <div className="mt-2 flex flex-wrap gap-3">
                     <Flag on={!!c.bank_verified} label="Bank" />
                     <Flag on={!!c.identity_verified} label="Identity" />
@@ -165,8 +166,8 @@ async function VerificationInner() {
             <CardBody>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="font-semibold text-ink">{b.company_name || "Unnamed business"}</p>
-                  <p className="text-xs text-ink-3">RC/CAC: {b.rc_number || "—"}{b.verification_submitted_at ? ` · submitted ${new Date(b.verification_submitted_at).toLocaleDateString()}` : ""}</p>
+                  <Link href={`/admin/users/${b.id}`} className="font-semibold text-ink hover:text-accent">{b.company_name || "Unnamed business"}</Link>
+                  <p className="text-xs text-ink-3">RC/CAC: {b.rc_number || "—"}{b.verification_submitted_at ? ` · submitted ${new Date(b.verification_submitted_at).toLocaleDateString()}` : ""} · full record</p>
                 </div>
                 <BrandVerificationRow brandId={b.id} readonly={readonly} />
               </div>

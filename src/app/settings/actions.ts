@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { detectAiClaim } from "@/lib/ai-detect";
+import { serializeGoals } from "@/lib/brand-options";
 import { normalizeHandle, isValidHandle, FREE_USERNAME_CHANGES } from "@/lib/username";
 
 const configured = () => !!process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -169,6 +170,63 @@ export async function updateCreatorSettings(input: CreatorSettingsInput): Promis
   return { ok: true, aiFlagged: aiClaim };
 }
 
+function ownStorageUrl(url: string, userId: string) {
+  try {
+    const parsed = new URL(url);
+    const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!base || parsed.origin !== new URL(base).origin) return false;
+    return parsed.pathname.startsWith(`/storage/v1/object/public/avatars/${userId}/`);
+  } catch {
+    return false;
+  }
+}
+
+/** Write the public photo as soon as the upload finishes, so leaving the form does not drop it. */
+export async function saveProfileImage(kind: "avatar" | "logo", url: string | null): Promise<ActionResult> {
+  const { supabase, user } = await requireUser();
+  if (!user) return { error: "Your session expired, please sign in again." };
+  if (url !== null && !ownStorageUrl(url, user.id)) return { error: "That image couldn't be saved." };
+
+  if (kind === "logo") {
+    const { data: brand } = await supabase.from("brand_profiles").select("id").eq("id", user.id).maybeSingle();
+    if (!brand) return { error: "Add a brand profile before saving a logo." };
+    const { error } = await supabase.from("brand_profiles").update({ logo_url: url }).eq("id", user.id);
+    if (error) return { error: error.message };
+    revalidatePath("/settings");
+    return { ok: true };
+  }
+
+  const { data: current } = await supabase
+    .from("creator_profiles")
+    .select("handle, avatar_url, avatar_changes, avatar_last_changed_at")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (!current) return { error: "Add a creator profile before saving a photo." };
+
+  const { error } = await supabase.from("creator_profiles").update({ avatar_url: url }).eq("id", user.id);
+  if (error) return { error: error.message };
+
+  if (url && url !== current.avatar_url) {
+    const admin = createAdminClient();
+    const changes = (current.avatar_changes ?? 0) + 1;
+    const last = current.avatar_last_changed_at ? new Date(current.avatar_last_changed_at).getTime() : 0;
+    const within30d = Date.now() - last < 30 * 24 * 60 * 60 * 1000;
+    await admin
+      .from("creator_profiles")
+      .update({
+        avatar_changes: changes,
+        avatar_last_changed_at: new Date().toISOString(),
+        ...(changes >= 3 && within30d ? { media_flagged: true } : {}),
+      })
+      .eq("id", user.id);
+  }
+
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
+  if (current.handle) revalidatePath(`/${current.handle}`);
+  return { ok: true };
+}
+
 export type BrandSettingsInput = {
   companyName: string;
   contactFirstName: string;
@@ -177,7 +235,7 @@ export type BrandSettingsInput = {
   storeUrl: string;
   phone: string | null;
   logoUrl: string | null;
-  goal: string;
+  goal: string[];
   adPlatforms: string[];
   contentTypes: string[];
   businessType: string;
@@ -202,7 +260,7 @@ export async function updateBrandSettings(input: BrandSettingsInput): Promise<Ac
       store_url: input.storeUrl.trim() || null,
       phone: input.phone || null,
       logo_url: input.logoUrl,
-      goal: input.goal || null,
+      goal: serializeGoals(input.goal ?? []),
       ad_platforms: input.adPlatforms ?? [],
       content_types: input.contentTypes ?? [],
       business_type: input.businessType || null,

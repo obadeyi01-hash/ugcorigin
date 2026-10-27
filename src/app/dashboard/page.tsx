@@ -18,6 +18,10 @@ import { publicName } from "@/lib/names";
 import { RecommendationsPopup, type RecCreator } from "@/components/dashboard/recommendations-popup";
 import { UpsellNudge } from "@/components/upsell/upsell-nudge";
 import { VerifyBanner } from "@/components/dashboard/verify-banner";
+import { getAdminContext } from "@/lib/admin/rbac";
+import { ROLE_LABEL } from "@/lib/admin/roles";
+import { loadRateSuggestion } from "@/lib/rates/load";
+import { rateMessage } from "@/lib/rates/guides";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -76,7 +80,7 @@ async function DashboardInner() {
   // Named columns only. phone, bank fields, and rc_number are not selectable
   // by the signed-in role, and select("*") would fail once that migration is applied.
   const [{ data: creator }, { data: brand }] = await Promise.all([
-    supabase.from("creator_profiles").select("id, handle, display_name, location, tier, is_live, suspended, completeness, identity_verified, bank_verified").eq("id", user.id).maybeSingle(),
+    supabase.from("creator_profiles").select("id, handle, display_name, location, niches, starting_rate_naira, avatar_url, tier, is_live, suspended, completeness, identity_verified, bank_verified").eq("id", user.id).maybeSingle(),
     supabase.from("brand_profiles").select("id, company_name, website, verification_status").eq("id", user.id).maybeSingle(),
   ]);
 
@@ -138,6 +142,16 @@ async function DashboardInner() {
   }
   const showCreatorPro = !!creator && !proActive;
   const showBrandVerify = !showCreatorPro && !!brand && brand.verification_status !== "verified";
+  const adminCtx = await getAdminContext();
+  let rateNote: { lead: string; detail: string; stance: string } | null = null;
+  if (creator) {
+    try {
+      const suggestion = await loadRateSuggestion(creator.niches ?? [], creator.location ?? "", creator.tier ?? "origin");
+      if (suggestion) rateNote = rateMessage(creator.starting_rate_naira ?? 0, suggestion);
+    } catch {
+      rateNote = null;
+    }
+  }
 
   return (
     <>
@@ -191,6 +205,21 @@ async function DashboardInner() {
           Welcome{creator?.display_name ? `, ${creator.display_name}` : brand?.company_name ? `, ${brand.company_name}` : ""}.
         </h1>
 
+        {adminCtx && (
+          <Card className="mt-6 max-w-2xl border-ink/15">
+            <CardBody>
+              <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">Admin</p>
+              <p className="mt-1 font-semibold text-ink">{ROLE_LABEL[adminCtx.role]}</p>
+              <p className="mt-1 text-sm text-ink-2">
+                Admin tools are a separate workspace on this email. Brand posting, offers, and brand verification stay on the brand profile and do not unlock admin actions.
+              </p>
+              <Link href="/admin" className="mt-4 inline-block">
+                <Button size="sm">Open admin <ArrowRight className="size-4" /></Button>
+              </Link>
+            </CardBody>
+          </Card>
+        )}
+
         {creator && (
           <Card className="mt-6 max-w-2xl">
             <CardBody>
@@ -217,6 +246,21 @@ async function DashboardInner() {
                 <div className="h-full rounded-full bg-accent" style={{ width: `${creator.completeness ?? 0}%` }} />
               </div>
               <p className="mt-1.5 text-xs text-ink-3">Profile {creator.completeness ?? 0}% complete</p>
+              {!creator.avatar_url && (
+                <p className="mt-3 text-sm text-ink-2">
+                  Brands see your initials until a profile photo is saved.{" "}
+                  <Link href="/settings" className="font-medium text-accent">Add a photo</Link>
+                </p>
+              )}
+              {rateNote && (
+                <div className={rateNote.stance === "high" || rateNote.stance === "low" ? "mt-4 rounded-xl bg-warning/10 px-3 py-3" : "mt-4 rounded-xl bg-surface-2 px-3 py-3"}>
+                  <p className="text-sm text-ink-2">{rateNote.lead}</p>
+                  {rateNote.detail && <p className="mt-1 text-xs text-ink-3">{rateNote.detail}</p>}
+                  {rateNote.stance !== "ok" && (
+                    <Link href="/settings#starting-rate" className="mt-2 inline-block text-sm font-medium text-accent">Adjust starting rate</Link>
+                  )}
+                </div>
+              )}
 
               <div className="mt-5 grid gap-2 text-sm">
                 <p className="flex items-center gap-2 text-ink-2">

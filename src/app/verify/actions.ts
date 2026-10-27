@@ -10,6 +10,8 @@ import { placeCreator } from "@/lib/tiering/placement";
 import { signedUpload, type SignedUpload } from "@/lib/cloudinary-server";
 import { identityFolder } from "@/lib/cloudinary";
 import { notifyAdminsPendingReview } from "@/lib/notify";
+import { identityTokenHash, parseVirtualNin } from "@/lib/identity/token";
+import { publishFacePhoto } from "@/lib/identity/face-photo";
 
 const MIN_COMPLETENESS = 80;
 
@@ -113,21 +115,23 @@ export async function signSelfieUpload(): Promise<{ upload?: SignedUpload; error
 }
 
 /**
- * Manual identity submission (selfie + NIN) while no automated KYC provider is
- * connected. Stored in identity_submissions (service-role only — never exposed
- * through the public creator row). Can be re-submitted while pending/rejected;
- * blocked once approved. Never self-sets identity_verified: an admin reviews the
- * selfie + NIN and approves, which flips the badge and sets the profile live.
+ * Manual identity submission (face photo + Virtual NIN) while no automated KYC
+ * provider is connected. The code is stored only until a reviewer decides, then
+ * deleted. A hash remains so the same code cannot be reused. The face photo is
+ * copied to the public profile. Never self-sets identity_verified.
  */
 export async function submitIdentityAction(input: {
   nin: string;
   selfieRef: string;
+  consent?: boolean;
 }): Promise<{ ok?: boolean; error?: string }> {
   const { user } = await requireUser();
   if (!user) return { error: "Please sign in again." };
+  if (!input.consent) return { error: "Confirm you agree to the identity check before submitting." };
 
-  const nin = input.nin.replace(/\D/g, "");
-  if (!/^\d{11}$/.test(nin)) return { error: "Enter your 11-digit NIN." };
+  const parsed = parseVirtualNin(input.nin);
+  if (!parsed.token) return { error: parsed.error ?? "Enter your Virtual NIN." };
+  const token = parsed.token;
   if (!input.selfieRef || !input.selfieRef.startsWith("cld:") || !input.selfieRef.includes(identityFolder(user.id))) {
     return { error: "Please add a clear photo of yourself before submitting." };
   }
@@ -151,7 +155,9 @@ export async function submitIdentityAction(input: {
   const { error } = await admin.from("identity_submissions").upsert(
     {
       user_id: user.id,
-      nin,
+      nin: token,
+      nin_hash: identityTokenHash(token),
+      nin_consent_at: new Date().toISOString(),
       selfie_ref: input.selfieRef,
       phone: prof?.phone ?? null,
       status: "pending",
@@ -164,11 +170,13 @@ export async function submitIdentityAction(input: {
   );
   if (error) {
     if (error.code === "23505") {
-      // The only other unique key here is the NIN.
-      return { error: "That NIN is already linked to another account. If this is a mistake, contact support." };
+      return { error: "That Virtual NIN is already linked to another account. If this is a mistake, contact support." };
     }
     return { error: error.message };
   }
+
+  // The face photo is the public profile photo until the creator uploads another.
+  await publishFacePhoto(user.id, input.selfieRef);
 
   // Mirror a pending row into verifications for the audit trail / queue parity.
   const { data: v } = await admin

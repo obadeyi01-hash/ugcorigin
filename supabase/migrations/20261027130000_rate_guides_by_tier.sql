@@ -1,0 +1,87 @@
+-- Suggested rates follow the entry ladder.
+-- A new creator is Origin. Rising and Pro are earned, so their bands are higher.
+-- Replaces the first seed, which priced Origin creators as if they were already Pro.
+
+alter table public.rate_guides
+  add column if not exists tier text not null default 'origin';
+
+alter table public.rate_guides drop constraint if exists rate_guides_niche_location_key;
+alter table public.rate_guides drop constraint if exists rate_guides_tier_niche_location_key;
+alter table public.rate_guides
+  add constraint rate_guides_tier_niche_location_key unique (tier, niche, location);
+
+delete from public.rate_guides;
+
+insert into public.rate_guides (tier, niche, location, low_naira, typical_naira, high_naira) values
+  ('origin', '*', '*', 10000, 12000, 18000),
+  ('origin', 'Lifestyle', '*', 10000, 12000, 18000),
+  ('origin', 'Fashion', '*', 10000, 15000, 20000),
+  ('origin', 'Dance & Choreography', '*', 10000, 12000, 18000),
+  ('origin', 'Beauty & Skincare', '*', 10000, 15000, 20000),
+  ('origin', 'Food & Cooking', '*', 10000, 12000, 18000),
+  ('origin', 'Finance & Fintech', '*', 12000, 18000, 25000),
+  ('origin', 'SaaS / Tech', '*', 12000, 18000, 25000),
+  ('origin', '*', 'Lagos', 13000, 15000, 23000),
+  ('origin', 'Lifestyle', 'Lagos', 13000, 15000, 23000),
+  ('origin', 'Fashion', 'Lagos', 13000, 19000, 25000),
+  ('origin', 'Dance & Choreography', 'Lagos', 13000, 15000, 23000),
+  ('origin', 'Beauty & Skincare', 'Lagos', 13000, 19000, 25000),
+  ('origin', 'Food & Cooking', 'Lagos', 13000, 15000, 23000),
+  ('origin', 'Finance & Fintech', 'Lagos', 15000, 23000, 31000),
+  ('origin', 'SaaS / Tech', 'Lagos', 15000, 23000, 31000),
+  ('origin', '*', 'FCT - Abuja', 13000, 15000, 23000),
+  ('origin', 'Lifestyle', 'FCT - Abuja', 13000, 15000, 23000),
+  ('origin', 'Fashion', 'FCT - Abuja', 13000, 19000, 25000),
+  ('origin', 'Dance & Choreography', 'FCT - Abuja', 13000, 15000, 23000),
+  ('origin', 'Beauty & Skincare', 'FCT - Abuja', 13000, 19000, 25000),
+  ('origin', 'Food & Cooking', 'FCT - Abuja', 13000, 15000, 23000),
+  ('origin', 'Finance & Fintech', 'FCT - Abuja', 15000, 23000, 31000),
+  ('origin', 'SaaS / Tech', 'FCT - Abuja', 15000, 23000, 31000),
+  ('rising', '*', '*', 20000, 25000, 32000),
+  ('rising', 'Lifestyle', '*', 20000, 22000, 30000),
+  ('rising', 'Fashion', '*', 20000, 28000, 35000),
+  ('rising', 'Dance & Choreography', '*', 20000, 22000, 30000),
+  ('rising', 'Beauty & Skincare', '*', 20000, 28000, 35000),
+  ('rising', 'Food & Cooking', '*', 20000, 22000, 30000),
+  ('rising', 'Finance & Fintech', '*', 25000, 32000, 40000),
+  ('rising', 'SaaS / Tech', '*', 25000, 32000, 40000),
+  ('rising', '*', 'Lagos', 25000, 31000, 40000),
+  ('rising', 'Lifestyle', 'Lagos', 25000, 28000, 38000),
+  ('rising', 'Fashion', 'Lagos', 25000, 35000, 44000),
+  ('rising', 'Dance & Choreography', 'Lagos', 25000, 28000, 38000),
+  ('rising', 'Beauty & Skincare', 'Lagos', 25000, 35000, 44000),
+  ('rising', 'Food & Cooking', 'Lagos', 25000, 28000, 38000),
+  ('rising', 'Finance & Fintech', 'Lagos', 31000, 40000, 50000),
+  ('rising', 'SaaS / Tech', 'Lagos', 31000, 40000, 50000),
+  ('rising', '*', 'FCT - Abuja', 25000, 31000, 40000),
+  ('rising', 'Lifestyle', 'FCT - Abuja', 25000, 28000, 38000),
+  ('rising', 'Fashion', 'FCT - Abuja', 25000, 35000, 44000),
+  ('rising', 'Dance & Choreography', 'FCT - Abuja', 25000, 28000, 38000),
+  ('rising', 'Beauty & Skincare', 'FCT - Abuja', 25000, 35000, 44000),
+  ('rising', 'Food & Cooking', 'FCT - Abuja', 25000, 28000, 38000),
+  ('rising', 'Finance & Fintech', 'FCT - Abuja', 31000, 40000, 50000),
+  ('rising', 'SaaS / Tech', 'FCT - Abuja', 31000, 40000, 50000),
+  ('pro', '*', '*', 35000, 40000, 50000),
+  ('pro', 'Lifestyle', '*', 35000, 40000, 48000),
+  ('pro', 'Fashion', '*', 35000, 45000, 55000),
+  ('pro', 'Dance & Choreography', '*', 35000, 40000, 48000),
+  ('pro', 'Beauty & Skincare', '*', 35000, 45000, 55000),
+  ('pro', 'Food & Cooking', '*', 35000, 40000, 48000),
+  ('pro', 'Finance & Fintech', '*', 40000, 50000, 65000),
+  ('pro', 'SaaS / Tech', '*', 40000, 50000, 65000),
+  ('pro', '*', 'Lagos', 44000, 50000, 63000),
+  ('pro', 'Lifestyle', 'Lagos', 44000, 50000, 60000),
+  ('pro', 'Fashion', 'Lagos', 44000, 56000, 69000),
+  ('pro', 'Dance & Choreography', 'Lagos', 44000, 50000, 60000),
+  ('pro', 'Beauty & Skincare', 'Lagos', 44000, 56000, 69000),
+  ('pro', 'Food & Cooking', 'Lagos', 44000, 50000, 60000),
+  ('pro', 'Finance & Fintech', 'Lagos', 50000, 63000, 81000),
+  ('pro', 'SaaS / Tech', 'Lagos', 50000, 63000, 81000),
+  ('pro', '*', 'FCT - Abuja', 44000, 50000, 63000),
+  ('pro', 'Lifestyle', 'FCT - Abuja', 44000, 50000, 60000),
+  ('pro', 'Fashion', 'FCT - Abuja', 44000, 56000, 69000),
+  ('pro', 'Dance & Choreography', 'FCT - Abuja', 44000, 50000, 60000),
+  ('pro', 'Beauty & Skincare', 'FCT - Abuja', 44000, 56000, 69000),
+  ('pro', 'Food & Cooking', 'FCT - Abuja', 44000, 50000, 60000),
+  ('pro', 'Finance & Fintech', 'FCT - Abuja', 50000, 63000, 81000),
+  ('pro', 'SaaS / Tech', 'FCT - Abuja', 50000, 63000, 81000);

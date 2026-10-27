@@ -21,7 +21,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://ugcorigin.com"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://www.ugcorigin.com"),
   title: {
     default: "UGCOrigin, Hire real creators for original UGC",
     template: "%s · UGCOrigin",
@@ -56,7 +56,25 @@ export const metadata: Metadata = {
     title: "UGCOrigin, Hire real creators for original UGC",
     description: "Identity-verified human creators. Escrow-protected. Nigeria-first.",
   },
+  ...siteVerification(),
 };
+
+function siteCode(value: string | undefined) {
+  const clean = value?.trim() ?? "";
+  return /^[A-Za-z0-9_-]{8,128}$/.test(clean) ? clean : null;
+}
+
+function siteVerification(): { verification: Metadata["verification"] } | Record<string, never> {
+  const google = siteCode(process.env.GOOGLE_SITE_VERIFICATION);
+  const bing = siteCode(process.env.BING_SITE_VERIFICATION);
+  if (!google && !bing) return {};
+  return {
+    verification: {
+      ...(google ? { google } : {}),
+      ...(bing ? { other: { "msvalidate.01": bing } } : {}),
+    },
+  };
+}
 
 const orgLd = {
   "@context": "https://schema.org",
