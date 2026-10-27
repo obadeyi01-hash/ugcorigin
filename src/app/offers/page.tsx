@@ -9,6 +9,7 @@ import { OfferList, type OfferRow } from "@/components/offers/offer-list";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { createClient } from "@/lib/supabase/server";
 import type { BrandMetrics } from "@/components/marketplace/brand-snapshot";
+import { loadTaxBps } from "@/lib/fees-server";
 
 export const metadata: Metadata = { title: "Offers" };
 
@@ -63,7 +64,7 @@ async function OffersInner() {
     };
   });
 
-  return <OfferList offers={offers} />;
+  return <OfferList offers={offers} taxBps={await loadTaxBps()} />;
 }
 
 export default function OffersPage() {

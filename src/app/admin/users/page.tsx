@@ -5,26 +5,83 @@ import { AdminShell } from "@/components/admin/admin-shell";
 import { Card, CardBody } from "@/components/ui/card";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { FeaturedToggle } from "@/components/admin/featured-toggle";
+import { AdminListControls } from "@/components/admin/list-controls";
 import { requireSection, isReadonly } from "@/lib/admin/rbac";
 import { createClient } from "@/lib/supabase/server";
+import { pageCount, pageWindow, readPage, readQuery } from "@/lib/admin/list";
 
 export const metadata: Metadata = { title: "Admin · Users" };
 
-async function UsersInner() {
+const CREATOR_STATUS = [
+  { value: "all", label: "All" },
+  { value: "live", label: "Live" },
+  { value: "hidden", label: "Not live" },
+  { value: "verified", label: "Verified" },
+  { value: "pending", label: "Pending" },
+  { value: "rejected", label: "Rejected" },
+  { value: "unverified", label: "Unverified" },
+];
+const BRAND_STATUS = [
+  { value: "all", label: "All" },
+  { value: "verified", label: "Verified" },
+  { value: "pending", label: "Pending" },
+  { value: "unverified", label: "Unverified" },
+];
+
+async function UsersInner({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const { role } = await requireSection("users");
   const supabase = await createClient();
   const readonly = isReadonly(role);
+  const sp = await searchParams;
+  const q = readQuery(sp.q);
+  const bq = readQuery(sp.bq);
+  const status = CREATOR_STATUS.some((item) => item.value === sp.status) ? sp.status! : "all";
+  const bstatus = BRAND_STATUS.some((item) => item.value === sp.bstatus) ? sp.bstatus! : "all";
+  const page = readPage(sp.page);
+  const bpage = readPage(sp.bpage);
+  const creatorsWindow = pageWindow(page);
+  const brandsWindow = pageWindow(bpage);
 
-  const [{ data: creators }, { data: brands }] = await Promise.all([
-    supabase.from("creator_profiles").select("id, handle, display_name, location, is_live, verification_status, featured, avatar_url").order("created_at", { ascending: false }).limit(100),
-    supabase.from("brand_profiles").select("id, company_name, website, verification_status").order("created_at", { ascending: false }).limit(100),
+  let creatorsQuery = supabase
+    .from("creator_profiles")
+    .select("id, handle, display_name, location, is_live, verification_status, featured, avatar_url", { count: "exact" })
+    .order("created_at", { ascending: false });
+  if (q) creatorsQuery = creatorsQuery.or(`display_name.ilike.%${q}%,handle.ilike.%${q}%,location.ilike.%${q}%`);
+  if (status === "live") creatorsQuery = creatorsQuery.eq("is_live", true);
+  if (status === "hidden") creatorsQuery = creatorsQuery.eq("is_live", false);
+  if (status === "verified" || status === "pending" || status === "rejected" || status === "unverified") {
+    creatorsQuery = creatorsQuery.eq("verification_status", status);
+  }
+
+  let brandsQuery = supabase
+    .from("brand_profiles")
+    .select("id, company_name, website, verification_status", { count: "exact" })
+    .order("created_at", { ascending: false });
+  if (bq) brandsQuery = brandsQuery.or(`company_name.ilike.%${bq}%,website.ilike.%${bq}%`);
+  if (bstatus !== "all") brandsQuery = brandsQuery.eq("verification_status", bstatus);
+
+  const [{ data: creators, count: creatorCount }, { data: brands, count: brandCount }] = await Promise.all([
+    creatorsQuery.range(creatorsWindow.from, creatorsWindow.to),
+    brandsQuery.range(brandsWindow.from, brandsWindow.to),
   ]);
+  const creatorPages = pageCount(creatorCount);
+  const brandPages = pageCount(brandCount);
 
   return (
     <AdminShell role={role} active="users">
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Users</h1>
 
-      <h2 className="mt-6 font-display text-lg font-semibold text-ink">Creators ({creators?.length ?? 0})</h2>
+      <h2 className="mt-6 font-display text-lg font-semibold text-ink">Creators</h2>
+      <AdminListControls
+        pathname="/admin/users"
+        q={q}
+        placeholder="Name, username, location"
+        filters={[{ name: "status", label: "Status", value: status, options: CREATOR_STATUS }]}
+        page={Math.min(page, creatorPages)}
+        pages={creatorPages}
+        total={creatorCount ?? 0}
+        hidden={{ bq, bpage: bpage > 1 ? String(bpage) : undefined, bstatus: bstatus === "all" ? undefined : bstatus }}
+      />
       <Card className="mt-3">
         <CardBody className="p-0">
           <ul className="divide-y divide-line">
@@ -56,7 +113,19 @@ async function UsersInner() {
         </CardBody>
       </Card>
 
-      <h2 className="mt-8 font-display text-lg font-semibold text-ink">Brands ({brands?.length ?? 0})</h2>
+      <h2 className="mt-8 font-display text-lg font-semibold text-ink">Brands</h2>
+      <AdminListControls
+        pathname="/admin/users"
+        q={bq}
+        queryParam="bq"
+        pageParam="bpage"
+        placeholder="Company or website"
+        filters={[{ name: "bstatus", label: "Status", value: bstatus, options: BRAND_STATUS }]}
+        page={Math.min(bpage, brandPages)}
+        pages={brandPages}
+        total={brandCount ?? 0}
+        hidden={{ q, page: page > 1 ? String(page) : undefined, status: status === "all" ? undefined : status }}
+      />
       <Card className="mt-3">
         <CardBody className="p-0">
           <ul className="divide-y divide-line">
@@ -77,10 +146,10 @@ async function UsersInner() {
   );
 }
 
-export default function AdminUsersPage() {
+export default function AdminUsersPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
     <Suspense fallback={<div className="min-h-dvh" />}>
-      <UsersInner />
+      <UsersInner searchParams={searchParams} />
     </Suspense>
   );
 }

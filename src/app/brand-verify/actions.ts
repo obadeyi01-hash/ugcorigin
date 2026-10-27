@@ -5,8 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { guardWrite } from "@/lib/admin/rbac";
 import { notifyAdminsPendingReview, notifyUser } from "@/lib/notify";
+import { recordProfileNote } from "@/lib/admin/profile-notes";
 import { sendEmail, emailConfigured } from "@/lib/email/send";
-import { brandApprovedEmail } from "@/lib/email/templates";
+import { brandApprovedEmail, brandRejectedEmail } from "@/lib/email/templates";
 
 type Res = { ok?: boolean; error?: string };
 
@@ -47,36 +48,47 @@ export async function submitBrandVerification(input: { companyName: string; rcNu
 export async function reviewBrandVerification(brandId: string, decision: "verified" | "unverified", note: string): Promise<Res> {
   const { ctx, error } = await guardWrite("verification");
   if (error || !ctx) return { error: error ?? "Not permitted." };
+  const reason = note.trim().slice(0, 300);
+  if (decision !== "verified" && !reason) return { error: "Add a short reason so they know what to fix." };
   const admin = createAdminClient();
   const { error: e } = await admin
     .from("brand_profiles")
-    .update({ verification_status: decision, verification_note: note.trim() || null })
+    .update({ verification_status: decision, verification_note: reason || null })
     .eq("id", brandId);
   if (e) return { error: e.message };
 
   await admin.from("audit_log").insert({ actor_id: ctx.userId, action: `brand.${decision === "verified" ? "verified" : "rejected"}`, target_type: "brand_profile", target_id: brandId, after: { verification_status: decision } });
 
-  // In-app notification (always). On approval, skip the generic email and send
-  // the dedicated welcome email instead; on rejection keep the generic email.
+  const { data: bp } = await admin.from("brand_profiles").select("company_name").eq("id", brandId).maybeSingle();
   await notifyUser(admin, brandId, {
     type: "product",
-    title: decision === "verified" ? "Your brand is verified" : "Brand verification update",
+    title: decision === "verified" ? "Your brand is verified" : "Brand verification needs another look",
     body: decision === "verified"
       ? "Your business is verified. Creators now see a Verified brand badge on your offers."
-      : `We couldn't verify your business yet. ${note.trim() || "Please resubmit with a valid CAC/RC number."}`,
+      : `We couldn't verify ${bp?.company_name || "your business"} yet. ${reason} Update the registered name and CAC/RC number in settings, then submit again.`,
     href: "/settings",
-    skipEmail: decision === "verified",
+    skipEmail: true,
   });
 
-  if (decision === "verified" && emailConfigured()) {
-    const [{ data: profile }, { data: bp }] = await Promise.all([
-      admin.from("profiles").select("email").eq("id", brandId).maybeSingle(),
-      admin.from("brand_profiles").select("company_name").eq("id", brandId).maybeSingle(),
-    ]);
-    if (profile?.email) {
-      await sendEmail(brandApprovedEmail(profile.email, { companyName: bp?.company_name }));
-    }
+  const { data: profile } = await admin.from("profiles").select("email").eq("id", brandId).maybeSingle();
+  let to = profile?.email?.trim() || "";
+  if (!to) {
+    const { data } = await admin.auth.admin.getUserById(brandId);
+    to = data.user?.email ?? "";
   }
+  const mail = decision === "verified"
+    ? brandApprovedEmail(to || "brand@ugcorigin.com", { companyName: bp?.company_name })
+    : brandRejectedEmail(to || "brand@ugcorigin.com", { companyName: bp?.company_name, note: reason });
+  if (decision !== "verified") {
+    await recordProfileNote(admin, {
+      userId: brandId,
+      kind: "brand_rejection",
+      subject: mail.subject,
+      body: mail.body,
+      actorId: ctx.userId,
+    });
+  }
+  if (to && emailConfigured()) await sendEmail({ ...mail, to });
 
   revalidatePath("/admin/verification");
   return { ok: true };

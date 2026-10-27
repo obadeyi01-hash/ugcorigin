@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { initTransaction, paystackConfigured } from "@/lib/payments/paystack";
-import { feeFor } from "@/lib/fees";
+import { feeFor, taxFor } from "@/lib/fees";
+import { loadTaxBps } from "@/lib/fees-server";
 import { requireLiveCreator, requireVerifiedBrand } from "@/lib/verification/gates";
 
 async function auth() {
@@ -126,14 +127,15 @@ export async function fundOfferAction(offerId: string): Promise<{ url?: string; 
 
   if (!paystackConfigured()) return { configured: false };
 
-  const amount = offer.price_naira + feeFor(offer.price_naira);
+  const taxBps = await loadTaxBps();
+  const amount = offer.price_naira + feeFor(offer.price_naira) + taxFor(offer.price_naira, taxBps);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://ugcorigin.com";
   try {
     const { authorizationUrl } = await initTransaction({
       email: user.email ?? `brand+${user.id}@ugcorigin.com`,
       amountNaira: amount,
       reference: `off_${offerId}_${Date.now()}`,
-      metadata: { offerId, kind: "escrow_funding" },
+      metadata: { offerId, kind: "escrow_funding", taxBps },
       callbackUrl: `${siteUrl}/offers?funded=1`,
     });
     return { url: authorizationUrl };

@@ -51,7 +51,7 @@ async function GigInner({ params }: { params: Promise<{ id: string }> }) {
 
   const { data: gig } = await supabase
     .from("gigs")
-    .select("id, title, status, price_naira, fee_naira, brand_id, creator_id, needs_product, shipping_address, shipping_status, needs_location, location_address, location_status")
+    .select("id, title, status, price_naira, fee_naira, tax_naira, brand_id, creator_id, needs_product, shipping_address, shipping_status, needs_location, location_address, location_status")
     .eq("id", id)
     .maybeSingle();
   if (!gig) return <div className="py-20 text-center text-ink-2">Gig not found.</div>;
@@ -151,7 +151,7 @@ async function GigInner({ params }: { params: Promise<{ id: string }> }) {
   return (
     <>
       <GigWorkspace
-        gig={{ id: gig.id, title: gig.title, status: gig.status, price_naira: gig.price_naira, fee_naira: gig.fee_naira }}
+        gig={{ id: gig.id, title: gig.title, status: gig.status, price_naira: gig.price_naira, fee_naira: gig.fee_naira, tax_naira: gig.tax_naira ?? 0 }}
         role={role}
         deliverable={deliverable}
         comments={comments}

@@ -45,7 +45,7 @@ async function SettingsInner() {
       .maybeSingle(),
     admin
       .from("brand_profiles")
-      .select("company_name, contact_first_name, contact_last_name, website, store_url, logo_url, verification_status, goal, ad_platforms, content_types, business_type, contact_role, team_size")
+      .select("company_name, contact_first_name, contact_last_name, website, store_url, logo_url, verification_status, verification_note, goal, ad_platforms, content_types, business_type, contact_role, team_size")
       .eq("id", user.id)
       .maybeSingle(),
     supabase

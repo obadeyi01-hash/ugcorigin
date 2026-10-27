@@ -4,16 +4,18 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { guardWrite, type AdminRole } from "@/lib/admin/rbac";
 import { paystackConfigured, initiateTransfer } from "@/lib/payments/paystack";
-import { feeFor } from "@/lib/fees";
+import { brandCharge, feeFor, taxBpsFromPercent } from "@/lib/fees";
+import { applyReviewedPlacement } from "@/lib/creators/apply-placement";
 import { refundHeldGig, releaseHeldGig } from "@/lib/payments/settle";
 import { placeCreator } from "@/lib/tiering/placement";
 import { notifyUser, notifyMany } from "@/lib/notify";
+import { sendEmail, emailConfigured } from "@/lib/email/send";
+import { identityRejectedEmail } from "@/lib/email/templates";
 import { logAudit } from "@/lib/admin/audit";
 import { requiresDualControl } from "@/lib/admin/security";
-import { sendEmail, emailConfigured } from "@/lib/email/send";
-import { creatorApprovedEmail } from "@/lib/email/templates";
 import { formatNaira } from "@/lib/utils";
 import { publishFacePhoto } from "@/lib/identity/face-photo";
+import { recordProfileNote } from "@/lib/admin/profile-notes";
 
 type Admin = ReturnType<typeof createAdminClient>;
 type Res = { error?: string; ok?: boolean; pendingApproval?: boolean };
@@ -40,23 +42,7 @@ export async function adminSetIdentityVerified(creatorId: string, verified: bool
     // In-app notification (always), plus a dedicated welcome/approval email that
     // bypasses the product-update preference — being verified is a milestone we
     // always want to confirm. skipEmail avoids a duplicate generic email.
-    await notifyUser(admin, creatorId, {
-      type: "product",
-      title: "You're verified — your profile is live 🎉",
-      body: "Your identity is verified and your profile is now live in the directory. Brands can find and hire you. Add your bank details to receive payouts.",
-      href: "/dashboard",
-      ctaLabel: "View your dashboard",
-      skipEmail: true,
-    });
-    if (emailConfigured()) {
-      const [{ data: profile }, { data: cp }] = await Promise.all([
-        admin.from("profiles").select("email").eq("id", creatorId).maybeSingle(),
-        admin.from("creator_profiles").select("display_name, handle").eq("id", creatorId).maybeSingle(),
-      ]);
-      if (profile?.email) {
-        await sendEmail(creatorApprovedEmail(profile.email, { name: cp?.display_name, handle: cp?.handle }));
-      }
-    }
+    await applyReviewedPlacement(admin, creatorId, { actorId: ctx!.userId });
   }
 
   await logAudit(admin, ctx!.userId, "creator.identity_verified", { targetType: "creator", targetId: creatorId, after: { verified } });
@@ -71,7 +57,10 @@ export async function adminSetIdentityVerified(creatorId: string, verified: bool
  * profile live (as promised). This is the manual-review counterpart to the
  * automated KYC webhook.
  */
-export async function adminApproveIdentity(creatorId: string): Promise<Res> {
+export async function adminApproveIdentity(
+  creatorId: string,
+  placement?: { tier?: string; startingRate?: number },
+): Promise<Res> {
   const { ctx, error } = await guardWrite("verification");
   if (error) return { error };
   const admin = createAdminClient();
@@ -115,13 +104,8 @@ export async function adminApproveIdentity(creatorId: string): Promise<Res> {
   } catch {
     /* tier engine optional */
   }
-  await notifyUser(admin, creatorId, {
-    type: "product",
-    title: "You're verified — your profile is live 🎉",
-    body: "Your identity is verified and your profile is now live in the directory. Brands can find and hire you. Add your bank details to receive payouts.",
-    href: "/dashboard",
-    ctaLabel: "View your dashboard",
-  });
+  const placed = await applyReviewedPlacement(admin, creatorId, { ...placement, actorId: ctx!.userId });
+  if (placed.error) return { error: placed.error };
 
   await logAudit(admin, ctx!.userId, "creator.identity_approved", { targetType: "creator", targetId: creatorId });
   revalidatePath("/admin/verification");
@@ -156,13 +140,37 @@ export async function adminRejectIdentity(creatorId: string, reason: string): Pr
   await admin.from("creator_profiles").update({ verification_status: "rejected" }).eq("id", creatorId);
   await admin.from("verifications").update({ status: "rejected" }).eq("user_id", creatorId).eq("kind", "identity");
 
+  const reasonText = note.slice(0, 300);
   await notifyUser(admin, creatorId, {
     type: "product",
     title: "Identity check needs another look",
-    body: `We couldn't approve your identity submission: ${note.slice(0, 160)}. Please resubmit from your Go-live page.`,
+    body: `We couldn't approve this submission yet. ${reasonText} Resubmit a clear face photo and a fresh Share Code or Virtual NIN from your Go-live page.`,
     href: "/verify",
     ctaLabel: "Resubmit",
+    skipEmail: true,
   });
+
+  const [{ data: account }, { data: creator }] = await Promise.all([
+    admin.from("profiles").select("email").eq("id", creatorId).maybeSingle(),
+    admin.from("creator_profiles").select("first_name, display_name").eq("id", creatorId).maybeSingle(),
+  ]);
+  let to = account?.email?.trim() || "";
+  if (!to) {
+    const { data } = await admin.auth.admin.getUserById(creatorId);
+    to = data.user?.email ?? "";
+  }
+  const rejection = identityRejectedEmail(to || "creator@ugcorigin.com", {
+    name: creator?.first_name || creator?.display_name,
+    note: reasonText,
+  });
+  await recordProfileNote(admin, {
+    userId: creatorId,
+    kind: "identity_rejection",
+    subject: rejection.subject,
+    body: rejection.body,
+    actorId: ctx!.userId,
+  });
+  if (to && emailConfigured()) await sendEmail({ ...rejection, to });
 
   await logAudit(admin, ctx!.userId, "creator.identity_rejected", { targetType: "creator", targetId: creatorId, after: { reason: note.slice(0, 300) } });
   revalidatePath("/admin/verification");
@@ -261,11 +269,11 @@ async function executeRelease(admin: Admin, gigId: string, actorId: string): Pro
 
 /** Actually refund escrow via Paystack. Audits as the given actor. */
 async function executeRefund(admin: Admin, gigId: string, actorId: string): Promise<Res> {
-  const { data: gig } = await admin.from("gigs").select("id, brand_id, title, price_naira").eq("id", gigId).maybeSingle();
+  const { data: gig } = await admin.from("gigs").select("id, brand_id, title, price_naira, fee_naira, tax_naira").eq("id", gigId).maybeSingle();
   if (!gig) return { error: "Gig not found." };
   const refunded = await refundHeldGig(admin, gigId, `Admin refund, ${gig.title}`);
   if (!refunded.ok) return { error: refunded.error ?? "Could not refund escrow." };
-  const total = gig.price_naira + feeFor(gig.price_naira);
+  const total = brandCharge(gig.price_naira, gig.fee_naira ?? feeFor(gig.price_naira), gig.tax_naira ?? 0);
   await notifyUser(admin, gig.brand_id, {
     type: "gig_update",
     title: refunded.refundStarted ? "Your payment was refunded" : "Refund recorded",
@@ -356,14 +364,47 @@ export async function adminReleaseEscrow(gigId: string): Promise<Res> {
   return res;
 }
 
+/** Change the tax rate applied to every new charge. Basis points: 750 = 7.5%. */
+export async function adminSetTaxRate(percent: number): Promise<Res> {
+  const { ctx, error } = await guardWrite("finance");
+  if (error || !ctx) return { error: error ?? "Not permitted." };
+  const taxBps = taxBpsFromPercent(percent);
+  if (taxBps == null) return { error: "Tax has to be between 0% and 25%." };
+  const admin = createAdminClient();
+  const { data: before } = await admin.from("platform_settings").select("tax_bps").eq("id", 1).maybeSingle();
+  const { error: saved } = await admin.from("platform_settings").upsert({ id: 1, tax_bps: taxBps, updated_at: new Date().toISOString() });
+  if (saved) return { error: saved.message };
+  await logAudit(admin, ctx.userId, "tax.rate", { targetType: "platform_settings", before: before ?? null, after: { tax_bps: taxBps } });
+  revalidatePath("/admin/finance");
+  return { ok: true };
+}
+
+/** Correct the tax recorded on one held charge. Refunds use this number. */
+export async function adminSetTransactionTax(gigId: string, taxNaira: number): Promise<Res> {
+  const { ctx, error } = await guardWrite("finance");
+  if (error || !ctx) return { error: error ?? "Not permitted." };
+  const tax = Math.round(taxNaira);
+  if (!Number.isFinite(tax) || tax < 0 || tax > 50_000_000) return { error: "Enter the tax in naira." };
+  const admin = createAdminClient();
+  const { data: held } = await admin.from("escrow_transactions").select("id, tax_naira").eq("gig_id", gigId).eq("status", "held").maybeSingle();
+  if (!held) return { error: "That charge is not held, so its tax can't be changed." };
+  const { error: escrowError } = await admin.from("escrow_transactions").update({ tax_naira: tax }).eq("id", held.id);
+  if (escrowError) return { error: escrowError.message };
+  const { error: gigError } = await admin.from("gigs").update({ tax_naira: tax }).eq("id", gigId);
+  if (gigError) return { error: gigError.message };
+  await logAudit(admin, ctx.userId, "tax.transaction", { targetType: "gig", targetId: gigId, before: { tax_naira: held.tax_naira }, after: { tax_naira: tax } });
+  revalidatePath("/admin/finance");
+  return { ok: true };
+}
+
 export async function adminRefundEscrow(gigId: string): Promise<Res> {
   const { ctx, error } = await guardWrite("finance");
   if (error) return { error };
   const admin = createAdminClient();
 
-  const { data: gig } = await admin.from("gigs").select("id, title, price_naira, status").eq("id", gigId).maybeSingle();
+  const { data: gig } = await admin.from("gigs").select("id, title, price_naira, fee_naira, tax_naira, status").eq("id", gigId).maybeSingle();
   if (!gig) return { error: "Gig not found." };
-  const total = gig.price_naira + feeFor(gig.price_naira);
+  const total = brandCharge(gig.price_naira, gig.fee_naira ?? feeFor(gig.price_naira), gig.tax_naira ?? 0);
 
   // Large refunds go through two-admin approval instead of moving money now. Only
   // gate what we can still refund (a held escrow); let execute* surface the real

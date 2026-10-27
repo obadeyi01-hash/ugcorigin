@@ -7,10 +7,15 @@ import { requireSection, isReadonly } from "@/lib/admin/rbac";
 import { dualControlThresholdNaira } from "@/lib/admin/security";
 import { createClient } from "@/lib/supabase/server";
 import { formatNaira } from "@/lib/utils";
+import { loadTaxBps } from "@/lib/fees-server";
+import { taxPercentLabel } from "@/lib/fees";
+import { TaxRateControl, TransactionTaxControl } from "@/components/admin/tax-controls";
+import { AdminListControls } from "@/components/admin/list-controls";
+import { pageCount, pageWindow, readPage } from "@/lib/admin/list";
 
 export const metadata: Metadata = { title: "Admin · Finance" };
 
-type EscrowRow = { id: string; amount_naira: number; fee_naira: number; gig: { id: string; title: string } | null };
+type EscrowRow = { id: string; amount_naira: number; fee_naira: number; tax_naira: number; gig: { id: string; title: string } | null };
 type PayoutRow = { id: string; amount_naira: number; status: string; gig: { title: string } | null; creator: { handle: string; display_name: string | null } | null };
 type AuditRow = { id: string; action: string; target_type: string | null; target_id: string | null; created_at: string };
 type ApprovalRow = { id: string; kind: "release" | "refund"; amount_naira: number; requested_by: string | null; created_at: string; gig: { title: string } | null };
@@ -28,19 +33,31 @@ const AUDIT_LABEL: Record<string, string> = {
   "payout.retry": "Payout retried",
 };
 
-async function FinanceInner() {
+async function FinanceInner({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const { role, userId } = await requireSection("finance");
   const supabase = await createClient();
   const readonly = isReadonly(role);
+  const sp = await searchParams;
+  const epage = readPage(sp.epage);
+  const ppage = readPage(sp.ppage);
+  const fpage = readPage(sp.fpage);
+  const escrowWindow = pageWindow(epage);
+  const payoutWindow = pageWindow(ppage);
+  const failedWindow = pageWindow(fpage);
 
-  const [{ data: escrow }, { data: payouts }, { data: failed }, { data: activity }, { data: approvals }] = await Promise.all([
-    supabase.from("escrow_transactions").select("id, amount_naira, fee_naira, gig:gigs(id, title)").eq("status", "held").limit(100),
-    supabase.from("payouts").select("id, amount_naira, status, gig:gigs(title), creator:creator_profiles(handle, display_name)").in("status", ["pending", "processing"]).limit(100),
-    supabase.from("payouts").select("id, amount_naira, status, gig:gigs(title), creator:creator_profiles(handle, display_name)").eq("status", "failed").limit(100),
+  const escrowQuery = supabase.from("escrow_transactions").select("id, amount_naira, fee_naira, tax_naira, gig:gigs(id, title)", { count: "exact" }).eq("status", "held");
+  const payoutQuery = supabase.from("payouts").select("id, amount_naira, status, gig:gigs(title), creator:creator_profiles(handle, display_name)", { count: "exact" }).in("status", ["pending", "processing"]);
+  const failedQuery = supabase.from("payouts").select("id, amount_naira, status, gig:gigs(title), creator:creator_profiles(handle, display_name)", { count: "exact" }).eq("status", "failed");
+
+  const [{ data: escrow, count: escrowCount }, { data: payouts, count: payoutCount }, { data: failed, count: failedCount }, { data: activity }, { data: approvals }] = await Promise.all([
+    escrowQuery.range(escrowWindow.from, escrowWindow.to),
+    payoutQuery.order("created_at", { ascending: false }).range(payoutWindow.from, payoutWindow.to),
+    failedQuery.order("created_at", { ascending: false }).range(failedWindow.from, failedWindow.to),
     supabase.from("audit_log").select("id, action, target_type, target_id, created_at").like("action", "escrow.%").order("created_at", { ascending: false }).limit(20),
-    supabase.from("release_approvals").select("id, kind, amount_naira, requested_by, created_at, gig:gigs(title)").eq("status", "pending").order("created_at", { ascending: false }).limit(100),
+    supabase.from("release_approvals").select("id, kind, amount_naira, requested_by, created_at, gig:gigs(title)").eq("status", "pending").order("created_at", { ascending: false }).limit(50),
   ]);
 
+  const taxBps = await loadTaxBps();
   const escrowRows = (escrow ?? []) as unknown as EscrowRow[];
   const payoutRows = (payouts ?? []) as unknown as PayoutRow[];
   const failedRows = (failed ?? []) as unknown as PayoutRow[];
@@ -57,6 +74,7 @@ async function FinanceInner() {
       <p className="mt-1 text-sm text-ink-3">
         Releases and refunds of {formatNaira(dualControlThresholdNaira())} or more need a second admin to approve before the money moves.
       </p>
+      <TaxRateControl percent={Number(taxPercentLabel(taxBps).replace("%", ""))} readonly={readonly} />
 
       {approvalRows.length > 0 && (
         <>
@@ -81,7 +99,18 @@ async function FinanceInner() {
         </>
       )}
 
-      <h2 className="mt-8 font-display text-lg font-semibold text-ink">Escrow held ({escrowRows.length})</h2>
+      <h2 className="mt-8 font-display text-lg font-semibold text-ink">Escrow held</h2>
+      <AdminListControls
+        pathname="/admin/finance"
+        q=""
+        search={false}
+        placeholder="Gig title"
+        pageParam="epage"
+        page={Math.min(epage, pageCount(escrowCount))}
+        pages={pageCount(escrowCount)}
+        total={escrowCount ?? 0}
+        hidden={{ ppage: ppage > 1 ? String(ppage) : undefined, fpage: fpage > 1 ? String(fpage) : undefined }}
+      />
       <div className="mt-3 grid gap-3">
         {escrowRows.length === 0 && <Card variant="outline"><CardBody className="py-10 text-center text-ink-2">No escrow currently held.</CardBody></Card>}
         {escrowRows.map((e) => (
@@ -89,15 +118,29 @@ async function FinanceInner() {
             <CardBody className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="font-medium text-ink">{e.gig?.title ?? "Gig"}</p>
-                <p className="text-xs text-ink-3">{formatNaira(e.amount_naira)} held · {formatNaira(e.fee_naira)} fee</p>
+                <p className="text-xs text-ink-3">{formatNaira(e.amount_naira)} held · {formatNaira(e.fee_naira)} fee · {formatNaira(e.tax_naira ?? 0)} tax</p>
               </div>
-              {e.gig && <EscrowControls gigId={e.gig.id} readonly={readonly} />}
+              <div className="flex flex-wrap items-center gap-3">
+                {e.gig && <TransactionTaxControl gigId={e.gig.id} taxNaira={e.tax_naira ?? 0} readonly={readonly} />}
+                {e.gig && <EscrowControls gigId={e.gig.id} readonly={readonly} />}
+              </div>
             </CardBody>
           </Card>
         ))}
       </div>
 
-      <h2 className="mt-8 font-display text-lg font-semibold text-ink">Payouts to process ({payoutRows.length})</h2>
+      <h2 className="mt-8 font-display text-lg font-semibold text-ink">Payouts to process</h2>
+      <AdminListControls
+        pathname="/admin/finance"
+        q=""
+        search={false}
+        placeholder="Creator"
+        pageParam="ppage"
+        page={Math.min(ppage, pageCount(payoutCount))}
+        pages={pageCount(payoutCount)}
+        total={payoutCount ?? 0}
+        hidden={{ epage: epage > 1 ? String(epage) : undefined, fpage: fpage > 1 ? String(fpage) : undefined }}
+      />
       <div className="mt-3 grid gap-3">
         {payoutRows.length === 0 && <Card variant="outline"><CardBody className="py-10 text-center text-ink-2">No pending payouts.</CardBody></Card>}
         {payoutRows.map((p) => (
@@ -115,7 +158,18 @@ async function FinanceInner() {
 
       {failedRows.length > 0 && (
         <>
-          <h2 className="mt-8 font-display text-lg font-semibold text-error">Failed payouts — need attention ({failedRows.length})</h2>
+          <h2 className="mt-8 font-display text-lg font-semibold text-error">Failed payouts — need attention</h2>
+          <AdminListControls
+            pathname="/admin/finance"
+            q=""
+            search={false}
+            placeholder="Creator"
+            pageParam="fpage"
+            page={Math.min(fpage, pageCount(failedCount))}
+            pages={pageCount(failedCount)}
+            total={failedCount ?? 0}
+            hidden={{ epage: epage > 1 ? String(epage) : undefined, ppage: ppage > 1 ? String(ppage) : undefined }}
+          />
           <div className="mt-3 grid gap-3">
             {failedRows.map((p) => (
               <Card key={p.id} variant="outline" className="border-error/30">
@@ -153,10 +207,10 @@ async function FinanceInner() {
   );
 }
 
-export default function AdminFinancePage() {
+export default function AdminFinancePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
     <Suspense fallback={<div className="min-h-dvh" />}>
-      <FinanceInner />
+      <FinanceInner searchParams={searchParams} />
     </Suspense>
   );
 }

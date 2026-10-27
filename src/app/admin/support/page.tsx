@@ -3,8 +3,10 @@ import { Suspense } from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Card, CardBody } from "@/components/ui/card";
 import { TicketReply } from "@/components/admin/ticket-reply";
+import { AdminListControls } from "@/components/admin/list-controls";
 import { requireSection, isReadonly } from "@/lib/admin/rbac";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { pageCount, pageWindow, readPage, readQuery } from "@/lib/admin/list";
 
 export const metadata: Metadata = { title: "Admin · Support" };
 
@@ -34,18 +36,37 @@ type Ticket = {
   created_at: string;
 };
 
-async function SupportInner() {
+const TICKET_STATUS = [
+  { value: "all", label: "All" },
+  { value: "open", label: "Open" },
+  { value: "in_progress", label: "In progress" },
+  { value: "resolved", label: "Resolved" },
+  { value: "closed", label: "Closed" },
+];
+
+async function SupportInner({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const { role } = await requireSection("support");
   const readonly = isReadonly(role);
   const admin = createAdminClient();
+  const sp = await searchParams;
+  const q = readQuery(sp.q);
+  const status = TICKET_STATUS.some((item) => item.value === sp.status) ? sp.status! : "all";
+  const page = readPage(sp.page);
+  const window = pageWindow(page);
 
-  const { data } = await admin
+  let query = admin
     .from("support_tickets")
-    .select("id, user_id, category, subject, body, status, response, created_at")
-    .order("status", { ascending: true })
-    .order("created_at", { ascending: false })
-    .limit(200);
+    .select("id, user_id, category, subject, body, status, response, created_at", { count: "exact" })
+    .order("created_at", { ascending: false });
+  if (q) query = query.ilike("subject", `%${q}%`);
+  if (status !== "all") query = query.eq("status", status);
+  const [{ data, count }, { count: openCount }] = await Promise.all([
+    query.range(window.from, window.to),
+    admin.from("support_tickets").select("id", { count: "exact", head: true }).in("status", ["open", "in_progress"]),
+  ]);
+  const pages = pageCount(count);
   const tickets = (data ?? []) as Ticket[];
+  const pagesSafe = pages;
 
   // Attach each requester's email for context.
   const emails = new Map<string, string>();
@@ -56,14 +77,21 @@ async function SupportInner() {
     }),
   );
 
-  const openCount = tickets.filter((t) => t.status === "open" || t.status === "in_progress").length;
-
   return (
     <AdminShell role={role} active="support">
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Support</h1>
       <p className="mt-1 text-sm text-ink-2">
-        User tickets. <span className="font-medium text-ink">{openCount}</span> open.
+        User tickets. <span className="font-medium text-ink">{openCount ?? 0}</span> open.
       </p>
+      <AdminListControls
+        pathname="/admin/support"
+        q={q}
+        placeholder="Subject"
+        filters={[{ name: "status", label: "Status", value: status, options: TICKET_STATUS }]}
+        page={Math.min(page, pagesSafe)}
+        pages={pagesSafe}
+        total={count ?? 0}
+      />
 
       <Card className="mt-6">
         <CardBody className="p-0">
@@ -97,10 +125,10 @@ async function SupportInner() {
   );
 }
 
-export default function AdminSupportPage() {
+export default function AdminSupportPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
     <Suspense fallback={<div className="min-h-dvh" />}>
-      <SupportInner />
+      <SupportInner searchParams={searchParams} />
     </Suspense>
   );
 }

@@ -6,7 +6,7 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Field } from "@/components/ui/input";
 import { sendOfferAction } from "@/app/offers/actions";
-import { feeFor } from "@/lib/fees";
+import { feeFor, taxFor, taxPercentLabel, DEFAULT_TAX_BPS } from "@/lib/fees";
 import { formatNaira } from "@/lib/utils";
 import { Notice } from "@/components/ui/notice";
 
@@ -16,12 +16,14 @@ export function OfferForm({
   startingRate,
   initialTitle,
   initialPrice,
+  taxBps = DEFAULT_TAX_BPS,
 }: {
   handle: string;
   creatorName: string;
   startingRate: number;
   initialTitle?: string;
   initialPrice?: number;
+  taxBps?: number;
 }) {
   const [title, setTitle] = useState(initialTitle ?? "");
   const [brief, setBrief] = useState("");
@@ -36,7 +38,8 @@ export function OfferForm({
   const [pending, start] = useTransition();
 
   const fee = feeFor(price || 0);
-  const total = (price || 0) + fee;
+  const tax = taxFor(price || 0, taxBps);
+  const total = (price || 0) + fee + tax;
 
   function submit() {
     setError(null);
@@ -109,7 +112,8 @@ export function OfferForm({
       <div className="rounded-xl border border-line bg-surface-2 p-4 text-sm">
         <div className="flex justify-between text-ink-2"><span>Creator rate</span><span>{formatNaira(price || 0)}</span></div>
         <div className="mt-1 flex justify-between text-ink-2"><span>Platform fee (12%)</span><span>{formatNaira(fee)}</span></div>
-        <div className="mt-2 flex justify-between border-t border-line pt-2 font-semibold text-ink"><span>You pay (held in escrow)</span><span>{formatNaira(total)}</span></div>
+        <div className="mt-1 flex justify-between text-ink-2"><span>Tax ({taxPercentLabel(taxBps)})</span><span>{formatNaira(tax)}</span></div>
+        <div className="mt-2 flex justify-between border-t border-line pt-2 font-semibold text-ink"><span>You pay</span><span>{formatNaira(total)}</span></div>
       </div>
 
       {needsBrand && (

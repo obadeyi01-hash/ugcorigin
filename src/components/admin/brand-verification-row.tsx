@@ -29,7 +29,7 @@ export function BrandVerificationRow({ brandId, readonly }: { brandId: string; r
       <input
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        placeholder="Note (optional)"
+        placeholder="Note (required to reject)"
         className="h-9 w-48 rounded-full border border-line bg-surface px-3 text-xs text-ink focus:border-accent focus:outline-none"
       />
       <div className="flex gap-2">

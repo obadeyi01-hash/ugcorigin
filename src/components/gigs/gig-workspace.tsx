@@ -25,6 +25,7 @@ export type GigData = {
   status: string;
   price_naira: number;
   fee_naira: number;
+  tax_naira?: number;
 };
 export type Deliverable = {
   id: string;
@@ -214,6 +215,7 @@ export function GigWorkspace({
             <div className="mt-4 grid gap-1.5 text-sm">
               <div className="flex justify-between"><span className="text-ink-2">Creator rate</span><span className="text-ink">{formatNaira(gig.price_naira)}</span></div>
               {role === "brand" && <div className="flex justify-between"><span className="text-ink-2">Platform fee</span><span className="text-ink">{formatNaira(gig.fee_naira)}</span></div>}
+              {role === "brand" && <div className="flex justify-between"><span className="text-ink-2">Tax</span><span className="text-ink">{formatNaira(gig.tax_naira ?? 0)}</span></div>}
             </div>
 
             {completed ? (

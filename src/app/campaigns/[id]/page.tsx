@@ -16,6 +16,8 @@ import { BoostButton } from "@/components/boost/boost-button";
 import { createClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/role";
 import { formatNaira } from "@/lib/utils";
+import { feeFor, taxFor, taxPercentLabel } from "@/lib/fees";
+import { loadTaxBps } from "@/lib/fees-server";
 import { Notice } from "@/components/ui/notice";
 
 export const metadata: Metadata = { title: "Campaign" };
@@ -50,6 +52,7 @@ async function Inner({ params }: { params: Promise<{ id: string }> }) {
     .eq("campaign_id", id)
     .order("created_at", { ascending: true });
 
+  const taxBps = await loadTaxBps();
   const rows = subsRaw ?? [];
   const mySub = user ? rows.find((s) => s.creator_id === user.id) : undefined;
   const submissions: Submission[] = rows.map((s) => {
@@ -93,7 +96,12 @@ async function Inner({ params }: { params: Promise<{ id: string }> }) {
             </div>
 
             <div className="mt-5">
-              {isOwner && !c.funded && <FundPool campaignId={id} />}
+              {isOwner && !c.funded && (
+                <FundPool
+                  campaignId={id}
+                  note={`You pay ${formatNaira(c.pool_naira + feeFor(c.pool_naira) + taxFor(c.pool_naira, taxBps))}, including the 12% fee and ${taxPercentLabel(taxBps)} tax.`}
+                />
+              )}
               {isOwner && c.funded && (
                 <div>
                   <p className="text-sm text-ink-3">Your campaign is live. Approve submissions to pay per views.</p>

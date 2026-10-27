@@ -81,6 +81,65 @@ export function verifyPromptEmail(
   };
 }
 
+/** Creator identity rejected. Always sent, with the reviewer's note and how to resubmit. */
+export function identityRejectedEmail(
+  to: string,
+  opts: { name?: string | null; note: string },
+): EmailInput {
+  const name = opts.name?.trim() ? esc(opts.name.trim().split(/\s+/)[0]) : "there";
+  const note = esc(opts.note.trim().slice(0, 300));
+  const bodyHtml = `
+    <p style="${P}">Hi ${name}, we couldn't approve this identity submission yet. Your profile stays off the directory until a person on the team can confirm it's you.</p>
+    <p style="${P}"><strong>What we need you to change</strong></p>
+    <p style="${P}">${note}</p>
+    <p style="${P}">Send it again with these three things:</p>
+    ${nextSteps([
+      "A clear, well-lit photo of your face, looking at the camera. No sunglasses, no heavy filter.",
+      "A current NINAuth Share Code (six characters), or a Virtual NIN if you already have one. The code from this submission has been cleared, so enter a fresh one.",
+      "The consent box ticked, so we can review it.",
+    ])}
+    <p style="${P}">Once those are in, you're back in the queue. We usually reply within a day.</p>`;
+  return {
+    to,
+    subject: "Your UGCOrigin verification needs another look",
+    heading: "We need another look",
+    body: `We couldn't approve your identity submission yet. ${opts.note.trim().slice(0, 300)}`,
+    bodyHtml,
+    preheader: "The reviewer left a note. You can resubmit from your Go-live page.",
+    ctaLabel: "Resubmit verification",
+    ctaUrl: `${SITE}/verify`,
+  };
+}
+
+/** Brand business verification rejected. Always sent, with the reviewer's note. */
+export function brandRejectedEmail(
+  to: string,
+  opts: { companyName?: string | null; note: string },
+): EmailInput {
+  const company = opts.companyName?.trim() ? esc(opts.companyName.trim()) : "your business";
+  const note = esc(opts.note.trim().slice(0, 300));
+  const bodyHtml = `
+    <p style="${P}">We couldn't turn on the Verified brand badge for <strong>${company}</strong> yet. Creators only see that badge after a person checks the registration.</p>
+    <p style="${P}"><strong>What we need you to change</strong></p>
+    <p style="${P}">${note}</p>
+    <p style="${P}">Before you submit again, check:</p>
+    ${nextSteps([
+      "The business name matches the CAC certificate, including spelling.",
+      "The RC or CAC number is the current one for that business.",
+      "Then send both again from settings. The badge turns on after the next review.",
+    ])}`;
+  return {
+    to,
+    subject: "Your brand verification needs another look",
+    heading: "Brand verification needs another look",
+    body: `We couldn't verify ${opts.companyName?.trim() || "your business"} yet. ${opts.note.trim().slice(0, 300)}`,
+    bodyHtml,
+    preheader: "The reviewer left a note. You can resubmit your CAC details from settings.",
+    ctaLabel: "Update your business details",
+    ctaUrl: `${SITE}/settings`,
+  };
+}
+
 /** Brand business verification approved → Verified brand badge. */
 export function brandApprovedEmail(to: string, opts: { companyName?: string | null }): EmailInput {
   const company = opts.companyName?.trim() ? esc(opts.companyName.trim()) : "your business";

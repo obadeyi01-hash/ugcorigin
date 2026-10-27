@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test src/lib/payments/money-math.test.ts src/lib/auth/email-link.test.ts src/lib/brand-options.test.ts src/lib/rates/guides.test.ts src/lib/identity/token.test.ts"
+    "test": "node --experimental-strip-types --test src/lib/payments/money-math.test.ts src/lib/auth/email-link.test.ts src/lib/brand-options.test.ts src/lib/rates/guides.test.ts src/lib/identity/token.test.ts src/lib/creators/placement-note.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

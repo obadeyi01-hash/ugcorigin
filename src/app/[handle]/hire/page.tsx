@@ -10,6 +10,7 @@ import { OfferForm } from "@/components/offers/offer-form";
 import { AccessNotice } from "@/components/layout/access-notice";
 import { createClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/role";
+import { loadTaxBps } from "@/lib/fees-server";
 
 export const metadata: Metadata = { title: "Make an offer" };
 
@@ -77,6 +78,7 @@ async function HireInner({ params, searchParams }: { params: Promise<{ handle: s
           startingRate={creator.starting_rate_naira ?? 0}
           initialTitle={spTitle ? spTitle.slice(0, 120) : undefined}
           initialPrice={spPrice ? Number(spPrice) || undefined : undefined}
+          taxBps={await loadTaxBps()}
         />
       </div>
     </div>

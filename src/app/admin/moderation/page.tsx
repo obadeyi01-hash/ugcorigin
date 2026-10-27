@@ -4,7 +4,9 @@ import Link from "next/link";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Card, CardBody } from "@/components/ui/card";
 import { ReportActions } from "@/components/admin/report-actions";
+import { AdminListControls } from "@/components/admin/list-controls";
 import { requireSection, isReadonly } from "@/lib/admin/rbac";
+import { pageCount, pageWindow, readPage, readQuery } from "@/lib/admin/list";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -34,17 +36,43 @@ const STATUS_STYLE: Record<string, string> = {
   dismissed: "bg-surface-2 text-ink-3",
 };
 
-async function ModerationInner() {
+const REPORT_STATUS = [
+  { value: "all", label: "All" },
+  { value: "open", label: "Open" },
+  { value: "actioned", label: "Actioned" },
+  { value: "dismissed", label: "Dismissed" },
+];
+const REPORT_TYPE = [
+  { value: "all", label: "All" },
+  { value: "profile", label: "Profile" },
+  { value: "review", label: "Review" },
+  { value: "campaign_submission", label: "Campaign submission" },
+  { value: "deliverable", label: "Deliverable" },
+];
+
+async function ModerationInner({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const { role } = await requireSection("moderation");
   const readonly = isReadonly(role);
   const supabase = await createClient();
+  const sp = await searchParams;
+  const q = readQuery(sp.q);
+  const status = REPORT_STATUS.some((item) => item.value === sp.status) ? sp.status! : "all";
+  const kind = REPORT_TYPE.some((item) => item.value === sp.kind) ? sp.kind! : "all";
+  const page = readPage(sp.page);
+  const window = pageWindow(page);
 
-  const { data } = await supabase
+  let query = supabase
     .from("reports")
-    .select("id, target_type, target_id, reason, details, status, resolution, created_at")
-    .order("status", { ascending: true })
-    .order("created_at", { ascending: false })
-    .limit(200);
+    .select("id, target_type, target_id, reason, details, status, resolution, created_at", { count: "exact" })
+    .order("created_at", { ascending: false });
+  if (q) query = query.ilike("reason", `%${q}%`);
+  if (status !== "all") query = query.eq("status", status);
+  if (kind !== "all") query = query.eq("target_type", kind);
+  const [{ data, count }, { count: openCount }] = await Promise.all([
+    query.range(window.from, window.to),
+    supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "open"),
+  ]);
+  const pages = pageCount(count);
   const reports = (data ?? []) as Report[];
 
   // Resolve handles for profile targets so we can link to them.
@@ -63,8 +91,6 @@ async function ModerationInner() {
     const { data: ds } = await createAdminClient().from("deliverables").select("id, gig_id").in("id", deliverableIds);
     (ds ?? []).forEach((d) => d.gig_id && gigForDeliverable.set(d.id, d.gig_id));
   }
-
-  const openCount = reports.filter((r) => r.status === "open").length;
 
   // AI / false-media review queue (flagged or unscored-pending).
   const { data: mediaRaw } = await supabase
@@ -85,8 +111,20 @@ async function ModerationInner() {
     <AdminShell role={role} active="moderation">
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Moderation</h1>
       <p className="mt-1 text-sm text-ink-2">
-        Reported profiles, reviews, campaign submissions and deliverables. <span className="font-medium text-ink">{openCount}</span> open.
+        Reported profiles, reviews, campaign submissions and deliverables. <span className="font-medium text-ink">{openCount ?? 0}</span> open.
       </p>
+      <AdminListControls
+        pathname="/admin/moderation"
+        q={q}
+        placeholder="Reason"
+        filters={[
+          { name: "status", label: "Status", value: status, options: REPORT_STATUS },
+          { name: "kind", label: "Type", value: kind, options: REPORT_TYPE },
+        ]}
+        page={Math.min(page, pages)}
+        pages={pages}
+        total={count ?? 0}
+      />
 
       {mediaReviews.length > 0 && (
         <Card className="mt-6">
@@ -159,10 +197,10 @@ async function ModerationInner() {
   );
 }
 
-export default function AdminModerationPage() {
+export default function AdminModerationPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
     <Suspense fallback={<div className="min-h-dvh" />}>
-      <ModerationInner />
+      <ModerationInner searchParams={searchParams} />
     </Suspense>
   );
 }

@@ -5,7 +5,7 @@ import { Banknote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fundCampaignAction } from "@/app/campaigns/actions";
 
-export function FundPool({ campaignId }: { campaignId: string }) {
+export function FundPool({ campaignId, note: chargeNote }: { campaignId: string; note?: string }) {
   const [pending, start] = useTransition();
   const [note, setNote] = useState<string | null>(null);
   return (
@@ -23,6 +23,7 @@ export function FundPool({ campaignId }: { campaignId: string }) {
       >
         <Banknote className="size-4" /> Fund the pool
       </Button>
+      {chargeNote && <p className="text-xs text-ink-3">{chargeNote}</p>}
       {note && <p className="text-xs text-warning">{note}</p>}
     </div>
   );

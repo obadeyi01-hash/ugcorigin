@@ -75,7 +75,7 @@ async function UserInner({ params }: { params: Promise<{ id: string }> }) {
   const email = authResult.data?.user?.email ?? null;
   if (!creator && !brand && !membership && !email) notFound();
 
-  const [{ data: socials }, { data: portfolio }, { data: videos }, { data: packages }, { data: submission }] = await Promise.all([
+  const [{ data: socials }, { data: portfolio }, { data: videos }, { data: packages }, { data: submission }, { data: notes }] = await Promise.all([
     creator
       ? admin.from("social_accounts").select("platform, handle, url, verified").eq("creator_id", id)
       : Promise.resolve({ data: [] as { platform: string; handle: string; url: string | null; verified: boolean }[] }),
@@ -88,7 +88,8 @@ async function UserInner({ params }: { params: Promise<{ id: string }> }) {
     creator
       ? admin.from("packages").select("title, price_naira, active").eq("creator_id", id)
       : Promise.resolve({ data: [] as { title: string; price_naira: number; active: boolean }[] }),
-    admin.from("identity_submissions").select("nin, nin_hash, selfie_ref, phone, status, submitted_at").eq("user_id", id).order("submitted_at", { ascending: false }).limit(1).maybeSingle(),
+    admin.from("identity_submissions").select("nin, nin_hash, selfie_ref, phone, status, reject_reason, submitted_at").eq("user_id", id).order("submitted_at", { ascending: false }).limit(1).maybeSingle(),
+    admin.from("profile_notes").select("id, kind, subject, body, created_at").eq("user_id", id).order("created_at", { ascending: false }).limit(50),
   ]);
 
   const selfieUrl = seeIdentity && submission?.selfie_ref ? privateUrlFromRef(submission.selfie_ref) : null;
@@ -213,6 +214,36 @@ async function UserInner({ params }: { params: Promise<{ id: string }> }) {
           </dl>
         </Section>
       )}
+
+      <Section title="Notes sent" note="Placement and verification notes this account received. The same text is in their notification and email.">
+        {(notes ?? []).length === 0 && !submission?.reject_reason && !brand?.verification_note ? (
+          <p className="text-sm text-ink-3">No notes yet.</p>
+        ) : (
+          <ul className="grid gap-4">
+            {(notes ?? []).map((note) => (
+              <li key={note.id}>
+                <p className="text-xs text-ink-3">
+                  {note.kind.replace(/_/g, " ")} · {new Date(note.created_at).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })}
+                </p>
+                <p className="mt-1 text-sm font-medium text-ink">{note.subject}</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-ink-2">{note.body}</p>
+              </li>
+            ))}
+            {(notes ?? []).length === 0 && submission?.reject_reason && (
+              <li>
+                <p className="text-xs text-ink-3">Identity rejection</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-ink-2">{submission.reject_reason}</p>
+              </li>
+            )}
+            {(notes ?? []).length === 0 && brand?.verification_note && (
+              <li>
+                <p className="text-xs text-ink-3">Brand verification</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-ink-2">{brand.verification_note}</p>
+              </li>
+            )}
+          </ul>
+        )}
+      </Section>
 
       {brand && (
         <Section

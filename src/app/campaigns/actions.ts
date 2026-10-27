@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { paystackConfigured, initTransaction } from "@/lib/payments/paystack";
-import { feeFor } from "@/lib/fees";
+import { feeFor, taxFor } from "@/lib/fees";
+import { loadTaxBps } from "@/lib/fees-server";
 import { payCampaignSubmission } from "@/lib/payments/settle";
 import { guardWrite } from "@/lib/admin/rbac";
 import { detectPlatform } from "@/lib/social/detect";
@@ -56,14 +57,15 @@ export async function fundCampaignAction(campaignId: string): Promise<{ url?: st
   if (c.funded) return { error: "This campaign is already funded." };
   if (!paystackConfigured()) return { configured: false };
 
-  const amount = c.pool_naira + feeFor(c.pool_naira);
+  const taxBps = await loadTaxBps();
+  const amount = c.pool_naira + feeFor(c.pool_naira) + taxFor(c.pool_naira, taxBps);
   const site = process.env.NEXT_PUBLIC_SITE_URL || "https://ugcorigin.com";
   try {
     const { authorizationUrl } = await initTransaction({
       email: user.email ?? `brand+${user.id}@ugcorigin.com`,
       amountNaira: amount,
       reference: `camp_${campaignId}_${Date.now()}`,
-      metadata: { campaignId, kind: "campaign_funding" },
+      metadata: { campaignId, kind: "campaign_funding", taxBps },
       callbackUrl: `${site}/campaigns/${campaignId}?funded=1`,
     });
     return { url: authorizationUrl };

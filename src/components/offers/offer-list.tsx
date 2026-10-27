@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatNaira } from "@/lib/utils";
-import { feeFor } from "@/lib/fees";
+import { DEFAULT_TAX_BPS, feeFor, taxFor, taxPercentLabel } from "@/lib/fees";
 import { acceptOfferAction, declineOfferAction, fundOfferAction } from "@/app/offers/actions";
 import { BrandSnapshot, type BrandMetrics } from "@/components/marketplace/brand-snapshot";
 
@@ -31,7 +31,7 @@ const STATUS_STYLES: Record<string, string> = {
   withdrawn: "bg-surface-2 text-ink-3",
 };
 
-export function OfferList({ offers }: { offers: OfferRow[] }) {
+export function OfferList({ offers, taxBps = DEFAULT_TAX_BPS }: { offers: OfferRow[]; taxBps?: number }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [note, setNote] = useState<Record<string, string>>({});
@@ -96,7 +96,7 @@ export function OfferList({ offers }: { offers: OfferRow[] }) {
                 <div className="text-sm">
                   <span className="font-display font-semibold text-ink">{formatNaira(o.price_naira)}</span>
                   {o.role === "brand" && (
-                    <span className="ml-2 text-xs text-ink-3">+ {formatNaira(feeFor(o.price_naira))} fee</span>
+                    <span className="ml-2 text-xs text-ink-3">+ {formatNaira(feeFor(o.price_naira))} fee + {formatNaira(taxFor(o.price_naira, taxBps))} tax ({taxPercentLabel(taxBps)})</span>
                   )}
                 </div>
 

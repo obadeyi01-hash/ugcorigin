@@ -17,7 +17,7 @@ import { tierMeta } from "@/lib/tiers";
 import { createClient, supabaseConfigured } from "@/lib/supabase/client";
 import { resizeToWebp } from "@/lib/image-resize";
 import { validateFile, LIMITS, type UploadKind } from "@/lib/upload-limits";
-import { NICHES } from "@/lib/sample-data";
+import { NichePicker } from "@/components/onboarding/niche-picker";
 import {
   updateCreatorSettings,
   updateBrandSettings,
@@ -52,6 +52,7 @@ type Brand = {
   contact_first_name?: string | null;
   contact_last_name?: string | null;
   verification_status?: string | null;
+  verification_note?: string | null;
   rc_number?: string | null;
   goal?: string | null; // stored as one value or a comma-separated list
   ad_platforms?: string[] | null;
@@ -420,14 +421,8 @@ function CreatorSettings({ userId, creator }: { userId: string; creator: Creator
             </Field>
             <RateNudge niches={niches} location={location} tier={creator.tier ?? "origin"} rate={Number(rate) || 0} onUse={(amount) => setRate(String(amount))} />
           </div>
-          <Field label="Niches" hint="Pick the categories you create in.">
-            <div className="flex flex-wrap gap-2">
-              {NICHES.map((n) => (
-                <button key={n} type="button" onClick={() => toggleNiche(n)}>
-                  <Chip active={niches.includes(n)}>{n}</Chip>
-                </button>
-              ))}
-            </div>
+          <Field label="Niches" hint="Search the list, or add your own if it isn't there. Up to 5.">
+            <NichePicker selected={niches} onToggle={toggleNiche} />
           </Field>
           <Field label="What you offer" hint="The formats you deliver, so brands know what to ask for.">
             <div className="flex flex-wrap gap-2">
@@ -489,7 +484,7 @@ function BrandSettings({ userId, brand }: { userId: string; brand: Brand }) {
   return (
     <form onSubmit={onSubmit}>
       <Section title="Business verification" description="Get the Verified brand badge creators trust.">
-        <BrandVerifyCard status={brand.verification_status ?? "unverified"} companyName={brand.company_name ?? ""} rcNumber={brand.rc_number ?? ""} />
+        <BrandVerifyCard status={brand.verification_status ?? "unverified"} companyName={brand.company_name ?? ""} rcNumber={brand.rc_number ?? ""} note={brand.verification_note} />
       </Section>
 
       <Section title="Brand logo" description="Shown on your offers and briefs.">

@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { feeFor } from "../fees.ts";
+import { brandCharge, feeFor, taxFor } from "../fees.ts";
 import { campaignPayoutNaira, disputeShares, mayTransfer } from "./money-math.ts";
 
 describe("feeFor", () => {
   it("is 12% rounded to naira", () => {
     assert.equal(feeFor(10_000), 1_200);
     assert.equal(feeFor(100), 12);
+    assert.equal(taxFor(10_000, 750), 750);
+    assert.equal(taxFor(10_000, 0), 0);
+    assert.equal(brandCharge(10_000, 1_200, 750), 11_950);
   });
 });
 

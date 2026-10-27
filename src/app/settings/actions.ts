@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { detectAiClaim } from "@/lib/ai-detect";
 import { serializeGoals } from "@/lib/brand-options";
 import { normalizeHandle, isValidHandle, FREE_USERNAME_CHANGES } from "@/lib/username";
+import { cleanNicheList } from "@/lib/niches";
 
 const configured = () => !!process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -123,6 +124,7 @@ export async function updateCreatorSettings(input: CreatorSettingsInput): Promis
     return { error: lockedError.message };
   }
 
+  const niches = cleanNicheList(input.niches);
   const { error } = await supabase
     .from("creator_profiles")
     .update({
@@ -130,11 +132,11 @@ export async function updateCreatorSettings(input: CreatorSettingsInput): Promis
       location: input.location.trim() || null,
       phone: input.phone || null,
       bio: input.bio.trim() || null,
-      niches: input.niches,
+      niches,
       content_formats: input.contentFormats,
       starting_rate_naira: input.startingRate > 0 ? Math.round(input.startingRate) : null,
       avatar_url: input.avatarUrl,
-      completeness: creatorCompleteness(input),
+      completeness: creatorCompleteness({ ...input, niches }),
     })
     .eq("id", user.id);
 

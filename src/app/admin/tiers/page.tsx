@@ -13,6 +13,8 @@ import { CreatorTierControls } from "@/components/admin/creator-tier-controls";
 import { requireSection, isReadonly } from "@/lib/admin/rbac";
 import { createClient } from "@/lib/supabase/server";
 import { formatNaira } from "@/lib/utils";
+import { AdminListControls } from "@/components/admin/list-controls";
+import { pageCount, pageWindow, readPage, readQuery } from "@/lib/admin/list";
 
 export const metadata: Metadata = { title: "Admin · Tiers" };
 
@@ -29,20 +31,28 @@ type CreatorRow = {
   metrics: { gigs_completed: number; review_count: number; avg_rating: number | null } | null;
 };
 
-async function TiersInner() {
+async function TiersInner({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const { role } = await requireSection("tiers");
   const readonly = isReadonly(role);
   const supabase = await createClient();
+  const sp = await searchParams;
+  const q = readQuery(sp.q);
+  const tierFilter = TIERS.some((tier) => tier.key === sp.tier) ? sp.tier! : "all";
+  const page = readPage(sp.page);
+  const window = pageWindow(page);
+  let creatorsQuery = supabase
+    .from("creator_profiles")
+    .select(
+      "id, handle, display_name, tier, is_live, is_influencer, starting_rate_naira, earned_reputation, metrics:creator_metrics(gigs_completed, review_count, avg_rating)",
+      { count: "exact" },
+    )
+    .order("earned_reputation", { ascending: false });
+  if (q) creatorsQuery = creatorsQuery.or(`display_name.ilike.%${q}%,handle.ilike.%${q}%`);
+  if (tierFilter !== "all") creatorsQuery = creatorsQuery.eq("tier", tierFilter);
 
-  const [{ data: configRaw }, { data: creatorsRaw }] = await Promise.all([
+  const [{ data: configRaw }, { data: creatorsRaw, count: creatorCount }] = await Promise.all([
     supabase.from("tier_config").select("tier, rank, label, tagline, floor_naira").order("rank", { ascending: true }),
-    supabase
-      .from("creator_profiles")
-      .select(
-        "id, handle, display_name, tier, is_live, is_influencer, starting_rate_naira, earned_reputation, metrics:creator_metrics(gigs_completed, review_count, avg_rating)",
-      )
-      .order("earned_reputation", { ascending: false })
-      .limit(80),
+    creatorsQuery.range(window.from, window.to),
   ]);
 
   const config = (configRaw ?? []) as ConfigRow[];
@@ -80,7 +90,16 @@ async function TiersInner() {
         <RateGuideEditor rows={guides} readonly={readonly} />
       </div>
 
-      <h2 className="mt-10 font-display text-lg font-semibold text-ink">Creators ({creators.length})</h2>
+      <h2 className="mt-10 font-display text-lg font-semibold text-ink">Creators</h2>
+      <AdminListControls
+        pathname="/admin/tiers"
+        q={q}
+        placeholder="Name or username"
+        filters={[{ name: "tier", label: "Level", value: tierFilter, options: [{ value: "all", label: "All levels" }, ...TIERS.map((tier) => ({ value: tier.key, label: tier.label }))] }]}
+        page={Math.min(page, pageCount(creatorCount))}
+        pages={pageCount(creatorCount)}
+        total={creatorCount ?? 0}
+      />
       <p className="mt-0.5 text-sm text-ink-3">Grouped by tier, from Luminary down to Origin. Reputation only orders people inside the same tier.</p>
       {creators.length === 0 && <Card className="mt-3"><CardBody className="p-6 text-center text-sm text-ink-3">No creators yet.</CardBody></Card>}
       {[...TIERS].reverse().map((tier) => {
@@ -126,10 +145,10 @@ async function TiersInner() {
   );
 }
 
-export default function AdminTiersPage() {
+export default function AdminTiersPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
     <Suspense fallback={<div className="min-h-dvh" />}>
-      <TiersInner />
+      <TiersInner searchParams={searchParams} />
     </Suspense>
   );
 }

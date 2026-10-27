@@ -1,14 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState, useTransition } from "react";
-import { ArrowRight, ArrowLeft, Video, Store, Check, Plus } from "lucide-react";
+import { ArrowRight, ArrowLeft, Check, Store, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Field, Select } from "@/components/ui/input";
 import { PhoneField } from "@/components/ui/phone-field";
-import { Chip } from "@/components/ui/chip";
 import { cn } from "@/lib/utils";
-import { NICHES } from "@/lib/sample-data";
 import { NG_STATES } from "@/lib/categories";
+import { NichePicker } from "@/components/onboarding/niche-picker";
 import { BRAND_GOALS, AD_PLATFORMS, CONTENT_TYPES, BUSINESS_TYPES, CONTACT_ROLES, TEAM_SIZES } from "@/lib/brand-options";
 import {
   createCreatorProfile,
@@ -23,9 +22,6 @@ type Role = "creator" | "brand" | null;
 // Step ids give each screen a real URL (?step=niches) and make browser Back work.
 const CREATOR_STEPS = ["basics", "niches", "rate"] as const;
 const BRAND_STEPS = ["goal", "channels", "about", "details"] as const;
-
-// How many niche pills to show before the "View more" reveal.
-const PILLS_BEFORE_MORE = 14;
 
 /**
  * Drives the current step from the URL (?role=…&step=…) so every step has its
@@ -322,7 +318,7 @@ export function OnboardingWizard({
 
       {cstep === "niches" && (
         <div className="grid gap-4">
-          <Field label="Your niches" hint="Pick up to 5, what you make best.">
+          <Field label="Your niches" hint="Search the list, or add your own if it isn't there. Up to 5.">
             <NichePicker selected={c.niches} onToggle={toggleNiche} />
           </Field>
           <Button onClick={() => go("creator", "rate")} disabled={!canNext2}>
@@ -367,7 +363,7 @@ export function OnboardingWizard({
 
 const CREATOR_TITLES: Record<(typeof CREATOR_STEPS)[number], { title: string; subtitle: string }> = {
   basics: { title: "Set up your creator profile", subtitle: "Start with the basics." },
-  niches: { title: "What do you make?", subtitle: "Pick the niches you're strongest in." },
+  niches: { title: "What do you make?", subtitle: "Search for the closest niche, or add yours." },
   rate: { title: "Your starting rate", subtitle: "Almost done." },
 };
 const BRAND_TITLES: Record<(typeof BRAND_STEPS)[number], { title: string; subtitle: string }> = {
@@ -376,36 +372,6 @@ const BRAND_TITLES: Record<(typeof BRAND_STEPS)[number], { title: string; subtit
   about: { title: "Tell us about you", subtitle: "So we can tailor your recommendations." },
   details: { title: "Your brand details", subtitle: "This is what creators see when you reach out." },
 };
-
-/** Niche pills with a "View more" reveal: the common ones first, the long tail
- *  behind a control so the first screen stays scannable. */
-function NichePicker({ selected, onToggle }: { selected: string[]; onToggle: (n: string) => void }) {
-  const [expanded, setExpanded] = useState(false);
-  // Keep any already-selected pill from the long tail visible even when collapsed.
-  const head = NICHES.slice(0, PILLS_BEFORE_MORE);
-  const tail = NICHES.slice(PILLS_BEFORE_MORE);
-  const visible = expanded ? NICHES : [...head, ...tail.filter((n) => selected.includes(n))];
-  const hiddenCount = NICHES.length - visible.length;
-
-  return (
-    <div className="flex flex-wrap gap-2">
-      {visible.map((n) => (
-        <button key={n} type="button" onClick={() => onToggle(n)}>
-          <Chip active={selected.includes(n)}>{n}</Chip>
-        </button>
-      ))}
-      {!expanded && hiddenCount > 0 && (
-        <button
-          type="button"
-          onClick={() => setExpanded(true)}
-          className="u-press inline-flex items-center gap-1 rounded-full border border-dashed border-line px-3 py-1 text-xs font-medium text-ink-2 transition-colors hover:border-accent hover:text-accent"
-        >
-          <Plus className="size-3" /> View more ({hiddenCount})
-        </button>
-      )}
-    </div>
-  );
-}
 
 function Shell({
   title,

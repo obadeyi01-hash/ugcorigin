@@ -3,21 +3,37 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Card, CardBody } from "@/components/ui/card";
+import { AdminListControls } from "@/components/admin/list-controls";
 import { requireSection } from "@/lib/admin/rbac";
 import { createClient } from "@/lib/supabase/server";
+import { pageCount, pageWindow, readPage, readQuery } from "@/lib/admin/list";
 
 export const metadata: Metadata = { title: "Admin · Messages" };
 
-async function MessagesInner({ searchParams }: { searchParams: Promise<{ c?: string }> }) {
+async function MessagesInner({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const { role } = await requireSection("messages");
-  const { c } = await searchParams;
+  const sp = await searchParams;
+  const c = sp.c;
+  const q = readQuery(sp.q);
+  const page = readPage(sp.page);
+  const window = pageWindow(page);
   const supabase = await createClient();
 
-  const { data: convs } = await supabase
+  let convQuery = supabase
     .from("conversations")
-    .select("id, brand_id, creator_id, last_message_at")
-    .order("last_message_at", { ascending: false })
-    .limit(100);
+    .select("id, brand_id, creator_id, last_message_at", { count: "exact" })
+    .order("last_message_at", { ascending: false });
+  if (q) {
+    const [{ data: creators }, { data: brands }] = await Promise.all([
+      supabase.from("creator_profiles").select("id").or(`handle.ilike.%${q}%,display_name.ilike.%${q}%`).limit(40),
+      supabase.from("brand_profiles").select("id").ilike("company_name", `%${q}%`).limit(40),
+    ]);
+    const ids = [...new Set([...(creators ?? []).map((row) => row.id), ...(brands ?? []).map((row) => row.id)])];
+    if (ids.length === 0) convQuery = convQuery.eq("id", "00000000-0000-0000-0000-000000000000");
+    else convQuery = convQuery.or(ids.flatMap((id) => [`creator_id.eq.${id}`, `brand_id.eq.${id}`]).join(","));
+  }
+  const { data: convs, count } = await convQuery.range(window.from, window.to);
+  const pages = pageCount(count);
   const list = convs ?? [];
 
   let thread: { id: string; sender_id: string; body: string; flagged: boolean; attachment_name: string | null; created_at: string }[] = [];
@@ -43,7 +59,16 @@ async function MessagesInner({ searchParams }: { searchParams: Promise<{ c?: str
   return (
     <AdminShell role={role} active="messages">
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Messages</h1>
-      <p className="mt-1 text-sm text-ink-2">Read-only oversight of brand to creator conversations. {list.length} total.</p>
+      <p className="mt-1 text-sm text-ink-2">Read-only oversight of brand to creator conversations.</p>
+      <AdminListControls
+        pathname="/admin/messages"
+        q={q}
+        placeholder="Creator or brand"
+        page={Math.min(page, pages)}
+        pages={pages}
+        total={count ?? 0}
+        hidden={{ c }}
+      />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[18rem_1fr]">
         <Card>
@@ -52,7 +77,7 @@ async function MessagesInner({ searchParams }: { searchParams: Promise<{ c?: str
               {list.map((conv) => (
                 <li key={conv.id}>
                   <Link
-                    href={`/admin/messages?c=${conv.id}`}
+                    href={`/admin/messages?c=${conv.id}${q ? `&q=${encodeURIComponent(q)}` : ""}${page > 1 ? `&page=${page}` : ""}`}
                     className={`block px-4 py-3 text-sm hover:bg-surface-2 ${c === conv.id ? "bg-surface-2 font-medium text-ink" : "text-ink-2"}`}
                   >
                     {conv.id.slice(0, 8)}
@@ -94,7 +119,7 @@ async function MessagesInner({ searchParams }: { searchParams: Promise<{ c?: str
   );
 }
 
-export default function AdminMessagesPage({ searchParams }: { searchParams: Promise<{ c?: string }> }) {
+export default function AdminMessagesPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
     <Suspense fallback={<div className="min-h-dvh" />}>
       <MessagesInner searchParams={searchParams} />

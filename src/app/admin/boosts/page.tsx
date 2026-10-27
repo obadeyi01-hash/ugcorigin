@@ -4,9 +4,11 @@ import Link from "next/link";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Card, CardBody } from "@/components/ui/card";
 import { BoostCancelButton } from "@/components/admin/boost-cancel-button";
+import { AdminListControls } from "@/components/admin/list-controls";
 import { requireSection, isReadonly } from "@/lib/admin/rbac";
 import { createClient } from "@/lib/supabase/server";
 import { formatNaira } from "@/lib/utils";
+import { pageCount, pageWindow, readPage } from "@/lib/admin/list";
 
 export const metadata: Metadata = { title: "Admin · Boosts" };
 
@@ -38,16 +40,37 @@ function isLiveNow(b: Boost) {
   return b.status === "active" && b.ends_at != null && new Date(b.ends_at).getTime() > Date.now();
 }
 
-async function BoostsInner() {
+const BOOST_STATUS = [
+  { value: "all", label: "All" },
+  { value: "active", label: "Active" },
+  { value: "pending", label: "Pending" },
+  { value: "cancelled", label: "Cancelled" },
+];
+const BOOST_TYPE = [
+  { value: "all", label: "All" },
+  { value: "creator", label: "Creator" },
+  { value: "brief", label: "Brief" },
+  { value: "campaign", label: "Campaign" },
+];
+
+async function BoostsInner({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const { role } = await requireSection("boosts");
   const readonly = isReadonly(role);
   const supabase = await createClient();
+  const sp = await searchParams;
+  const status = BOOST_STATUS.some((item) => item.value === sp.status) ? sp.status! : "all";
+  const kind = BOOST_TYPE.some((item) => item.value === sp.kind) ? sp.kind! : "all";
+  const page = readPage(sp.page);
+  const window = pageWindow(page);
 
-  const { data: boostsRaw } = await supabase
+  let query = supabase
     .from("boosts")
-    .select("id, target_type, target_id, days, amount_naira, status, starts_at, ends_at, created_at")
-    .order("created_at", { ascending: false })
-    .limit(100);
+    .select("id, target_type, target_id, days, amount_naira, status, starts_at, ends_at, created_at", { count: "exact" })
+    .order("created_at", { ascending: false });
+  if (status !== "all") query = query.eq("status", status);
+  if (kind !== "all") query = query.eq("target_type", kind);
+  const { data: boostsRaw, count } = await query.range(window.from, window.to);
+  const pages = pageCount(count);
   const boosts = (boostsRaw ?? []) as Boost[];
 
   // Resolve creator handles for nicer links.
@@ -66,10 +89,24 @@ async function BoostsInner() {
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Boosts</h1>
       <p className="mt-1 text-sm text-ink-2">Paid featured placements. Boosts add a capped, labelled band only, they never change ranking or tier.</p>
 
+      <AdminListControls
+        pathname="/admin/boosts"
+        q=""
+        search={false}
+        placeholder="Filter"
+        filters={[
+          { name: "status", label: "Status", value: status, options: BOOST_STATUS },
+          { name: "kind", label: "Type", value: kind, options: BOOST_TYPE },
+        ]}
+        page={Math.min(page, pages)}
+        pages={pages}
+        total={count ?? 0}
+      />
+
       <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Card><CardBody><p className="text-xs text-ink-3">Live now</p><p className="mt-1 font-display text-2xl font-bold text-ink">{liveCount}</p></CardBody></Card>
-        <Card><CardBody><p className="text-xs text-ink-3">Boosts (90d)</p><p className="mt-1 font-display text-2xl font-bold text-ink">{boosts.length}</p></CardBody></Card>
-        <Card><CardBody><p className="text-xs text-ink-3">Boost revenue</p><p className="mt-1 font-display text-2xl font-bold text-ink">{formatNaira(revenue)}</p></CardBody></Card>
+        <Card><CardBody><p className="text-xs text-ink-3">On this page</p><p className="mt-1 font-display text-2xl font-bold text-ink">{boosts.length}</p></CardBody></Card>
+        <Card><CardBody><p className="text-xs text-ink-3">Revenue on this page</p><p className="mt-1 font-display text-2xl font-bold text-ink">{formatNaira(revenue)}</p></CardBody></Card>
       </div>
 
       <Card className="mt-6">
@@ -109,10 +146,10 @@ async function BoostsInner() {
   );
 }
 
-export default function AdminBoostsPage() {
+export default function AdminBoostsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
     <Suspense fallback={<div className="min-h-dvh" />}>
-      <BoostsInner />
+      <BoostsInner searchParams={searchParams} />
     </Suspense>
   );
 }

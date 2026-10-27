@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { serializeGoals } from "@/lib/brand-options";
 import { generateUniqueHandle } from "@/lib/username";
 import { sendVerifyPrompt } from "@/lib/notify";
+import { cleanNicheList } from "@/lib/niches";
 
 const configured = () => !!process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -75,6 +76,7 @@ export async function createCreatorProfile(input: CreatorInput): Promise<ActionR
     return !!data;
   });
 
+  const niches = cleanNicheList(input.niches);
   const { error } = await supabase.from("creator_profiles").insert({
     id: user.id,
     handle,
@@ -84,9 +86,9 @@ export async function createCreatorProfile(input: CreatorInput): Promise<ActionR
     location: input.location.trim(),
     phone: input.phone || null,
     bio: input.bio.trim(),
-    niches: input.niches,
+    niches,
     starting_rate_naira: Math.max(0, Math.round(input.startingRate)),
-    completeness: creatorCompleteness(input),
+    completeness: creatorCompleteness({ ...input, niches }),
   });
 
   if (error) {

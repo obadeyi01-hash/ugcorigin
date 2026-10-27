@@ -1,6 +1,6 @@
 import "server-only";
 import type { createAdminClient } from "@/lib/supabase/admin";
-import { feeFor } from "@/lib/fees";
+import { brandCharge, feeFor } from "@/lib/fees";
 import { createRefund, initiateTransfer, paystackConfigured } from "@/lib/payments/paystack";
 import { campaignPayoutNaira, disputeShares, mayTransfer, type DisputeResolution } from "@/lib/payments/money-math";
 
@@ -121,7 +121,7 @@ async function revertEscrowToHeld(admin: Admin, escrowId: string) {
  * caller gets an error. Nothing is marked refunded on a failed API call.
  */
 export async function refundHeldGig(admin: Admin, gigId: string, memo?: string): Promise<SettleResult> {
-  const { data: gig } = await admin.from("gigs").select("id, brand_id, title, price_naira").eq("id", gigId).maybeSingle();
+  const { data: gig } = await admin.from("gigs").select("id, brand_id, title, price_naira, fee_naira, tax_naira").eq("id", gigId).maybeSingle();
   if (!gig) return { error: "Gig not found." };
 
   const { data: esc } = await admin
@@ -133,7 +133,7 @@ export async function refundHeldGig(admin: Admin, gigId: string, memo?: string):
     .maybeSingle();
   if (!esc) return { error: "No held escrow to refund (already released or refunded)." };
 
-  const total = gig.price_naira + feeFor(gig.price_naira);
+  const total = brandCharge(gig.price_naira, gig.fee_naira ?? feeFor(gig.price_naira), gig.tax_naira ?? 0);
   if (paystackConfigured()) {
     if (!esc.provider_ref) {
       await revertEscrowToHeld(admin, esc.id);

@@ -14,6 +14,7 @@ import { TierBadge } from "@/components/ui/tier-badge";
 import { BoostButton } from "@/components/boost/boost-button";
 import { tierMeta } from "@/lib/tiers";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { publicName } from "@/lib/names";
 import { RecommendationsPopup, type RecCreator } from "@/components/dashboard/recommendations-popup";
 import { UpsellNudge } from "@/components/upsell/upsell-nudge";
@@ -85,6 +86,16 @@ async function DashboardInner() {
   ]);
 
   if (!creator && !brand) redirect("/onboarding");
+
+  let brandNote: string | null = null;
+  if (brand && brand.verification_status !== "verified" && brand.verification_status !== "pending") {
+    const { data: privateBrand } = await createAdminClient()
+      .from("brand_profiles")
+      .select("verification_note")
+      .eq("id", user.id)
+      .maybeSingle();
+    brandNote = privateBrand?.verification_note ?? null;
+  }
 
   const { data: gigs } = await supabase
     .from("gigs")
@@ -195,10 +206,12 @@ async function DashboardInner() {
           <VerifyBanner
             role="brand"
             href="/settings"
-            title={brand.verification_status === "pending" ? "Brand verification is in review" : "Verify your brand"}
+            title={brand.verification_status === "pending" ? "Brand verification is in review" : brandNote ? "Brand verification needs another look" : "Verify your brand"}
             body={brand.verification_status === "pending"
               ? "We have your CAC/RC number. You'll get an email when the badge is on."
-              : "A verified business gets a badge on every offer and brief. Submit your CAC/RC number from settings."}
+              : brandNote
+                ? brandNote
+                : "A verified business gets a badge on every offer and brief. Submit your CAC/RC number from settings."}
           />
         )}
         <h1 className="font-display text-2xl font-bold tracking-tight text-ink">

@@ -8,7 +8,17 @@ import { Input, Field } from "@/components/ui/input";
 import { Card, CardBody } from "@/components/ui/card";
 import { submitBrandVerification } from "@/app/brand-verify/actions";
 
-export function BrandVerifyCard({ status, companyName, rcNumber }: { status: string; companyName: string; rcNumber: string }) {
+export function BrandVerifyCard({
+  status,
+  companyName,
+  rcNumber,
+  note,
+}: {
+  status: string;
+  companyName: string;
+  rcNumber: string;
+  note?: string | null;
+}) {
   const router = useRouter();
   const [company, setCompany] = useState(companyName);
   const [rc, setRc] = useState(rcNumber);
@@ -42,6 +52,11 @@ export function BrandVerifyCard({ status, companyName, rcNumber }: { status: str
         <p className="mt-0.5 text-sm text-ink-2">
           Verify your business so creators trust you. We check your CAC/RC number against your company name.
         </p>
+        {status !== "pending" && note?.trim() && (
+          <p className="mt-3 rounded-lg border border-error/30 bg-error/5 px-3 py-2 text-sm text-ink">
+            <span className="font-medium">What we need you to change. </span>{note.trim()}
+          </p>
+        )}
         {status === "pending" ? (
           <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-warning/14 px-3 py-1 text-xs font-medium text-warning">
             <Clock className="size-3.5" /> Under review

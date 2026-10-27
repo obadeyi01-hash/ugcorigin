@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyWebhookSignature, verifyTransaction } from "@/lib/payments/paystack";
 import { refundStrayCharge } from "@/lib/payments/settle";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { feeFor } from "@/lib/fees";
+import { feeFor, taxBpsFromMetadata, taxFor } from "@/lib/fees";
 import { notifyUser, notifyMany } from "@/lib/notify";
 
 type Admin = ReturnType<typeof createAdminClient>;
@@ -65,10 +65,12 @@ export async function POST(request: Request) {
   }
   const paid = verified.amountNaira; // Naira actually paid, per Paystack.
 
-  const campaignId = event.data?.metadata?.campaignId;
-  const offerId = event.data?.metadata?.offerId;
-  const boostId = event.data?.metadata?.boostId;
-  const subscriptionId = event.data?.metadata?.subscriptionId;
+  const meta = verified.metadata ?? {};
+  const campaignId = (meta.campaignId as string | undefined) ?? event.data?.metadata?.campaignId;
+  const offerId = (meta.offerId as string | undefined) ?? event.data?.metadata?.offerId;
+  const boostId = (meta.boostId as string | undefined) ?? event.data?.metadata?.boostId;
+  const subscriptionId = (meta.subscriptionId as string | undefined) ?? event.data?.metadata?.subscriptionId;
+  const taxBps = taxBpsFromMetadata(meta);
 
   // Creator Pro subscription: activate for 30 days from now (idempotent).
   if (subscriptionId) {
@@ -166,12 +168,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true, already: true });
     }
     if (c && !c.funded) {
-      if (paid < c.pool_naira + feeFor(c.pool_naira)) {
+      const campFee = feeFor(c.pool_naira);
+      const campTax = taxFor(c.pool_naira, taxBps);
+      if (paid < c.pool_naira + campFee + campTax) {
         const refunded = await refundStrayCharge(reference, "Underpaid campaign funding charge");
         if (!refunded) return new NextResponse("refund failed", { status: 500 });
         return NextResponse.json({ received: true, ignored: "underpaid" });
       }
-      await admin.from("campaigns").update({ funded: true, status: "open", provider_ref: reference }).eq("id", campaignId).eq("funded", false);
+      await admin.from("campaigns").update({ funded: true, status: "open", provider_ref: reference, fee_naira: campFee, tax_naira: campTax }).eq("id", campaignId).eq("funded", false);
       await admin.from("ledger_entries").insert({ entry_type: "escrow_in", amount_naira: c.pool_naira, memo: `Campaign pool funded (${campaignId})` });
     }
     return NextResponse.json({ received: true });
@@ -197,8 +201,9 @@ export async function POST(request: Request) {
   if (!offer) return NextResponse.json({ received: true });
 
   const fee = feeFor(offer.price_naira);
-  // The brand must have paid at least the rate + platform fee, else don't bind escrow.
-  if (paid < offer.price_naira + fee) {
+  const tax = taxFor(offer.price_naira, taxBps);
+  // The brand must have paid the rate, the platform fee, and the tax on that charge.
+  if (paid < offer.price_naira + fee + tax) {
     const refunded = await refundStrayCharge(reference, "Underpaid offer charge");
     if (!refunded) return new NextResponse("refund failed", { status: 500 });
     return NextResponse.json({ received: true, ignored: "underpaid" });
@@ -215,6 +220,7 @@ export async function POST(request: Request) {
         title: offer.title,
         price_naira: offer.price_naira,
         fee_naira: fee,
+        tax_naira: tax,
         status: "funded",
         review_window_days: 7,
         deadline: offer.deadline ?? null,
@@ -243,14 +249,16 @@ export async function POST(request: Request) {
       provider_ref: reference,
       amount_naira: offer.price_naira,
       fee_naira: fee,
+      tax_naira: tax,
       status: "held",
     })
     .select("id")
     .single();
 
   await admin.from("ledger_entries").insert([
-    { gig_id: gig.id, escrow_id: esc?.id, entry_type: "escrow_in", amount_naira: offer.price_naira + fee, memo: "Brand funded escrow" },
+    { gig_id: gig.id, escrow_id: esc?.id, entry_type: "escrow_in", amount_naira: offer.price_naira + fee + tax, memo: "Brand funded escrow" },
     { gig_id: gig.id, escrow_id: esc?.id, entry_type: "fee", amount_naira: fee, memo: "Platform fee" },
+    ...(tax > 0 ? [{ gig_id: gig.id, escrow_id: esc?.id, entry_type: "fee" as const, amount_naira: tax, memo: "Tax" }] : []),
     { gig_id: gig.id, escrow_id: esc?.id, entry_type: "hold", amount_naira: offer.price_naira, memo: "Held for creator" },
   ]);
 
