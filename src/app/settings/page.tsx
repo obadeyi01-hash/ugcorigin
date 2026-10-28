@@ -63,6 +63,9 @@ async function SettingsInner() {
   ]);
   const creatorForForm = creator ? { ...creator, phone: creatorPrivate?.phone ?? null } : null;
   const brandForForm = brand ? { ...brand, phone: brandPrivate?.phone ?? null, rc_number: brandPrivate?.rc_number ?? null } : null;
+  const { data: socials } = creator
+    ? await supabase.from("social_accounts").select("id, platform, handle, url, follower_count").eq("creator_id", user.id)
+    : { data: [] as { id: string; platform: string; handle: string; url: string | null; follower_count: number | null }[] };
 
   const prefs = settings ?? {
     notify_offers: true,
@@ -82,6 +85,7 @@ async function SettingsInner() {
           creator={creatorForForm}
           brand={brandForForm}
           prefs={prefs}
+          socials={socials ?? []}
         />
       </div>
     </Container>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { youtubeId, tiktokId } from "@/lib/social/detect";
+import { subscribeMedia } from "@/lib/media/exclusive";
 
 export type EmbedLink = { id: string; platform: string; url: string };
 
@@ -22,7 +23,12 @@ type Twttr = { widgets?: { load?: () => void } };
 type Instgrm = { Embeds?: { process?: () => void } };
 
 export function SocialEmbeds({ links }: { links: EmbedLink[] }) {
+  const [held, setHeld] = useState(false);
+
+  useEffect(() => subscribeMedia((owner) => setHeld(owner != null)), []);
+
   useEffect(() => {
+    if (held) return;
     const platforms = new Set(links.map((l) => l.platform));
     (async () => {
       if (platforms.has("x")) {
@@ -38,7 +44,7 @@ export function SocialEmbeds({ links }: { links: EmbedLink[] }) {
         await loadScript("https://www.tiktok.com/embed.js");
       }
     })();
-  }, [links]);
+  }, [links, held]);
 
   if (links.length === 0) return null;
 
@@ -48,7 +54,13 @@ export function SocialEmbeds({ links }: { links: EmbedLink[] }) {
       <div className="mt-4 grid gap-5 sm:grid-cols-2">
         {links.map((l) => (
           <div key={l.id} className="overflow-hidden rounded-2xl border border-line bg-surface">
-            <Embed platform={l.platform} url={l.url} />
+            {held ? (
+              <div className="grid min-h-40 place-items-center px-4 py-10 text-center text-sm text-ink-3">
+                Paused while another clip is playing.
+              </div>
+            ) : (
+              <Embed platform={l.platform} url={l.url} />
+            )}
           </div>
         ))}
       </div>

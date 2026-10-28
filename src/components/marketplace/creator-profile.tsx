@@ -16,6 +16,8 @@ import { SaveButton } from "@/components/marketplace/save-button";
 import { ReportButton } from "@/components/moderation/report-button";
 import { formatNaira } from "@/lib/utils";
 import { formatLabel } from "@/lib/content-formats";
+import { formatFollowers, socialHostPath, socialPlatformLabel } from "@/lib/social/accounts";
+import { ShowcaseVideos } from "@/components/marketplace/showcase-videos";
 
 export type ProfileData = {
   id?: string;
@@ -32,7 +34,7 @@ export type ProfileData = {
   saved?: boolean;
   startingRate?: number | null;
   url: string;
-  socials: { platform: string; handle: string; url?: string | null }[];
+  socials: { platform: string; handle: string; url?: string | null; follower_count?: number | null }[];
   socialsLocked?: boolean;
   packages: {
     id: string;
@@ -179,29 +181,10 @@ export function CreatorProfile({ data }: { data: ProfileData }) {
         {data.videos && data.videos.length > 0 && (
           <section className="mt-10">
             <h2 className="font-display text-lg font-semibold text-ink">Showcase videos</h2>
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {data.videos.map((v) => (
-                <figure key={v.id} className="relative">
-                  <video
-                    src={v.url}
-                    poster={v.poster ?? undefined}
-                    controls
-                    preload="none"
-                    playsInline
-                    className="aspect-[9/16] w-full rounded-xl border border-line bg-obsidian object-cover"
-                  />
-                  {v.verified && (
-                    <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-success/90 px-2 py-0.5 text-2xs font-semibold text-white shadow-sm">
-                      <ShieldCheck className="size-3" /> Verified
-                    </span>
-                  )}
-                  {v.caption && <figcaption className="mt-1.5 text-xs text-ink-2">{v.caption}</figcaption>}
-                </figure>
-              ))}
-            </div>
+            <ShowcaseVideos videos={data.videos} />
             <p className="mt-2 text-xs text-ink-3">
               <ShieldCheck className="mr-1 inline size-3 text-success" />
-              Verified clips are real work delivered through UGCOrigin.
+              Verified clips are real work delivered through UGCOrigin. Open a clip to watch it larger.
             </p>
           </section>
         )}
@@ -219,6 +202,28 @@ export function CreatorProfile({ data }: { data: ProfileData }) {
 
       {/* Rate card sidebar */}
       <aside>
+        {data.socials.some((social) => social.follower_count != null || (!data.socialsLocked && social.url)) && (
+          <Card className="mb-4">
+            <CardBody>
+              <h2 className="font-display text-lg font-semibold text-ink">Social profiles</h2>
+              <ul className="mt-3 grid gap-2">
+                {data.socials.map((social) => (
+                  <li key={social.platform} className="rounded-xl border border-line px-3 py-2.5">
+                    <p className="font-medium text-ink">{socialPlatformLabel(social.platform)}</p>
+                    {social.follower_count != null && (
+                      <p className="text-sm text-ink-2">{formatFollowers(social.follower_count)} followers</p>
+                    )}
+                    {!data.socialsLocked && social.url && (
+                      <a href={social.url} target="_blank" rel="noopener noreferrer" className="block truncate text-xs text-ink-3 hover:text-ink">
+                        {socialHostPath(social.url)}
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </CardBody>
+          </Card>
+        )}
         <Card className="md:sticky md:top-20">
           <CardBody>
             <p className="text-xs text-ink-3">Starting at</p>

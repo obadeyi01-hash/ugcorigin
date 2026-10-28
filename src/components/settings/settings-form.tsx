@@ -26,6 +26,7 @@ import {
   type NotificationPrefs,
 } from "@/app/settings/actions";
 import { RateNudge } from "@/components/onboarding/rate-nudge";
+import { SocialAccountsForm, type SocialAccountRow } from "@/components/settings/social-accounts-form";
 
 type Creator = {
   handle: string | null;
@@ -130,12 +131,14 @@ export function SettingsForm({
   creator,
   brand,
   prefs,
+  socials,
 }: {
   userId: string;
   email: string;
   creator: Creator | null;
   brand: Brand | null;
   prefs: NotificationPrefs;
+  socials: SocialAccountRow[];
 }) {
   const both = !!(creator && brand);
   return (
@@ -145,6 +148,7 @@ export function SettingsForm({
           {both && <h2 className="font-display text-lg font-semibold text-ink">Creator profile</h2>}
           {both && <p className="mb-4 mt-1 text-sm text-ink-3">What brands see when they hire you. Separate from the brand tools below.</p>}
           <CreatorSettings userId={userId} creator={creator} />
+          <SocialAccountsForm accounts={socials} />
         </section>
       )}
       {brand && (

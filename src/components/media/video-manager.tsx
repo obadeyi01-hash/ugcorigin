@@ -108,7 +108,14 @@ export function VideoManager({ videos: initial }: { videos: Vid[] }) {
                 controls
                 preload="none"
                 playsInline
+                data-showcase-preview=""
                 className="aspect-[9/16] w-full object-cover"
+                onPlay={(event) => {
+                  const current = event.currentTarget;
+                  document.querySelectorAll<HTMLVideoElement>("[data-showcase-preview]").forEach((node) => {
+                    if (node !== current) node.pause();
+                  });
+                }}
               />
               <button
                 onClick={() => remove(v.id)}

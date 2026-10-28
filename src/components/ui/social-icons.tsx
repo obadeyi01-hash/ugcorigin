@@ -1,6 +1,6 @@
 import type { SVGProps, ReactElement } from "react";
 
-type Platform = "instagram" | "tiktok" | "youtube" | "twitch" | "x" | "snapchat";
+type Platform = "instagram" | "tiktok" | "youtube" | "twitch" | "x" | "snapchat" | "facebook";
 
 function Instagram(props: SVGProps<SVGSVGElement>) {
   return (
@@ -38,6 +38,14 @@ function X(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+function Facebook(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M14.5 8.5V6.8c0-.7.5-1 1.2-1H17V3h-2.1C12.2 3 11 4.4 11 6.6v1.9H9v2.7h2V21h3.5v-9.8h2.3l.4-2.7h-2.7Z" />
+    </svg>
+  );
+}
+
 function Snapchat(props: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -53,6 +61,7 @@ const ICONS: Record<Platform, (p: SVGProps<SVGSVGElement>) => ReactElement> = {
   twitch: Twitch,
   x: X,
   snapchat: Snapchat,
+  facebook: Facebook,
 };
 
 const BASE_URL: Record<Platform, (handle: string) => string> = {
@@ -62,6 +71,7 @@ const BASE_URL: Record<Platform, (handle: string) => string> = {
   twitch: (h) => `https://twitch.tv/${h}`,
   x: (h) => `https://x.com/${h}`,
   snapchat: (h) => `https://snapchat.com/add/${h}`,
+  facebook: (h) => `https://facebook.com/${h}`,
 };
 
 export function SocialIcon({ platform, className }: { platform: string; className?: string }) {
@@ -75,4 +85,4 @@ export function socialUrl(platform: string, handle: string, url?: string | null)
   return fn ? fn(handle.replace(/^@/, "")) : "#";
 }
 
-export const SOCIAL_PLATFORMS: Platform[] = ["instagram", "tiktok", "youtube", "x", "snapchat", "twitch"];
+export const SOCIAL_PLATFORMS: Platform[] = ["instagram", "tiktok", "youtube", "facebook", "x", "snapchat", "twitch"];

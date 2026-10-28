@@ -9,6 +9,7 @@ import { JsonLd, SITE_URL } from "@/components/seo/json-ld";
 import { tierMeta, isInfluencer } from "@/lib/tiers";
 import { displayNameFor, publicName } from "@/lib/names";
 import { createClient } from "@/lib/supabase/server";
+import { refreshSocialFollowers } from "@/lib/social/refresh";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://ugcorigin.com";
 
@@ -185,8 +186,9 @@ async function ProfileInner({ params }: { params: Promise<{ handle: string }> })
         saved = !!savedRow;
       }
 
+      await refreshSocialFollowers(creator.id).catch(() => undefined);
       const [{ data: socials }, { data: packages }, { data: reviewRows }, { data: portfolio }, { data: vids }, { data: metricsRow }] = await Promise.all([
-        supabase.from("social_accounts").select("platform, handle, url").eq("creator_id", creator.id),
+        supabase.from("social_accounts").select("platform, handle, url, follower_count").eq("creator_id", creator.id),
         supabase.from("packages").select("id, title, type, price_naira, revisions, format").eq("creator_id", creator.id).eq("active", true),
         supabase.from("reviews").select("id, rating_speed, rating_comms, rating_quality, body").eq("subject_id", creator.id).order("created_at", { ascending: false }).limit(12),
         supabase.from("portfolio_links").select("id, platform, url").eq("creator_id", creator.id).order("position", { ascending: true }),
@@ -203,7 +205,9 @@ async function ProfileInner({ params }: { params: Promise<{ handle: string }> })
 
       // When not revealed, expose platform presence but not the handles/links.
       const socialList = (socials ?? []).map((s) =>
-        revealed ? s : { platform: s.platform, handle: "", url: null },
+        revealed
+          ? s
+          : { platform: s.platform, handle: "", url: null, follower_count: s.follower_count },
       );
 
       data = {

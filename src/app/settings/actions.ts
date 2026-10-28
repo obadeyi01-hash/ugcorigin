@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isSocialPlatform, parseSocialAccount } from "@/lib/social/accounts";
 import { detectAiClaim } from "@/lib/ai-detect";
 import { serializeGoals } from "@/lib/brand-options";
 import { normalizeHandle, isValidHandle, FREE_USERNAME_CHANGES } from "@/lib/username";
@@ -296,6 +297,43 @@ export async function updateNotificationPrefs(prefs: NotificationPrefs): Promise
 
   if (error) return { error: error.message };
 
+  revalidatePath("/settings");
+  return { ok: true };
+}
+
+export async function saveSocialAccount(platform: string, raw: string): Promise<ActionResult> {
+  if (!configured()) return { error: "Backend not connected." };
+  const { user } = await requireUser();
+  if (!user) return { error: "Your session expired, please sign in again." };
+  if (!isSocialPlatform(platform)) return { error: "Choose a network from the list." };
+  const parsed = parseSocialAccount(platform, raw);
+  if (!parsed) {
+    return { error: platform === "facebook"
+      ? "Paste the page or profile address. A share link does not carry the audience."
+      : "Paste a profile address or @handle for that network." };
+  }
+  const admin = createAdminClient();
+  const { error } = await admin.from("social_accounts").upsert({
+    creator_id: user.id,
+    platform,
+    handle: parsed.handle,
+    url: parsed.url,
+    follower_count: null,
+    followers_checked_at: null,
+  }, { onConflict: "creator_id,platform" });
+  if (error) return { error: error.message };
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+export async function removeSocialAccount(id: string): Promise<ActionResult> {
+  if (!configured()) return { error: "Backend not connected." };
+  const { user } = await requireUser();
+  if (!user) return { error: "Your session expired, please sign in again." };
+  const admin = createAdminClient();
+  const { error } = await admin.from("social_accounts").delete().eq("id", id).eq("creator_id", user.id);
+  if (error) return { error: error.message };
   revalidatePath("/settings");
   return { ok: true };
 }
