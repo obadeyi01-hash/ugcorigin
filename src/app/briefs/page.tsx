@@ -15,7 +15,7 @@ import { formatNaira } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Open briefs",
-  description: "Browse open UGC campaigns from Nigerian brands and apply.",
+  description: "Open paid UGC briefs from verified brands, including founding work from Dream Intrepid Ltd. Apply with a pitch and one sample.",
 };
 
 type BriefRow = {
@@ -113,7 +113,7 @@ export default function BriefsPage() {
           <div className="flex items-end justify-between gap-4">
             <div className="max-w-2xl">
               <h1 className="font-display text-3xl font-bold tracking-tight text-ink sm:text-4xl">Open briefs</h1>
-              <p className="mt-2 text-ink-2">Campaigns from brands looking for creators. Apply with a quick pitch.</p>
+              <p className="mt-2 text-ink-2">Paid work from verified brands. Dream Intrepid Ltd is hiring across beauty, fashion, food, tech and more. Apply with a pitch and one sample.</p>
             </div>
             {/* Creator-only accounts don't post briefs — the CTA resolves the session inside Suspense. */}
             <Suspense fallback={null}><PostBriefCta /></Suspense>

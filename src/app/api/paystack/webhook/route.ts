@@ -4,6 +4,7 @@ import { refundStrayCharge } from "@/lib/payments/settle";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { feeFor, taxBpsFromMetadata, taxFor } from "@/lib/fees";
 import { notifyUser, notifyMany } from "@/lib/notify";
+import { awardReferral, markReferralPaid } from "@/lib/referrals/award";
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -189,7 +190,11 @@ export async function POST(request: Request) {
   const { data: existing } = await admin.from("gigs").select("id").eq("offer_id", offerId).maybeSingle();
   if (existing) {
     const { data: escRow } = await admin.from("escrow_transactions").select("id, provider_ref").eq("gig_id", existing.id).maybeSingle();
-    if (escRow?.provider_ref === reference) return NextResponse.json({ received: true, already: true });
+    if (escRow?.provider_ref === reference) {
+      const { data: hired } = await admin.from("gigs").select("id, creator_id, brand_id").eq("id", existing.id).maybeSingle();
+      if (hired) await awardReferral(admin, { creatorId: hired.creator_id, gigId: hired.id, brandId: hired.brand_id });
+      return NextResponse.json({ received: true, already: true });
+    }
     if (escRow) {
       const refunded = await refundStrayCharge(reference, "Duplicate offer charge");
       if (!refunded) return new NextResponse("refund failed", { status: 500 });
@@ -266,6 +271,7 @@ export async function POST(request: Request) {
     { userId: offer.creator_id, payload: { type: "gig_update", title: "You've been hired", body: `"${offer.title}" is funded and ready to start.`, href: `/gigs/${gig.id}`, ctaLabel: "Start the gig" } },
     { userId: offer.brand_id, payload: { type: "gig_update", title: "Escrow funded", body: `"${offer.title}" is funded. The creator can start now.`, href: `/gigs/${gig.id}`, ctaLabel: "View the gig" } },
   ]);
+  await awardReferral(admin, { creatorId: offer.creator_id, gigId: gig.id, brandId: offer.brand_id });
 
   return NextResponse.json({ received: true });
 }
@@ -295,6 +301,7 @@ async function handleTransferEvent(
 
   if (type === "transfer.success") {
     await admin.from("payouts").update({ status: "paid" }).eq("id", payout.id).neq("status", "paid");
+    await markReferralPaid(admin, payout.id);
     await notifyUser(admin, payout.creator_id, {
       type: "payout",
       title: "You've been paid",

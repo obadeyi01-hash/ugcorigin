@@ -2,12 +2,14 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { serializeGoals } from "@/lib/brand-options";
 import { generateUniqueHandle } from "@/lib/username";
 import { sendVerifyPrompt } from "@/lib/notify";
 import { cleanNicheList } from "@/lib/niches";
+import { cleanReferralCode } from "@/lib/referrals/code";
 
 const configured = () => !!process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -102,6 +104,14 @@ export async function createCreatorProfile(input: CreatorInput): Promise<ActionR
     }
     return { error: error.message };
   }
+
+  const invite = cleanReferralCode((await cookies()).get("ugc_ref")?.value);
+  let referredBy: string | null = null;
+  if (invite && invite !== handle) {
+    const { data: referrer } = await admin.from("creator_profiles").select("id").eq("referral_code", invite).maybeSingle();
+    if (referrer && referrer.id !== user.id) referredBy = referrer.id;
+  }
+  await admin.from("creator_profiles").update({ referral_code: handle, referred_by: referredBy }).eq("id", user.id);
 
   await sendVerifyPrompt(admin, user.id, "creator");
   revalidatePath("/dashboard");

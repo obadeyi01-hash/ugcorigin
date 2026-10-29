@@ -22,7 +22,7 @@ Creators appear in the directory and in the sitemap only when their profile is l
 
 ## Money
 - Creators keep 100% of their agreed rate (no creator-side cut).
-- Brands pay a small flat service fee, always shown before payment; it funds escrow, verification and payouts.
+- Brands pay a 12% service fee on the creator rate, plus the current tax. A ₦20,000 video costs the brand ₦22,400 before tax. The creator keeps ₦20,000. The exact charge is shown before payment.
 - Creators set their own rates within tier-based price floors (from NGN 10,000 at entry); they climb 7 tiers (Origin, Rising, Pro, Standout, Elite, Signature, Luminary) by completing work and earning reviews.
 - Per-view campaigns: brands fund a pool and pay creators per 1,000 verified views. The payout cannot exceed the money still in the pool.
 

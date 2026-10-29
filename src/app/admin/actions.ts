@@ -16,6 +16,7 @@ import { requiresDualControl } from "@/lib/admin/security";
 import { formatNaira } from "@/lib/utils";
 import { publishFacePhoto } from "@/lib/identity/face-photo";
 import { recordProfileNote } from "@/lib/admin/profile-notes";
+import { markReferralPaid } from "@/lib/referrals/award";
 
 type Admin = ReturnType<typeof createAdminClient>;
 type Res = { error?: string; ok?: boolean; pendingApproval?: boolean };
@@ -501,6 +502,7 @@ export async function adminMarkPayoutPaid(payoutId: string): Promise<Res> {
   const admin = createAdminClient();
   const { error: e } = await admin.from("payouts").update({ status: "paid" }).eq("id", payoutId).neq("status", "paid");
   if (e) return { error: e.message };
+  await markReferralPaid(admin, payoutId);
   await logAudit(admin, ctx!.userId, "payout.mark_paid", { targetType: "payout", targetId: payoutId });
   revalidatePath("/admin/finance");
   return { ok: true };

@@ -16,8 +16,28 @@ import { createClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/role";
 import { formatNaira } from "@/lib/utils";
 import { Notice } from "@/components/ui/notice";
+import { JsonLd, SITE_URL } from "@/components/seo/json-ld";
+import { createAdminClient } from "@/lib/supabase/admin";
 
-export const metadata: Metadata = { title: "Brief" };
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return { title: "Brief" };
+  const { data } = await createAdminClient()
+    .from("briefs")
+    .select("title, description, status, brand:brand_profiles!inner(verification_status)")
+    .eq("id", id)
+    .maybeSingle();
+  const brand = data?.brand as { verification_status?: string } | { verification_status?: string }[] | null;
+  const verified = Array.isArray(brand) ? brand[0]?.verification_status === "verified" : brand?.verification_status === "verified";
+  if (!data || data.status !== "open" || !verified) return { title: "Brief", robots: { index: false, follow: false } };
+  const description = (data.description ?? "").replace(/\s+/g, " ").trim().slice(0, 160);
+  return {
+    title: data.title,
+    description,
+    alternates: { canonical: `/briefs/${id}` },
+    openGraph: { title: data.title, description, url: `/briefs/${id}` },
+  };
+}
 
 async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -28,7 +48,7 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
 
   const { data: brief } = await supabase
     .from("briefs")
-    .select("id, brand_id, title, description, budget_naira, slots, deadline, niches, status, brand:brand_profiles(company_name)")
+    .select("id, brand_id, title, description, budget_naira, slots, deadline, niches, status, created_at, brand:brand_profiles(company_name)")
     .eq("id", id)
     .maybeSingle();
 
@@ -73,8 +93,30 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
     myAppStatus = mine?.status ?? null;
   }
 
+  const posted = (brief as { created_at?: string }).created_at;
+  const jobLd = brief.status === "open" && brief.budget_naira ? {
+    "@context": "https://schema.org",
+    "@type": "JobPosting",
+    title: brief.title,
+    description: brief.description ?? brief.title,
+    datePosted: posted ? posted.slice(0, 10) : undefined,
+    validThrough: brief.deadline ?? undefined,
+    employmentType: "CONTRACTOR",
+    directApply: true,
+    hiringOrganization: { "@type": "Organization", name: company, url: SITE_URL },
+    jobLocation: { "@type": "Place", address: { "@type": "PostalAddress", addressCountry: "NG" } },
+    applicantLocationRequirements: { "@type": "Country", name: "Nigeria" },
+    baseSalary: {
+      "@type": "MonetaryAmount",
+      currency: "NGN",
+      value: { "@type": "QuantitativeValue", value: brief.budget_naira, unitText: "VIDEO" },
+    },
+    url: `${SITE_URL}/briefs/${id}`,
+  } : null;
+
   return (
     <div className="grid gap-8 py-10 md:grid-cols-[1fr_340px]">
+      {jobLd && <JsonLd data={jobLd} />}
       <div>
         <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{brief.title}</h1>
         <p className="mt-1.5 text-ink-3">{company}</p>

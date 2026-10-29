@@ -73,8 +73,8 @@ export default function PricingPage() {
           {/* The real fee detail lives in the docs + is shown in-app before you pay. */}
           <div className="mx-auto mt-10 max-w-4xl rounded-2xl border border-line bg-surface-2 p-6 text-center">
             <p className="text-ink-2">
-              Brands pay a small flat service fee that funds escrow, verification and payouts. You always see the exact amount
-              before you fund, nothing is hidden.
+              Brands pay a 12% service fee on the creator&apos;s rate. A ₦20,000 video is ₦2,400 in fee, so the brand
+              pays ₦22,400 plus the current tax. The creator keeps the full ₦20,000. Both numbers are shown before you fund.
             </p>
             <Link href="/docs/fees-and-payments" className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline">
               See exactly how fees &amp; payments work <ArrowRight className="size-4" />

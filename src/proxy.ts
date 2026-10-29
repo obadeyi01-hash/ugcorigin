@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
+import { cleanReferralCode } from "@/lib/referrals/code";
 
 // Next 16 renamed the `middleware` convention to `proxy` (same API).
 export async function proxy(request: NextRequest) {
@@ -17,7 +18,18 @@ export async function proxy(request: NextRequest) {
     dest.searchParams.set("detail", detail.slice(0, 180));
     return NextResponse.redirect(dest);
   }
-  return await updateSession(request);
+  const response = await updateSession(request);
+  const ref = cleanReferralCode(request.nextUrl.searchParams.get("ref"));
+  if (ref) {
+    response.cookies.set("ugc_ref", ref, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: request.nextUrl.protocol === "https:",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
+  }
+  return response;
 }
 
 export const config = {

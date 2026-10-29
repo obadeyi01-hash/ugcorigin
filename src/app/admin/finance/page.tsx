@@ -148,7 +148,7 @@ async function FinanceInner({ searchParams }: { searchParams: Promise<Record<str
             <CardBody className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="font-medium text-ink">{p.creator?.display_name || (p.creator?.handle ? `@${p.creator.handle}` : "Creator")}</p>
-                <p className="text-xs text-ink-3">{formatNaira(p.amount_naira)} · {p.gig?.title ?? ""} · <span className="capitalize">{p.status}</span></p>
+                <p className="text-xs text-ink-3">{formatNaira(p.amount_naira)} · {p.gig?.title || "Creator referral"} · <span className="capitalize">{p.status}</span></p>
               </div>
               <PayoutControls payoutId={p.id} readonly={readonly} />
             </CardBody>
@@ -176,7 +176,7 @@ async function FinanceInner({ searchParams }: { searchParams: Promise<Record<str
                 <CardBody className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="font-medium text-ink">{p.creator?.display_name || (p.creator?.handle ? `@${p.creator.handle}` : "Creator")}</p>
-                    <p className="text-xs text-ink-3">{formatNaira(p.amount_naira)} · {p.gig?.title ?? ""} · <span className="font-medium text-error">transfer failed</span></p>
+                    <p className="text-xs text-ink-3">{formatNaira(p.amount_naira)} · {p.gig?.title || "Creator referral"} · <span className="font-medium text-error">transfer failed</span></p>
                   </div>
                   <RetryPayoutControls payoutId={p.id} readonly={readonly} />
                 </CardBody>

@@ -23,6 +23,10 @@ import { getAdminContext } from "@/lib/admin/rbac";
 import { ROLE_LABEL } from "@/lib/admin/roles";
 import { loadRateSuggestion } from "@/lib/rates/load";
 import { rateMessage } from "@/lib/rates/guides";
+import { CopyInviteLink } from "@/components/dashboard/invite-earn";
+import { SITE_URL } from "@/components/seo/json-ld";
+import { formatNaira } from "@/lib/utils";
+import { REFERRAL_HIRE_NAIRA } from "@/lib/referrals/award";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -81,7 +85,7 @@ async function DashboardInner() {
   // Named columns only. phone, bank fields, and rc_number are not selectable
   // by the signed-in role, and select("*") would fail once that migration is applied.
   const [{ data: creator }, { data: brand }] = await Promise.all([
-    supabase.from("creator_profiles").select("id, handle, display_name, location, niches, starting_rate_naira, avatar_url, tier, is_live, suspended, completeness, identity_verified, bank_verified").eq("id", user.id).maybeSingle(),
+    supabase.from("creator_profiles").select("id, handle, display_name, location, niches, starting_rate_naira, avatar_url, tier, is_live, suspended, completeness, identity_verified, bank_verified, referral_code").eq("id", user.id).maybeSingle(),
     supabase.from("brand_profiles").select("id, company_name, website, verification_status").eq("id", user.id).maybeSingle(),
   ]);
 
@@ -111,6 +115,22 @@ async function DashboardInner() {
   const { data: videos } = creator
     ? await supabase.from("profile_videos").select("id, url, poster_url").eq("creator_id", user.id).order("position", { ascending: true })
     : { data: [] as { id: string; url: string; poster_url: string | null }[] };
+
+  let invited = 0;
+  let referralEarned = 0;
+  let referralPaid = 0;
+  if (creator) {
+    const admin = createAdminClient();
+    const [{ count }, { data: rewards }] = await Promise.all([
+      admin.from("creator_profiles").select("id", { count: "exact", head: true }).eq("referred_by", user.id),
+      admin.from("referral_rewards").select("amount_naira, status").eq("referrer_id", user.id),
+    ]);
+    invited = count ?? 0;
+    for (const reward of rewards ?? []) {
+      referralEarned += reward.amount_naira;
+      if (reward.status === "paid") referralPaid += reward.amount_naira;
+    }
+  }
 
   // Brand recommendations: a mix of top performers + newly-vetted creators.
   let recs: RecCreator[] = [];
@@ -307,6 +327,24 @@ async function DashboardInner() {
                   <BoostButton targetType="creator" targetId={creator.id} label="Boost my profile" variant="secondary" size="sm" />
                 )}
               </div>
+            </CardBody>
+          </Card>
+        )}
+
+        {creator?.handle && (
+          <Card className="mt-6 max-w-2xl">
+            <CardBody>
+              <p className="font-display font-semibold text-ink">Invite a creator, earn {formatNaira(REFERRAL_HIRE_NAIRA)}</p>
+              <p className="mt-1 text-sm text-ink-2">
+                When someone joins with your link and a brand hires them, you earn {formatNaira(REFERRAL_HIRE_NAIRA)}. It is paid to your bank, and it is not taken from their rate. You can earn it even if you are not the one hired.
+              </p>
+              <p className="mt-3 break-all text-xs text-ink-3">{SITE_URL}/signup?role=creator&amp;ref={creator.referral_code || creator.handle}</p>
+              <div className="mt-3">
+                <CopyInviteLink url={`${SITE_URL}/signup?role=creator&ref=${creator.referral_code || creator.handle}`} />
+              </div>
+              <p className="mt-3 text-xs text-ink-3">
+                {invited} joined with your link · {formatNaira(referralEarned)} earned{referralPaid > 0 ? ` · ${formatNaira(referralPaid)} paid` : ""}
+              </p>
             </CardBody>
           </Card>
         )}
