@@ -58,7 +58,11 @@ export function CreatorCard({
         src={creator.image}
         alt={`${creator.name}, creator`}
         fill
-        sizes="(max-width: 640px) 72vw, (max-width: 1024px) 33vw, 300px"
+        sizes={
+          variant === "overlay"
+            ? "(max-width: 640px) 72vw, (max-width: 1024px) 33vw, 300px"
+            : "(max-width: 640px) 46vw, (max-width: 1024px) 24vw, 200px"
+        }
         priority={creator.priority}
         data-zoom
         className="object-cover"
@@ -125,7 +129,7 @@ export function CreatorCard({
   } else {
     // Directory grid: portrait media + a compact body. Niches reveal on the image.
     card = (
-      <article className="u-card u-zoom group overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
+      <article className="u-card u-zoom group overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
         <div className="relative aspect-[5/6] overflow-hidden bg-surface-2">
           {media}
 
@@ -150,9 +154,9 @@ export function CreatorCard({
           )}
         </div>
 
-        <div className="min-w-0 p-2.5 sm:p-3">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <h3 className="min-w-0 truncate font-display text-sm font-semibold text-ink">{creator.name}</h3>
+        <div className="min-w-0 p-2">
+          <div className="flex min-w-0 items-center gap-1">
+            <h3 className="min-w-0 truncate font-display text-[13px] font-semibold leading-tight text-ink">{creator.name}</h3>
             {creator.verified && <VerifiedBadge compact />}
             {creator.pro && (
               <span className="shrink-0 rounded-full bg-ink px-1.5 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide text-paper">
@@ -160,12 +164,12 @@ export function CreatorCard({
               </span>
             )}
           </div>
-          <div className="mt-1 flex items-center justify-between gap-2">
-            <p className="flex min-w-0 items-center gap-1 truncate text-xs text-ink-3">
+          <div className="mt-1 flex items-center justify-between gap-1.5">
+            <p className="flex min-w-0 items-center gap-1 truncate text-[11px] text-ink-3">
               <MapPin className="size-3 shrink-0" aria-hidden />
               <span className="truncate">{creator.location}</span>
             </p>
-            <span className="shrink-0 text-xs font-semibold text-ink">
+            <span className="shrink-0 text-[11px] font-semibold text-ink">
               <span className="font-normal text-ink-3">From </span>
               {formatNaira(creator.startingRate)}
             </span>

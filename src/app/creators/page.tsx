@@ -44,13 +44,15 @@ type SP = { q?: string; niche?: string; region?: string; max?: string; platform?
 
 const PAGE_SIZE = 24;
 
+const CARD_GRID = "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5";
+
 function GridSkeleton() {
   return (
-    <div className="mt-8 grid grid-cols-2 gap-5 lg:grid-cols-3">
+    <div className={`mt-8 ${CARD_GRID}`}>
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="overflow-hidden rounded-2xl border border-line bg-surface">
           <div className="aspect-[5/6] animate-pulse bg-surface-2" />
-          <div className="space-y-2 p-3">
+          <div className="space-y-2 p-2">
             <div className="h-4 w-2/3 animate-pulse rounded bg-surface-2" />
             <div className="h-3 w-1/3 animate-pulse rounded bg-surface-2" />
           </div>
@@ -260,7 +262,7 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
             <span className="inline-block size-1.5 rounded-full bg-accent" aria-hidden />
             Featured creators
           </h2>
-          <div className="mt-3 grid grid-cols-2 gap-5 lg:grid-cols-3">
+          <div className={`mt-3 ${CARD_GRID}`}>
             {featured.map((c, i) => (
               <CreatorCard key={`f-${c.handle ?? c.name}`} creator={{ ...c, priority: i < 3 }} />
             ))}
@@ -273,7 +275,7 @@ async function CreatorResults({ searchParams }: { searchParams: Promise<SP> }) {
         {sort === "" ? " · recommended for you" : ""}
         {totalPages > 1 ? ` · page ${page} of ${totalPages}` : ""}
       </p>
-      <div className="mt-4 grid grid-cols-2 gap-5 lg:grid-cols-3">
+      <div className={`mt-4 ${CARD_GRID}`}>
         {creators.map((c, i) => (
           <CreatorCard key={c.handle ?? c.name} creator={{ ...c, priority: i < 3 }} />
         ))}
