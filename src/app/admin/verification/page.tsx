@@ -8,6 +8,7 @@ import { VerificationRow } from "@/components/admin/verification-row";
 import { BrandVerificationRow } from "@/components/admin/brand-verification-row";
 import { IdentitySubmissionRow } from "@/components/admin/identity-submission-row";
 import { EntrySignalsControl } from "@/components/admin/entry-signals-control";
+import { VerifyReminder } from "@/components/admin/verify-reminder";
 import { requireSection, isReadonly } from "@/lib/admin/rbac";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -204,7 +205,10 @@ async function VerificationInner({ searchParams }: { searchParams: Promise<Recor
                     <Flag on={!!c.is_live} label="Live" />
                   </div>
                 </div>
-                <VerificationRow id={c.id} identityVerified={!!c.identity_verified} isLive={!!c.is_live} readonly={readonly} />
+                <div className="flex flex-col items-end gap-2">
+                  <VerificationRow id={c.id} identityVerified={!!c.identity_verified} isLive={!!c.is_live} readonly={readonly} />
+                  <VerifyReminder userId={c.id} role="creator" readonly={readonly} />
+                </div>
               </div>
               <EntrySignalsControl
                 creatorId={c.id}
@@ -243,7 +247,10 @@ async function VerificationInner({ searchParams }: { searchParams: Promise<Recor
                   <Link href={`/admin/users/${b.id}`} className="font-semibold text-ink hover:text-accent">{b.company_name || "Unnamed business"}</Link>
                   <p className="text-xs text-ink-3">RC/CAC: {b.rc_number || "—"}{b.verification_submitted_at ? ` · submitted ${new Date(b.verification_submitted_at).toLocaleDateString()}` : ""} · full record</p>
                 </div>
-                <BrandVerificationRow brandId={b.id} readonly={readonly} />
+                <div className="flex flex-col items-end gap-2">
+                  <BrandVerificationRow brandId={b.id} readonly={readonly} />
+                  <VerifyReminder userId={b.id} role="brand" readonly={readonly} />
+                </div>
               </div>
             </CardBody>
           </Card>
