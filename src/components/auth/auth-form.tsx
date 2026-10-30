@@ -82,6 +82,10 @@ export function AuthForm({ mode }: { mode: Mode }) {
   // Role is chosen in onboarding, not here. We only carry a role through when a
   // deep link (e.g. "Become a creator") already expressed intent.
   const roleParam = params.get("role");
+  // A same-site path to land on after sign-in (e.g. /login?next=/briefs/abc).
+  // Carried through /auth/callback; the server re-validates it with safeNext.
+  const rawNext = params.get("next");
+  const nextParam = rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : null;
   const [email, setEmail] = useState("");
   const [sentTo, setSentTo] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
@@ -93,8 +97,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
   // on must match the PKCE cookie. NEXT_PUBLIC_SITE_URL is often still
   // localhost in a deployed env, and a different host drops the session.
   function redirectTo(): string {
-    const roleQuery = roleParam === "brand" || roleParam === "creator" ? `?role=${roleParam}` : "";
-    return `${window.location.origin}/auth/callback${roleQuery}`;
+    const q = new URLSearchParams();
+    if (roleParam === "brand" || roleParam === "creator") q.set("role", roleParam);
+    if (nextParam) q.set("next", nextParam);
+    const query = q.toString();
+    return `${window.location.origin}/auth/callback${query ? `?${query}` : ""}`;
   }
   const urlError = describeAuthError(params.get("error"), params.get("detail"));
 

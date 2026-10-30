@@ -53,10 +53,15 @@ async function BriefsInner({ searchParams }: { searchParams: Promise<SP> }) {
   const boosted = new Set<string>();
   if (configured) {
     const supabase = await createClient();
+    // A brief past its deadline is retired from the public listing even if its
+    // status is still "open" (null deadline = no expiry).
+    const today = new Date().toISOString().slice(0, 10);
+    const notExpired = `deadline.is.null,deadline.gte.${today}`;
     const { count } = await supabase
       .from("briefs")
       .select("id", { count: "exact", head: true })
-      .eq("status", "open");
+      .eq("status", "open")
+      .or(notExpired);
     total = count ?? 0;
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
     if (page > totalPages) page = totalPages;
@@ -66,6 +71,7 @@ async function BriefsInner({ searchParams }: { searchParams: Promise<SP> }) {
         .from("briefs")
         .select("id, title, description, budget_naira, slots, deadline, location, format, niches, tags, conceal_brand, brand:brand_profiles(company_name)")
         .eq("status", "open")
+        .or(notExpired)
         .order("created_at", { ascending: false })
         .range(from, from + PAGE_SIZE - 1),
       supabase.rpc("active_boost_target_ids", { ttype: "brief" }),

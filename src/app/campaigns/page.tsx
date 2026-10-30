@@ -43,10 +43,13 @@ async function Inner({ searchParams }: { searchParams: Promise<SP> }) {
   const boosted = new Set<string>();
   if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
     const supabase = await createClient();
+    // Only live campaigns show: funded and still open. A fully-spent pool is
+    // flipped to "completed" in settle.ts, so status="open" retires it here.
     const { count } = await supabase
       .from("campaigns")
       .select("id", { count: "exact", head: true })
-      .eq("funded", true);
+      .eq("funded", true)
+      .eq("status", "open");
     total = count ?? 0;
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
     if (page > totalPages) page = totalPages;
@@ -56,6 +59,7 @@ async function Inner({ searchParams }: { searchParams: Promise<SP> }) {
         .from("campaigns")
         .select("id, title, description, niches, pool_naira, spent_naira, rate_per_1000_naira, status, conceal_brand, brand:brand_profiles(company_name)")
         .eq("funded", true)
+        .eq("status", "open")
         .order("created_at", { ascending: false })
         .range(from, from + PAGE_SIZE - 1),
       supabase.rpc("active_boost_target_ids", { ttype: "campaign" }),

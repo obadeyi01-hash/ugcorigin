@@ -43,7 +43,7 @@ async function Inner({ params }: { params: Promise<{ id: string }> }) {
   } = await supabase.auth.getUser();
   const isOwner = !!user && c.brand_id === user.id;
   // Submitting is a creator action — hide the form from brand-only accounts.
-  const { showCreatorCtas, isCreator, creatorLive } = await getViewer();
+  const { userId, showCreatorCtas, isCreator, creatorLive } = await getViewer();
   const conceal = !!(c as { conceal_brand?: boolean }).conceal_brand;
   const companyName = (c as unknown as { brand?: { company_name: string | null } }).brand?.company_name ?? null;
   const remaining = c.pool_naira - c.spent_naira;
@@ -113,19 +113,31 @@ async function Inner({ params }: { params: Promise<{ id: string }> }) {
                   </div>
                 </div>
               )}
-              {!isOwner && isOpen && showCreatorCtas && isCreator && !creatorLive && (
+              {/* Submitting is gated to a logged-in, verified, LIVE creator.
+                  Guests/non-creators get a prompt, never the form. */}
+              {!isOwner && isOpen && !userId && (
+                <Notice tone="info" title="Sign in and verify as a creator to submit" href={`/login?next=/campaigns/${id}`} action="Sign in">
+                  Submissions are for verified creators. Sign in, then finish creator verification to submit to this campaign.
+                </Notice>
+              )}
+              {!isOwner && isOpen && userId && !showCreatorCtas && (
+                <p className="text-sm text-ink-3">Creators submit clips to per-view campaigns. Fund your own campaign to get submissions.</p>
+              )}
+              {!isOwner && isOpen && userId && showCreatorCtas && !isCreator && (
+                <Notice tone="info" title="Set up a creator profile" href="/onboarding?role=creator" action="Get started">
+                  Submissions are for verified creators. Create a creator profile and finish verification to submit.
+                </Notice>
+              )}
+              {!isOwner && isOpen && userId && showCreatorCtas && isCreator && !creatorLive && (
                 <Notice tone="warning" title="You're not live yet" href="/verify" action="Finish verification">
                   Submissions stay closed until verification is done. Live creators are the only ones brands can hire.
                 </Notice>
               )}
-              {!isOwner && isOpen && showCreatorCtas && (!isCreator || creatorLive) && (mySub ? (
+              {!isOwner && isOpen && userId && showCreatorCtas && isCreator && creatorLive && (mySub ? (
                 <div className="rounded-xl border border-success/30 bg-success/10 p-3 text-sm text-ink">You submitted, status: <span className="font-medium capitalize">{mySub.status}</span>.</div>
               ) : (
                 <CampaignSubmit campaignId={id} />
               ))}
-              {!isOwner && isOpen && !showCreatorCtas && (
-                <p className="text-sm text-ink-3">Creators submit clips to per-view campaigns. Fund your own campaign to get submissions.</p>
-              )}
               {!isOwner && !isOpen && <p className="text-sm text-ink-3">This campaign isn&apos;t open for submissions.</p>}
             </div>
           </CardBody>
