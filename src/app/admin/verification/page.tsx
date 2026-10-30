@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { Check, X } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
 import { Card, CardBody } from "@/components/ui/card";
 import { VerificationRow } from "@/components/admin/verification-row";
 import { BrandVerificationRow } from "@/components/admin/brand-verification-row";
@@ -262,7 +263,7 @@ async function VerificationInner({ searchParams }: { searchParams: Promise<Recor
 
 export default function AdminVerificationPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
-    <Suspense fallback={<div className="min-h-dvh" />}>
+    <Suspense fallback={<AdminShellSkeleton />}>
       <VerificationInner searchParams={searchParams} />
     </Suspense>
   );

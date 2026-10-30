@@ -33,7 +33,7 @@ function CategoryTile({ tile, priority = false }: { tile: Tile; priority?: boole
         tile.tint,
       )}
     >
-      <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-surface-2">
+      <div className="relative aspect-square overflow-hidden rounded-xl bg-surface-2 sm:aspect-[4/5]">
         <Image
           src={img(tile.image)}
           alt={`${tile.label} creators on UGCOrigin`}

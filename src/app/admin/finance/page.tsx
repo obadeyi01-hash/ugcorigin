@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
 import { Card, CardBody } from "@/components/ui/card";
 import { EscrowControls, PayoutControls, RetryPayoutControls, ReleaseApprovalControls } from "@/components/admin/finance-controls";
 import { requireSection, isReadonly } from "@/lib/admin/rbac";
@@ -209,7 +210,7 @@ async function FinanceInner({ searchParams }: { searchParams: Promise<Record<str
 
 export default function AdminFinancePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
-    <Suspense fallback={<div className="min-h-dvh" />}>
+    <Suspense fallback={<AdminShellSkeleton />}>
       <FinanceInner searchParams={searchParams} />
     </Suspense>
   );

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
 import { Card, CardBody } from "@/components/ui/card";
 import { TierBadge } from "@/components/ui/tier-badge";
 import { TierConfigEditor } from "@/components/admin/tier-config-editor";
@@ -147,7 +148,7 @@ async function TiersInner({ searchParams }: { searchParams: Promise<Record<strin
 
 export default function AdminTiersPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
-    <Suspense fallback={<div className="min-h-dvh" />}>
+    <Suspense fallback={<AdminShellSkeleton />}>
       <TiersInner searchParams={searchParams} />
     </Suspense>
   );

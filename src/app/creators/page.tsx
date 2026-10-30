@@ -51,7 +51,7 @@ function GridSkeleton() {
     <div className={`mt-8 ${CARD_GRID}`}>
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="overflow-hidden rounded-2xl border border-line bg-surface">
-          <div className="aspect-[5/6] animate-pulse bg-surface-2" />
+          <div className="aspect-square animate-pulse bg-surface-2 sm:aspect-[5/6]" />
           <div className="space-y-2 p-2">
             <div className="h-4 w-2/3 animate-pulse rounded bg-surface-2" />
             <div className="h-3 w-1/3 animate-pulse rounded bg-surface-2" />

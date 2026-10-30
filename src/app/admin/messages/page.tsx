@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
 import { Card, CardBody } from "@/components/ui/card";
 import { AdminListControls } from "@/components/admin/list-controls";
 import { requireSection } from "@/lib/admin/rbac";
@@ -121,7 +122,7 @@ async function MessagesInner({ searchParams }: { searchParams: Promise<Record<st
 
 export default function AdminMessagesPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
-    <Suspense fallback={<div className="min-h-dvh" />}>
+    <Suspense fallback={<AdminShellSkeleton />}>
       <MessagesInner searchParams={searchParams} />
     </Suspense>
   );

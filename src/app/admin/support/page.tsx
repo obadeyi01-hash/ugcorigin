@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
 import { Card, CardBody } from "@/components/ui/card";
 import { TicketReply } from "@/components/admin/ticket-reply";
 import { AdminListControls } from "@/components/admin/list-controls";
@@ -127,7 +128,7 @@ async function SupportInner({ searchParams }: { searchParams: Promise<Record<str
 
 export default function AdminSupportPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
-    <Suspense fallback={<div className="min-h-dvh" />}>
+    <Suspense fallback={<AdminShellSkeleton />}>
       <SupportInner searchParams={searchParams} />
     </Suspense>
   );

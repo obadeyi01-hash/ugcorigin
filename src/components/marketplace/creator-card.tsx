@@ -90,7 +90,7 @@ export function CreatorCard({
     // Info-on-image: the shortest, most editorial card. Essentials (name, rate)
     // stay visible for touch; location + niche reveal on hover as the "little more".
     card = (
-      <article className="u-card u-zoom group relative aspect-[5/6] overflow-hidden rounded-2xl border border-line bg-surface-2 shadow-sm">
+      <article className="u-card u-zoom group relative aspect-square overflow-hidden rounded-2xl border border-line bg-surface-2 shadow-sm sm:aspect-[5/6]">
         {media}
         {/* legibility scrim */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-obsidian/85 via-obsidian/15 to-transparent" />
@@ -130,7 +130,7 @@ export function CreatorCard({
     // Directory grid: portrait media + a compact body. Niches reveal on the image.
     card = (
       <article className="u-card u-zoom group overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
-        <div className="relative aspect-[5/6] overflow-hidden bg-surface-2">
+        <div className="relative aspect-square overflow-hidden bg-surface-2 sm:aspect-[5/6]">
           {media}
 
           <div className="absolute inset-x-2.5 top-2.5 flex flex-col items-start gap-1.5">

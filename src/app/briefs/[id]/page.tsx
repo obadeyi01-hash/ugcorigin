@@ -5,6 +5,7 @@ import { CalendarClock, MapPin, Users } from "lucide-react";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { Container } from "@/components/ui/container";
+import { DetailSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { BrandByline, BriefTagList, PRIVATE_BRAND } from "@/components/briefs/brief-facts";
@@ -190,7 +191,7 @@ export default function BriefPage({ params }: { params: Promise<{ id: string }> 
       <SiteHeader />
       <main className="flex-1">
         <Container>
-          <Suspense fallback={<div className="py-20" />}>
+          <Suspense fallback={<DetailSkeleton />}>
             <BriefInner params={params} />
           </Suspense>
         </Container>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
 import { RolesManager, type AdminRow } from "@/components/admin/roles-manager";
 import { AdminListControls } from "@/components/admin/list-controls";
 import { requireSection, type AdminRole } from "@/lib/admin/rbac";
@@ -55,7 +56,7 @@ async function RolesInner({ searchParams }: { searchParams: Promise<Record<strin
 
 export default function AdminRolesPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
-    <Suspense fallback={<div className="min-h-dvh" />}>
+    <Suspense fallback={<AdminShellSkeleton />}>
       <RolesInner searchParams={searchParams} />
     </Suspense>
   );

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
 import { Card, CardBody } from "@/components/ui/card";
 import { BroadcastComposer } from "@/components/admin/broadcast-composer";
 import { requireSection, isReadonly } from "@/lib/admin/rbac";
@@ -31,7 +32,7 @@ async function NotificationsInner() {
 
 export default function AdminNotificationsPage() {
   return (
-    <Suspense fallback={<div className="min-h-dvh" />}>
+    <Suspense fallback={<AdminShellSkeleton />}>
       <NotificationsInner />
     </Suspense>
   );

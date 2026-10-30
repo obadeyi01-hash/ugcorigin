@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
 import { requireSection } from "@/lib/admin/rbac";
 import { createClient } from "@/lib/supabase/server";
 import { formatNaira } from "@/lib/utils";
@@ -58,7 +59,7 @@ async function OverviewInner() {
 
 export default function AdminOverviewPage() {
   return (
-    <Suspense fallback={<div className="min-h-dvh" />}>
+    <Suspense fallback={<AdminShellSkeleton />}>
       <OverviewInner />
     </Suspense>
   );
