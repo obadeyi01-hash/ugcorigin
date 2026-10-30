@@ -62,7 +62,7 @@ export function BriefForm() {
         <Field label="Budget per creator (₦)">
           <Input type="number" inputMode="numeric" value={budget || ""} onChange={(e) => setBudget(Number(e.target.value))} />
         </Field>
-        <Field label="Creators needed" hint="Up to 100 — hire at scale.">
+        <Field label="Creators needed" hint="Up to 100, hire at scale.">
           <Input type="number" inputMode="numeric" min={1} max={100} value={slots || ""} onChange={(e) => setSlots(Math.min(100, Math.max(1, Number(e.target.value))))} />
         </Field>
         <Field label="Deadline" hint="Optional">
@@ -82,7 +82,7 @@ export function BriefForm() {
       <Button onClick={submit} loading={pending} disabled={!title.trim() || !(budget > 0)}>
         Post brief <ArrowRight className="size-4" />
       </Button>
-      <p className="text-xs text-ink-3">Creators apply, you pick your favourites, and fund escrow per creator. You only pay for work you approve.</p>
+      <p className="text-xs text-ink-3">Creators apply, you pick your favourites, and fund the gig per creator. You only pay for work you approve.</p>
     </div>
   );
 }

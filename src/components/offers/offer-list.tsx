@@ -108,13 +108,13 @@ export function OfferList({ offers, taxBps = DEFAULT_TAX_BPS }: { offers: OfferR
                     </>
                   )}
                   {o.role === "creator" && o.status === "accepted" && (
-                    <span className="text-xs text-ink-3">Waiting for the brand to fund escrow.</span>
+                    <span className="text-xs text-ink-3">Waiting for the brand to fund the gig.</span>
                   )}
                   {o.role === "brand" && o.status === "pending" && (
                     <Button size="sm" variant="ghost" onClick={() => run(o.id, () => declineOfferAction(o.id))} disabled={busy}>Withdraw</Button>
                   )}
                   {o.role === "brand" && o.status === "accepted" && (
-                    <Button size="sm" loading={busy} onClick={() => run(o.id, () => fundOfferAction(o.id))}>Fund escrow</Button>
+                    <Button size="sm" loading={busy} onClick={() => run(o.id, () => fundOfferAction(o.id))}>Fund the gig</Button>
                   )}
                 </div>
               </div>

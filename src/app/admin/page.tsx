@@ -38,7 +38,7 @@ async function OverviewInner() {
     { label: "Brands", value: brands },
     { label: "Gigs", value: gigs },
     { label: "Open disputes", value: openDisputes },
-    { label: "Escrow held", value: formatNaira(escrowHeld) },
+    { label: "Funds held", value: formatNaira(escrowHeld) },
   ];
 
   return (

@@ -23,18 +23,18 @@ function nextSteps(items: string[]): string {
 export function creatorApprovedEmail(to: string, opts: { name?: string | null; handle?: string | null }): EmailInput {
   const name = opts.name?.trim() ? esc(opts.name.trim().split(/\s+/)[0]) : "there";
   const bodyHtml = `
-    <p style="${P}">Hi ${name}, great news — your identity is verified and your UGCOrigin profile is now <strong>live in the creator directory</strong>. Brands can find you, view your work, and send you offers.</p>
+    <p style="${P}">Hi ${name}, great news, your identity is verified and your UGCOrigin profile is now <strong>live in the creator directory</strong>. Brands can find you, view your work, and send you offers.</p>
     <p style="${P}">Here's how to make the most of it:</p>
     ${nextSteps([
       "Add your bank details so payouts land the moment a gig is approved.",
-      "Polish your profile — add packages, portfolio links and a few sample videos.",
+      "Polish your profile, add packages, portfolio links and a few sample videos.",
       "Browse open briefs and apply to the ones that fit your niche.",
-      "Keep your response time quick — it lifts you up the tier ladder.",
+      "Keep your response time quick, it lifts you up the tier ladder.",
     ])}
     <p style="${P}">Welcome aboard. We're glad you're here.</p>`;
   return {
     to,
-    subject: "You're verified — your UGCOrigin profile is live 🎉",
+    subject: "You're verified, your UGCOrigin profile is live 🎉",
     heading: "You're verified and live",
     body: "Your identity is verified and your profile is now live in the creator directory.",
     bodyHtml,
@@ -144,12 +144,12 @@ export function brandRejectedEmail(
 export function brandApprovedEmail(to: string, opts: { companyName?: string | null }): EmailInput {
   const company = opts.companyName?.trim() ? esc(opts.companyName.trim()) : "your business";
   const bodyHtml = `
-    <p style="${P}">Good news — <strong>${company}</strong> is now a verified brand on UGCOrigin. Creators see a <strong>Verified brand</strong> badge on your offers and briefs, which builds trust and gets you more (and better) applicants.</p>
+    <p style="${P}">Good news, <strong>${company}</strong> is now a verified brand on UGCOrigin. Creators see a <strong>Verified brand</strong> badge on your offers and briefs, which builds trust and gets you more (and better) applicants.</p>
     <p style="${P}">Here's what to do next:</p>
     ${nextSteps([
-      "Post a brief describing the content you need — the clearer the ask, the stronger the responses.",
+      "Post a brief describing the content you need. The clearer the ask, the stronger the responses.",
       "Browse the creator directory and make direct offers to creators you like.",
-      "Fund gigs through secure escrow — creators only get paid once you approve the work.",
+      "Fund gigs with secured payments, creators only get paid once you approve the work.",
       "Save creators you want to work with again for faster re-bookings.",
     ])}
     <p style="${P}">Let's get your first campaign moving.</p>`;

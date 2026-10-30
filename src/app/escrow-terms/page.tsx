@@ -1,13 +1,6 @@
-import type { Metadata } from "next";
-import { Suspense } from "react";
-import { LegalDoc } from "@/components/layout/legal-doc";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Escrow Terms", alternates: { canonical: "/escrow-terms" } };
-
+// Legacy path kept working: the page is now titled "Payment protection terms".
 export default function EscrowTermsPage() {
-  return (
-    <Suspense fallback={<div className="min-h-dvh" />}>
-      <LegalDoc slug="escrow-terms" fallbackTitle="Escrow Terms" />
-    </Suspense>
-  );
+  redirect("/payment-protection-terms");
 }

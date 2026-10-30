@@ -118,7 +118,7 @@ function LockedField({ label, value, note }: { label: string; value: ReactNode; 
         </span>
       </div>
       <div className="flex min-h-[2.75rem] items-center rounded-xl border border-line bg-surface-2 px-3 text-sm text-ink-2">
-        {value || <span className="text-ink-3">—</span>}
+        {value || <span className="text-ink-3">Not set</span>}
       </div>
       {note && <p className="mt-1 text-xs text-ink-3">{note}</p>}
     </div>
@@ -357,7 +357,7 @@ function CreatorSettings({ userId, creator }: { userId: string; creator: Creator
           <LockedField
             label="Tier"
             value={meta.label}
-            note="Earned through completed gigs and reviews — it can’t be set manually."
+            note="Earned through completed gigs and reviews. It can’t be set manually."
           />
         </div>
       </Section>
@@ -374,7 +374,7 @@ function CreatorSettings({ userId, creator }: { userId: string; creator: Creator
             <>
               <div className="grid grid-cols-2 gap-3">
                 <LockedField label="First name" value={firstName} note="Your verified legal name. Contact support to change it." />
-                <LockedField label="Last name" value={lastName} note="Verified — public shows initial only." />
+                <LockedField label="Last name" value={lastName} note="Verified. Public shows initial only." />
               </div>
             </>
           ) : (
@@ -520,7 +520,7 @@ function BrandSettings({ userId, brand }: { userId: string; brand: Brand }) {
         </div>
       </Section>
 
-      <Section title="Preferences" description="What you selected at sign-up — tweak anytime, it tunes your recommendations.">
+      <Section title="Preferences" description="What you selected at sign-up. Tweak anytime, it tunes your recommendations.">
         <div className="grid gap-4">
           <Field label="What you're trying to do" hint="Select all that apply.">
             <div className="flex flex-wrap gap-2">
@@ -581,7 +581,7 @@ function BrandSettings({ userId, brand }: { userId: string; brand: Brand }) {
 
 const NOTIFY_ROWS: { key: keyof NotificationPrefs; title: string; desc: string }[] = [
   { key: "notify_offers", title: "Offers & gigs", desc: "New offers, applications and gig updates." },
-  { key: "notify_payouts", title: "Payments", desc: "Escrow funded, work approved, payouts sent." },
+  { key: "notify_payouts", title: "Payments", desc: "Payment secured, work approved, payouts sent." },
   { key: "notify_reviews", title: "Reviews & disputes", desc: "New reviews and anything needing your attention." },
   { key: "notify_product", title: "Product news", desc: "Occasional tips and platform updates. (Optional)" },
 ];

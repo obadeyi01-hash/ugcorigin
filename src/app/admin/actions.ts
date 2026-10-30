@@ -274,7 +274,7 @@ export async function adminSendVerifyReminder(input: {
       .eq("id", input.userId)
       .maybeSingle();
     if (!c) return { error: "No creator profile for that user." };
-    if (c.suspended) return { error: "That profile is suspended — contact them directly instead." };
+    if (c.suspended) return { error: "That profile is suspended. Contact them directly instead." };
     if (c.is_live) return { error: "That creator is already live." };
     name = c.first_name || c.display_name;
   } else {
@@ -365,7 +365,7 @@ export async function adminSetFeatured(creatorId: string, featured: boolean): Pr
 /** Actually release escrow → ledger + one payout. Audits as the given actor. */
 async function executeRelease(admin: Admin, gigId: string, actorId: string): Promise<Res> {
   const released = await releaseHeldGig(admin, gigId, { memo: "Admin released escrow" });
-  if (!released.ok) return { error: released.error ?? "Could not release escrow." };
+  if (!released.ok) return { error: released.error ?? "Could not release the payment." };
   await logAudit(admin, actorId, "escrow.release", { targetType: "gig", targetId: gigId, after: { payout_queued: !!released.payoutQueued } });
   return { ok: true };
 }
@@ -375,7 +375,7 @@ async function executeRefund(admin: Admin, gigId: string, actorId: string): Prom
   const { data: gig } = await admin.from("gigs").select("id, brand_id, title, price_naira, fee_naira, tax_naira").eq("id", gigId).maybeSingle();
   if (!gig) return { error: "Gig not found." };
   const refunded = await refundHeldGig(admin, gigId, `Admin refund, ${gig.title}`);
-  if (!refunded.ok) return { error: refunded.error ?? "Could not refund escrow." };
+  if (!refunded.ok) return { error: refunded.error ?? "Could not refund the payment." };
   const total = brandCharge(gig.price_naira, gig.fee_naira ?? feeFor(gig.price_naira), gig.tax_naira ?? 0);
   await notifyUser(admin, gig.brand_id, {
     type: "gig_update",
@@ -514,7 +514,7 @@ export async function adminRefundEscrow(gigId: string): Promise<Res> {
   // "nothing to refund" error below the threshold path.
   if (requiresDualControl(total)) {
     const { data: held } = await admin.from("escrow_transactions").select("id").eq("gig_id", gigId).eq("status", "held").maybeSingle();
-    if (!held) return { error: "No held escrow to refund (already released or refunded)." };
+    if (!held) return { error: "No held payment to refund (already released or refunded)." };
     return requestApproval(admin, ctx!.userId, gig, "refund", total);
   }
   const res = await executeRefund(admin, gigId, ctx!.userId);
@@ -541,7 +541,7 @@ export async function adminApproveRelease(approvalId: string): Promise<Res> {
     .maybeSingle();
   if (!req) return { error: "Approval request not found." };
   if (req.status !== "pending") return { error: "This request has already been decided." };
-  if (req.requested_by === ctx!.userId) return { error: "You can't approve your own request — a different admin must approve." };
+  if (req.requested_by === ctx!.userId) return { error: "You can't approve your own request. A different admin must approve." };
 
   // Claim the request: only the approver who flips pending→approved proceeds.
   const { data: claimed } = await admin
@@ -673,7 +673,7 @@ export async function adminSetRole(userId: string, role: AdminRole): Promise<Res
   if (!prev) return { error: "That admin no longer exists." };
   // Don't strip the final super_admin — it would lock everyone out of role management.
   if (prev.role === "super_admin" && role !== "super_admin" && (await superAdminCount(admin)) <= 1) {
-    return { error: "Promote another super admin first — you can't remove the last one." };
+    return { error: "Promote another super admin first. You can't remove the last one." };
   }
   const { error: e } = await admin.from("admin_users").update({ role }).eq("user_id", userId);
   if (e) return { error: e.message };

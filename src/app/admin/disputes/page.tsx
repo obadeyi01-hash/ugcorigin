@@ -46,7 +46,7 @@ async function DisputesInner({ searchParams }: { searchParams: Promise<Record<st
   return (
     <AdminShell role={role} active="disputes">
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Disputes</h1>
-      <p className="mt-1.5 text-sm text-ink-2">Resolve against the written brief: release, refund, or split the escrow.</p>
+      <p className="mt-1.5 text-sm text-ink-2">Resolve against the written brief: release, refund, or split the held payment.</p>
       <AdminListControls
         pathname="/admin/disputes"
         q={q}
@@ -65,7 +65,7 @@ async function DisputesInner({ searchParams }: { searchParams: Promise<Record<st
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <Link href={`/gigs/${d.gig?.id}`} className="font-display font-semibold text-ink hover:text-accent">{d.gig?.title ?? "Gig"}</Link>
-                  <p className="text-xs text-ink-3">{d.gig ? formatNaira(d.gig.price_naira) : ""} in escrow</p>
+                  <p className="text-xs text-ink-3">{d.gig ? formatNaira(d.gig.price_naira) : ""} held</p>
                 </div>
                 <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-medium capitalize text-ink-2">{d.status.replace(/_/g, " ")}</span>
               </div>

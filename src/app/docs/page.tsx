@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Documentation",
-  description: "How UGCOrigin works, fees, escrow, payouts, trust & safety, and guides for brands and creators.",
+  description: "How UGCOrigin works, fees, payment protection, payouts, trust & safety, and guides for brands and creators.",
 };
 
 type Doc = { slug: string; title: string; category: string };
@@ -43,7 +43,7 @@ async function DocsInner() {
         </div>
         <h1 className="mt-5 font-display text-3xl font-bold tracking-tight text-ink sm:text-4xl">Documentation</h1>
         <p className="mt-3 text-lg text-ink-2">
-          Exactly how UGCOrigin works, fees and payments, escrow, getting paid, and how we keep every deal safe.
+          Exactly how UGCOrigin works, fees and payments, payment protection, getting paid, and how we keep every deal safe.
         </p>
       </div>
 

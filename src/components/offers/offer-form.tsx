@@ -130,7 +130,7 @@ export function OfferForm({
         Send offer to {creatorName} <ArrowRight className="size-4" />
       </Button>
       <p className="text-xs text-ink-3">
-        We hold your payment in escrow after the creator accepts. You only pay for good work, release funds when you approve.
+        We hold your payment safely after the creator accepts. You only pay for good work, release funds when you approve.
       </p>
     </div>
   );

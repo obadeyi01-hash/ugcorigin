@@ -27,7 +27,7 @@ export function ApplicationsList({ apps }: { apps: AppRow[] }) {
       const res = await selectApplicantAction(id);
       setPendingId(null);
       if (res?.url) { window.location.href = res.url; return; }
-      if (res?.configured === false) { setNote((n) => ({ ...n, [id]: "Selected, fund escrow in Offers (Paystack not connected yet)." })); return; }
+      if (res?.configured === false) { setNote((n) => ({ ...n, [id]: "Selected, fund the gig in Offers (Paystack not connected yet)." })); return; }
       if (res?.error) { setNote((n) => ({ ...n, [id]: res.error! })); return; }
     });
   }

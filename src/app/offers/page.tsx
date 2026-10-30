@@ -81,7 +81,7 @@ export default function OffersPage() {
       </header>
       <Container className="py-10">
         <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Offers</h1>
-        <p className="mt-1.5 text-sm text-ink-2">Offers you&apos;ve sent and received. Accept, decline, or fund escrow to start a gig.</p>
+        <p className="mt-1.5 text-sm text-ink-2">Offers you&apos;ve sent and received. Accept, decline, or fund the gig to get started.</p>
         <div className="mt-7">
           <Suspense fallback={<div className="h-40 animate-pulse rounded-2xl bg-surface-2" />}>
             <OffersInner />

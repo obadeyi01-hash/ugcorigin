@@ -43,7 +43,7 @@ const columns = [
     links: [
       ["Terms", "/terms"],
       ["Privacy", "/privacy"],
-      ["Escrow terms", "/escrow-terms"],
+      ["Payment protection terms", "/payment-protection-terms"],
       ["Creator agreement", "/creator-agreement"],
     ],
   },

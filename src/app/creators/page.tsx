@@ -29,13 +29,13 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
     if (region) u.set("region", region);
     return {
       title: `Hire ${niche} UGC creators${where || " in Nigeria"}`,
-      description: `Browse verified ${niche} creators${where} on UGCOrigin. Real, human, identity-verified. Escrow-protected payments, Nigeria-first.`,
+      description: `Browse verified ${niche} creators${where} on UGCOrigin. Real, human, identity-verified. Protected payments, Nigeria-first.`,
       alternates: { canonical: `/creators?${u.toString()}` },
     };
   }
   return {
     title: "Find creators",
-    description: "Browse verified Nigerian UGC creators by category, region, budget and platform. Escrow-protected, identity-verified.",
+    description: "Browse verified Nigerian UGC creators by category, region, budget and platform. Payment-protected, identity-verified.",
     alternates: { canonical: "/creators" },
   };
 }

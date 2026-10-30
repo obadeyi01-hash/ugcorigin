@@ -210,7 +210,7 @@ export function GigWorkspace({
         <Card className="lg:sticky lg:top-20">
           <CardBody>
             <div className="flex items-center gap-2 text-sm text-ink-2">
-              <ShieldCheck className="size-4 text-success" /> Escrow-protected
+              <ShieldCheck className="size-4 text-success" /> Payment-protected
             </div>
             <div className="mt-4 grid gap-1.5 text-sm">
               <div className="flex justify-between"><span className="text-ink-2">Creator rate</span><span className="text-ink">{formatNaira(gig.price_naira)}</span></div>
@@ -221,13 +221,13 @@ export function GigWorkspace({
             {completed ? (
               <div className="mt-5 rounded-xl border border-success/30 bg-success/10 p-3 text-sm text-ink">
                 <Check className="mb-1 size-5 text-success" />
-                Approved, escrow released{role === "creator" ? ". Your payout is on the way." : " to the creator."}
+                Approved, payment released{role === "creator" ? ". Your payout is on the way." : " to the creator."}
               </div>
             ) : canReview ? (
               <div className="mt-5 grid gap-2">
                 <Button onClick={approve} loading={pending}><Check className="size-4" /> Approve &amp; release</Button>
                 <Button variant="secondary" onClick={revise} loading={pending}><RotateCcw className="size-4" /> Request revision</Button>
-                <p className="text-xs text-ink-3">Approving releases {formatNaira(gig.price_naira)} from escrow to the creator.</p>
+                <p className="text-xs text-ink-3">Approving releases {formatNaira(gig.price_naira)} to the creator.</p>
               </div>
             ) : (
               <p className="mt-5 text-sm text-ink-3">

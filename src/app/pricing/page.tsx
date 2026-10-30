@@ -10,7 +10,7 @@ import { Card, CardBody } from "@/components/ui/card";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Free to join and browse. Creators keep 100% of their rate. Escrow-protected deals, pay only on approval, next-day payouts.",
+    "Free to join and browse. Creators keep 100% of their rate. Payment-protected deals, pay only on approval, next-day payouts.",
 };
 
 // Honest value facts, NOT fabricated metrics. Each is a real product guarantee.
@@ -21,9 +21,9 @@ const facts = [
 ];
 
 const guarantees = [
-  { icon: Lock, title: "Escrow on every deal", text: "Funds are held safely and released only when the work is approved." },
+  { icon: Lock, title: "Payment protection on every deal", text: "Funds are held safely and released only when the work is approved." },
   { icon: BadgeCheck, title: "Verified human creators", text: "Every creator passes identity verification before they can be hired." },
-  { icon: Wallet, title: "Pay only on approval", text: "Brands fund up front into escrow but release only for work they accept." },
+  { icon: Wallet, title: "Pay only on approval", text: "Brands fund up front and the payment is held safely, released only for work they accept." },
   { icon: ShieldCheck, title: "Fair dispute resolution", text: "Disputes are decided against the written brief, using the workspace record." },
 ];
 
@@ -39,7 +39,7 @@ export default function PricingPage() {
             </h1>
             <p className="mt-4 text-lg text-ink-2">
               Free to join, free to browse, free to message. Creators keep 100% of their rate, and brands only ever pay for
-              work they approve, every deal protected by escrow.
+              work they approve, every deal covered by payment protection.
             </p>
           </div>
 

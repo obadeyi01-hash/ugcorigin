@@ -54,12 +54,12 @@ export default async function OgImage() {
               real humans.
             </span>
             <span style={{ fontSize: 28, color: "#b9b9b4", marginTop: 18, maxWidth: 520 }}>
-              Hire identity-verified creators. Escrow-protected. Nigeria-first.
+              Hire identity-verified creators. Payment-protected. Nigeria-first.
             </span>
           </div>
 
           <div style={{ display: "flex", gap: 12 }}>
-            {["Escrow-protected", "Verified humans", "Next-day payouts"].map((t) => (
+            {["Payment-protected", "Verified humans", "Next-day payouts"].map((t) => (
               <span key={t} style={{ display: "flex", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 999, padding: "8px 18px", fontSize: 21, color: "#d7d7d3" }}>
                 {t}
               </span>

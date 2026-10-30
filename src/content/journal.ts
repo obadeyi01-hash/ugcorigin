@@ -53,7 +53,7 @@ export const JOURNAL: JournalPost[] = [
     [
       "Most Nigerian shoppers can tell a studio ad in the first second. The lighting is even, the voice is borrowed, and the product is held the way a brand guideline says to hold it. They scroll. A creator who already uses the category, speaking the way they speak to a friend, gets the pause because it does not look bought.",
       "That does not mean handing over a blank page. The useful brief names the product truth, the one thing that must be said, and the things that must not be claimed. It leaves the opening line, the room, and the accent alone. A script that reads like a radio spot will be delivered like a radio spot.",
-      "On UGCOrigin the person on camera is a verified human, not a stock face and not a generated one. The brand is verified too. The work is a gig with a price, a deadline, and escrow. Original means the creator made it. It also means you can point at who made it.",
+      "On UGCOrigin the person on camera is a verified human, not a stock face and not a generated one. The brand is verified too. The work is a gig with a price, a deadline, and payment protection. Original means the creator made it. It also means you can point at who made it.",
     ],
   ),
   post(
@@ -71,15 +71,15 @@ export const JOURNAL: JournalPost[] = [
   ),
   post(
     "2026-10-03",
-    "how-escrow-protects-a-first-hire",
-    "How escrow protects a first hire",
+    "how-payment-protection-works-on-a-first-hire",
+    "How payment protection works on a first hire",
     "The brand pays before the work, the creator is not paid before approval, and neither side is trusting a stranger with the whole amount.",
     "escrow",
     "Payment held in a lock before it moves to the creator.",
     [
-      "The nervous part of a first hire is the same on both sides. The brand does not want to send money to a handle they just met. The creator does not want to shoot a week of videos for a brand that goes quiet. Escrow is the boring answer. The brand pays. The money sits. The creator delivers. The brand approves. Then the payout is queued.",
+      "The nervous part of a first hire is the same on both sides. The brand does not want to send money to a handle they just met. The creator does not want to shoot a week of videos for a brand that goes quiet. Payment protection is the boring answer. The brand pays. The money sits. The creator delivers. The brand approves. Then the payout is queued.",
       "The platform fee is 12 percent, taken on the way in, so the number the creator accepted is the number they are owed. A refund, when the work is not approved and the rules say so, goes back through Paystack rather than being written down as a note in a spreadsheet.",
-      "Nothing is released because someone clicked twice. The transfer happens only when that click itself moves the escrow row out of held. If the row was already released, or was never held, no second payout goes out.",
+      "Nothing is released because someone clicked twice. The transfer happens only when that click itself moves the held payment to released. If the payment was already released, or was never held, no second payout goes out.",
     ],
   ),
   post(
@@ -90,7 +90,7 @@ export const JOURNAL: JournalPost[] = [
     "brief",
     "A brief document with space to add another creator.",
     [
-      "A brief is a public ask. You describe the work, the budget per creator, how many people you need, and a deadline. Live creators apply with a short pitch and, if they have one, a sample. You pick. Picking creates an accepted offer and starts the same escrow path as a direct hire.",
+      "A brief is a public ask. You describe the work, the budget per creator, how many people you need, and a deadline. Live creators apply with a short pitch and, if they have one, a sample. You pick. Picking creates an accepted offer and starts the same payment-protection path as a direct hire.",
       "A direct offer is for when you have already found the person. You open their card, name the job, name the price, and they have 48 hours. An expired offer cannot be accepted. An offer to a profile that is not live cannot be sent, because that profile is not on the directory.",
       "Use a brief when the niche is wide and you want to see how people talk about the product. Use an offer when the creator's past work is already the reason you are here. Both require a verified brand. An unverified business can set up an account. It cannot publish either.",
     ],
@@ -144,7 +144,7 @@ export const JOURNAL: JournalPost[] = [
     [
       "There is no national price for a fifteen-second video. A skincare routine in Lagos and a hardware demo in Aba are not the same afternoon. What creators can do is publish a starting rate. What brands should do is treat that number as the opening, then write the real price into the offer.",
       "Usage changes the price more than length does. A clip for one organic post is not a clip you will run as a paid ad for six months. Say which one you are buying. Creators price the second one higher because it is doing a media buy's job.",
-      "Put the number in the offer, not in a later chat. Escrow is calculated from that number, plus the 12 percent fee. A rate that lives only in WhatsApp is a rate you will argue about when the video is already shot.",
+      "Put the number in the offer, not in a later chat. The protected amount is calculated from that number, plus the 12 percent fee. A rate that lives only in WhatsApp is a rate you will argue about when the video is already shot.",
     ],
   ),
   post(
@@ -170,7 +170,7 @@ export const JOURNAL: JournalPost[] = [
     [
       "An offer can say a physical product is coming. The creator should know that before they accept, because their address and their week change. After booking, the address is shared so a courier can move. It is not on the public card.",
       "Decide, in the brief, whether the product is the creator's to keep, a loan, or something they send back. A ₦4,000 sample and a ₦400,000 device are not the same sentence. Write the sentence.",
-      "Escrow covers the fee for the video. It does not track the parcel. If the parcel is the expensive part, use a courier with a receipt and keep that receipt outside the chat. The gig is evidence of the content deal, not of the logistics company.",
+      "Payment protection covers the fee for the video. It does not track the parcel. If the parcel is the expensive part, use a courier with a receipt and keep that receipt outside the chat. The gig is evidence of the content deal, not of the logistics company.",
     ],
   ),
   post(
@@ -195,7 +195,7 @@ export const JOURNAL: JournalPost[] = [
     "Two sides of a job that only stays fair if the scope was written down.",
     [
       "Creators expect notes. Change the first line, cover the logo, cut the claim you cannot legally make. That is a revision. Asking for a different product, a different room, and a different argument is another video.",
-      "Put the included round in the brief. When the deliverable comes in, the status moves to review. Approving releases escrow. Sending it back for the agreed notes keeps the same gig. Opening a second gig is how you pay for a second idea.",
+      "Put the included round in the brief. When the deliverable comes in, the status moves to review. Approving releases the payment. Sending it back for the agreed notes keeps the same gig. Opening a second gig is how you pay for a second idea.",
       "Silence is the stall. A brand that does not review and a creator who does not deliver both hold the money in place. The hold is the safety. It is not a place to leave a job for a month. Review in the window you wrote down.",
     ],
   ),
@@ -268,12 +268,12 @@ export const JOURNAL: JournalPost[] = [
     "2026-10-18",
     "disputes-release-refund-or-split",
     "Disputes: release, refund, or split",
-    "A dispute names an amount. The money moves only after the held escrow actually changes hands, including the refund.",
+    "A dispute names an amount. The money moves only after the held payment actually changes hands, including the refund.",
     "escrow",
     "A dispute is still the same locked payment, pointed at a decision.",
     [
       "Most gigs never become disputes. When one does, the outcomes are release to the creator, refund to the brand, or a split of the creator's rate. The platform fee is not quietly given to either side as if it were part of the rate.",
-      "Large amounts are not settled by one admin. At or above the dual-control threshold the action stops and points at the finance console, where a second person has to agree. Below that line, the settlement still refuses to pay unless it successfully moved the escrow out of held.",
+      "Large amounts are not settled by one admin. At or above the dual-control threshold the action stops and points at the finance console, where a second person has to agree. Below that line, the settlement still refuses to pay unless it successfully moved the payment out of held.",
       "A refund that Paystack does not accept does not get marked refunded. The row goes back to held. That is slower than a green check. It is also the only version that matches the bank.",
     ],
   ),
@@ -338,7 +338,7 @@ export const JOURNAL: JournalPost[] = [
     "Repeat work is the relationship the first verified hire makes possible.",
     [
       "A first hire is a search. A second hire is a message. Brands that win at UGC keep a short list of creators who already understand the product and already have a payout path that worked.",
-      "Save creators while you browse, but only hire the live ones. A saved name is a note. An offer is a contract. The offer still goes through escrow even when you have worked together before. Familiarity is not a reason to pay off-platform. Off-platform is where the dispute has no record.",
+      "Save creators while you browse, but only hire the live ones. A saved name is a note. An offer is a contract. The offer still goes through payment protection even when you have worked together before. Familiarity is not a reason to pay off-platform. Off-platform is where the dispute has no record.",
       "Creators should treat a finished gig as the start of a roster too. Feature the verified cut. Answer the next brief from that brand faster because you already know the don'ts. Speed, after trust exists, is the advantage.",
     ],
   ),
@@ -359,12 +359,12 @@ export const JOURNAL: JournalPost[] = [
     "2026-10-25",
     "trust-signals-both-sides-can-read",
     "Trust signals both sides can read",
-    "Badge, tier, completed gigs, escrow, and a brief that names the usage. Each one answers a different fear.",
+    "Badge, tier, completed gigs, payment protection, and a brief that names the usage. Each one answers a different fear.",
     "trust",
     "Brand and creator only meet in public after the checks that make the badges mean something.",
     [
       "Creators look for the verified brand badge because a company name is cheap to type. Brands look for a live creator, a tier that came from finished work, and at least one verified clip. Neither signal replaces the brief. Together they remove the obvious frauds.",
-      "Escrow answers the payment fear. The badge answers the identity fear. The usage line answers the 'what will you do with my face' fear. If a page on the platform is missing one of those, it is not done.",
+      "Payment protection answers the payment fear. The badge answers the identity fear. The usage line answers the 'what will you do with my face' fear. If a page on the platform is missing one of those, it is not done.",
       "We do not invent extra badges for appearance. A badge that does not check anything trains people to ignore badges. The ones here are tied to a review, a completed gig, or money that actually moved.",
     ],
   ),

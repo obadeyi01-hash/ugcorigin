@@ -8,7 +8,7 @@ import { JOURNAL, journalImage } from "@/content/journal";
 export const metadata: Metadata = {
   title: "Journal",
   description:
-    "Notes on hiring verified creators in Nigeria: briefs, escrow, identity, and per-view campaigns. A new piece for each day the marketplace has been explaining itself.",
+    "Notes on hiring verified creators in Nigeria: briefs, payment protection, identity, and per-view campaigns. A new piece for each day the marketplace has been explaining itself.",
   alternates: { canonical: "/journal" },
 };
 

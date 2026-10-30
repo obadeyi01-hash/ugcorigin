@@ -9,7 +9,7 @@ export function GET() {
   const journal = JOURNAL.map((post) => `- [${post.date}] ${post.title}: ${SITE_URL}/journal/${post.slug}`).join("\n");
   const body = `# UGCOrigin
 
-> The creator network for original, human, verified content. Nigeria-first. Hire identity-verified UGC creators with escrow-protected payments.
+> The creator network for original, human, verified content. Nigeria-first. Hire identity-verified UGC creators with protected payments.
 
 UGCOrigin (a product by Dream Intrepid Ltd.) connects brands with real, identity-verified Nigerian creators for authentic user-generated content, video, images, testimonials, unboxings and more. It is deliberately anti-AI: every creator is a verified human, never an AI avatar or generated content.
 
@@ -18,7 +18,7 @@ Creators appear in the directory and in the sitemap only when their profile is l
 ## How it works
 - Brands verify their CAC/RC number, then post a brief, fund a campaign, or send an offer. Creators finish identity verification, then apply or accept.
 - Creators deliver in a shared workspace; brands review and approve.
-- On approval, escrow releases and the creator is paid out to a Nigerian bank account.
+- On approval, the protected payment is released and the creator is paid out to a Nigerian bank account.
 
 ## Money
 - Creators keep 100% of their agreed rate (no creator-side cut).
@@ -31,7 +31,7 @@ Creators appear in the directory and in the sitemap only when their profile is l
 - For brands: ${SITE_URL}/for-brands
 - For creators: ${SITE_URL}/for-creators
 - Pricing: ${SITE_URL}/pricing
-- Documentation (fees, escrow, payouts, trust & safety): ${SITE_URL}/docs
+- Documentation (fees, payment protection, payouts, trust & safety): ${SITE_URL}/docs
 - Open briefs: ${SITE_URL}/briefs
 - Per-view campaigns: ${SITE_URL}/campaigns
 - Journal: ${SITE_URL}/journal
@@ -42,7 +42,7 @@ Creators appear in the directory and in the sitemap only when their profile is l
 ${journal}
 
 ## Trust & safety
-- Escrow on every deal; funds released only on approval.
+- Payment protection on every deal; funds released only on approval.
 - Identity-verified creators only. Verified brands only, for anything public.
 - Disputes are decided against the written brief using the workspace record.
 `;

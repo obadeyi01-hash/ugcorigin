@@ -14,7 +14,7 @@ const DRAFT_IMAGE =
 
 const ticks = [
   { icon: Clock, label: "Time-stamped notes" },
-  { icon: ShieldCheck, label: "Escrow-backed" },
+  { icon: ShieldCheck, label: "Payment-protected" },
   { icon: Banknote, label: "Paid next day" },
 ];
 
@@ -51,11 +51,11 @@ export function ProductMomentFeature() {
         <div className="p-6 sm:p-8 lg:p-10">
           <span className="text-xs font-semibold uppercase tracking-[0.14em] text-accent-hover">The review moment</span>
           <h3 className="mt-2 text-balance font-display text-2xl font-semibold text-ink sm:text-3xl">
-            See it, note it, approve it — then they get paid
+            See it, note it, approve it, then they get paid
           </h3>
           <p className="mt-3 max-w-md text-pretty text-sm leading-relaxed text-ink-2 sm:text-base">
             A creator&apos;s draft lands here, not in your DMs. Scrub the video, drop notes on the exact
-            frame, and ask for the tweak you need. The money&apos;s already held safely in escrow — the
+            frame, and ask for the tweak you need. The money&apos;s already held safely. The
             moment you approve, the final files unlock and payment settles to the creator&apos;s bank.
           </p>
 
@@ -72,7 +72,7 @@ export function ProductMomentFeature() {
             <div className="flex items-center justify-between">
               <span className="inline-flex items-center gap-1.5 text-2xs font-semibold text-ink-2">
                 {released ? <Check className="size-3.5 text-success" /> : <Lock className="size-3.5 text-accent" />}
-                {released ? "Released from escrow" : "Held in escrow"}
+                {released ? "Released to creator" : "Held safely"}
               </span>
               <span className="text-2xs font-medium text-ink-3">Paystack</span>
             </div>
@@ -109,7 +109,7 @@ export function ProductMomentFeature() {
               </button>
             )}
             <p aria-live="polite" className="sr-only">
-              {released ? "Payment released to the creator." : "Payment held in escrow."}
+              {released ? "Payment released to the creator." : "Payment held safely."}
             </p>
           </div>
         </div>

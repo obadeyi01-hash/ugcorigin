@@ -13,7 +13,7 @@ const facts = [
   { value: "From ₦10k", label: "Hire a verified creator", sub: "Affordable to start" },
   { value: "100%", label: "Creators keep their rate", sub: "No cut from what you earn" },
   { value: "Next-day", label: "Payouts to your bank", sub: "Approved work pays fast" },
-  { value: "Escrow", label: "On every single deal", sub: "Protected both ways" },
+  { value: "Protected", label: "On every single deal", sub: "Payment protected both ways" },
 ];
 
 export function StatsBand() {

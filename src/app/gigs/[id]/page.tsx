@@ -195,7 +195,7 @@ async function GigInner({ params }: { params: Promise<{ id: string }> }) {
               {disputeOpen ? "Dispute open, under review" : "Dispute resolved"}
             </p>
             {dispute.reason && <p className="mt-2 text-sm text-ink-2">{dispute.reason}</p>}
-            <p className="mt-2 text-xs text-ink-3">Our Trust &amp; Safety team decides against the written brief. Escrow stays held until it&apos;s resolved.</p>
+            <p className="mt-2 text-xs text-ink-3">Our Trust &amp; Safety team decides against the written brief. Your payment stays held safely until it&apos;s resolved.</p>
           </div>
         )}
 

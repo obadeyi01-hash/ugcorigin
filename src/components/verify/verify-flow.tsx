@@ -143,7 +143,7 @@ export function VerifyFlow({
                   <Link href="/terms" className="text-accent hover:underline">Terms</Link>,{" "}
                   <Link href="/creator-agreement" className="text-accent hover:underline">Creator Agreement</Link>,{" "}
                   <Link href="/privacy" className="text-accent hover:underline">Privacy Policy</Link>, and{" "}
-                  <Link href="/escrow-terms" className="text-accent hover:underline">Escrow Terms</Link>.
+                  <Link href="/payment-protection-terms" className="text-accent hover:underline">Payment protection terms</Link>.
                 </span>
               </label>
             </div>
@@ -213,10 +213,10 @@ function IdentityStep({
   const desc = done
     ? "Identity verified."
     : status === "pending"
-      ? "Under review — our team is confirming you're a real person. Usually within 24 hours."
+      ? "Under review. Our team is confirming you're a real person. Usually within 24 hours."
       : status === "rejected"
         ? "Your last submission couldn't be approved. Please resubmit."
-        : "Add a clear photo of your face and a Virtual NIN. Reviewed by a human — usually within 24 hours.";
+        : "Add a clear photo of your face and a Virtual NIN. Reviewed by a human, usually within 24 hours.";
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -276,7 +276,7 @@ function IdentityStep({
       ) : status === "pending" && !editing ? (
         <div className="grid gap-2">
           <p className="rounded-lg bg-accent-tint/60 px-3 py-2 text-xs text-ink-2">
-            Thanks — you&apos;re in the review queue. We&apos;ll verify you and set you live automatically. We&apos;ll notify you.
+            Thanks, you&apos;re in the review queue. We&apos;ll verify you and set you live automatically. We&apos;ll notify you.
           </p>
           <div>
             <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
