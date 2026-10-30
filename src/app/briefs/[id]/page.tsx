@@ -23,12 +23,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return { title: "Brief" };
   const { data } = await createAdminClient()
     .from("briefs")
-    .select("title, description, status, brand:brand_profiles!inner(verification_status)")
+    .select("title, description, status, deadline, brand:brand_profiles!inner(verification_status)")
     .eq("id", id)
     .maybeSingle();
   const brand = data?.brand as { verification_status?: string } | { verification_status?: string }[] | null;
   const verified = Array.isArray(brand) ? brand[0]?.verification_status === "verified" : brand?.verification_status === "verified";
-  if (!data || data.status !== "open" || !verified) return { title: "Brief", robots: { index: false, follow: false } };
+  const expired = !!data?.deadline && data.deadline < new Date().toISOString().slice(0, 10);
+  if (!data || data.status !== "open" || expired || !verified) return { title: "Brief", robots: { index: false, follow: false } };
   const description = (data.description ?? "").replace(/\s+/g, " ").trim().slice(0, 160);
   return {
     title: data.title,
@@ -65,7 +66,12 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
   } = await supabase.auth.getUser();
   const isOwner = !!user && brief.brand_id === user.id;
   // Applying is a creator action — hide the form from brand-only accounts.
-  const { showCreatorCtas, isCreator, creatorLive } = await getViewer();
+  const { userId, showCreatorCtas, isCreator, creatorLive } = await getViewer();
+  // A past-deadline brief is closed to the public even if its status is still
+  // "open" — it drops from the listing and the apply form here.
+  const today = new Date().toISOString().slice(0, 10);
+  const isExpired = !!brief.deadline && brief.deadline < today;
+  const open = brief.status === "open" && !isExpired;
   const conceal = !!(brief as { conceal_brand?: boolean }).conceal_brand;
   const companyName = (brief as unknown as { brand?: { company_name: string | null } }).brand?.company_name ?? null;
   // Never name the company in structured data when the brief is masked; RLS
@@ -100,7 +106,7 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
   }
 
   const posted = (brief as { created_at?: string }).created_at;
-  const jobLd = brief.status === "open" && brief.budget_naira ? {
+  const jobLd = open && brief.budget_naira ? {
     "@context": "https://schema.org",
     "@type": "JobPosting",
     title: brief.title,
@@ -155,14 +161,34 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
               </div>
             )}
 
-            {!isOwner && brief.status === "open" && showCreatorCtas && isCreator && !creatorLive && (
+            {/* Applying is gated to a logged-in, verified, LIVE creator. Guests
+                and non-creators get a prompt, never the form (showCreatorCtas is
+                true for guests, so it must not gate the form on its own). */}
+            {!isOwner && open && !userId && (
+              <div className="mt-5">
+                <Notice tone="info" title="Sign in and verify as a creator to apply" href={`/login?next=/briefs/${id}`} action="Sign in">
+                  Applying is for verified creators. Sign in, then finish creator verification to apply to this brief.
+                </Notice>
+              </div>
+            )}
+            {!isOwner && open && userId && !showCreatorCtas && (
+              <p className="mt-5 text-sm text-ink-3">Creators apply to briefs. To work with a creator directly, make them an offer from their profile.</p>
+            )}
+            {!isOwner && open && userId && showCreatorCtas && !isCreator && (
+              <div className="mt-5">
+                <Notice tone="info" title="Set up a creator profile" href="/onboarding?role=creator" action="Get started">
+                  Applying is for verified creators. Create a creator profile and finish verification to apply.
+                </Notice>
+              </div>
+            )}
+            {!isOwner && open && userId && showCreatorCtas && isCreator && !creatorLive && (
               <div className="mt-5">
                 <Notice tone="warning" title="You're not live yet" href="/verify" action="Finish verification">
                   Brands cannot see you, and applications stay closed until verification is done.
                 </Notice>
               </div>
             )}
-            {!isOwner && brief.status === "open" && showCreatorCtas && (!isCreator || creatorLive) && (
+            {!isOwner && open && userId && showCreatorCtas && isCreator && creatorLive && (
               <div className="mt-5">
                 {myAppStatus ? (
                   <div className="rounded-xl border border-success/30 bg-success/10 p-3 text-sm text-ink">
@@ -173,10 +199,7 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
                 )}
               </div>
             )}
-            {!isOwner && brief.status === "open" && !showCreatorCtas && (
-              <p className="mt-5 text-sm text-ink-3">Creators apply to briefs. To work with a creator directly, make them an offer from their profile.</p>
-            )}
-            {!isOwner && brief.status !== "open" && <p className="mt-5 text-sm text-ink-3">This brief is closed.</p>}
+            {!isOwner && !open && <p className="mt-5 text-sm text-ink-3">This brief is closed.</p>}
           </CardBody>
         </Card>
       </aside>

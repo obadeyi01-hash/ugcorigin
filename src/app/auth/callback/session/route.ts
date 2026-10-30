@@ -37,6 +37,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "session" }, { status: 400 });
   }
   const role = record?.role === "brand" || record?.role === "creator" ? record.role : null;
+  // A same-site landing path from the sign-in link; re-validated by safeNext.
+  const next = typeof record?.next === "string" && record.next.length <= 512 ? record.next : null;
 
   const bound = supabaseForRequest(request);
   if (!bound) return NextResponse.json({ error: "config" }, { status: 500 });
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest) {
   });
   if (error) return NextResponse.json({ error: "session" }, { status: 400 });
 
-  const redirect = await pathAfterSignIn(bound.client, role, null);
+  const redirect = await pathAfterSignIn(bound.client, role, next);
   const response = NextResponse.json({ redirect });
   response.headers.set("cache-control", "no-store");
   bound.apply(response);

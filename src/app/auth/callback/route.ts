@@ -33,7 +33,7 @@ const IMPLICIT_CALLBACK_HTML = `<!doctype html>
     method: "POST",
     headers: { "content-type": "application/json" },
     credentials: "same-origin",
-    body: JSON.stringify({ access_token: access, refresh_token: refresh, role: query.get("role") })
+    body: JSON.stringify({ access_token: access, refresh_token: refresh, role: query.get("role"), next: query.get("next") })
   }).then(function (res) {
     return res.json().then(function (body) { return { ok: res.ok, body: body }; });
   }).then(function (result) {
