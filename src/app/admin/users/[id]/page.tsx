@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AdminShell } from "@/components/admin/admin-shell";
-import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
+import { AdminContentSkeleton } from "@/components/ui/skeleton";
 import { Card, CardBody } from "@/components/ui/card";
 import { TierBadge } from "@/components/ui/tier-badge";
 import { requireSection } from "@/lib/admin/rbac";
@@ -101,7 +100,7 @@ async function UserInner({ params }: { params: Promise<{ id: string }> }) {
   const title = creator?.display_name || brand?.company_name || email || "User";
 
   return (
-    <AdminShell role={role} active="users">
+    <>
       <p className="text-sm text-ink-3">
         <Link href="/admin/users" className="hover:text-ink">Users</Link>
         <span> / {title}</span>
@@ -280,13 +279,13 @@ async function UserInner({ params }: { params: Promise<{ id: string }> }) {
           </dl>
         </Section>
       )}
-    </AdminShell>
+    </>
   );
 }
 
 export default function AdminUserPage({ params }: { params: Promise<{ id: string }> }) {
   return (
-    <Suspense fallback={<AdminShellSkeleton />}>
+    <Suspense fallback={<AdminContentSkeleton />}>
       <UserInner params={params} />
     </Suspense>
   );

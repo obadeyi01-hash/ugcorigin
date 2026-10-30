@@ -1,10 +1,15 @@
+"use client";
+
 import type { ElementType, ReactNode } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { LayoutDashboard, BadgeCheck, Users, Briefcase, Banknote, Scale, Shield, Layers, Rocket, BookOpen, Flag, MessageSquare, LifeBuoy, Megaphone, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { Container } from "@/components/ui/container";
 import { cn } from "@/lib/utils";
-import { sectionsFor, ROLE_LABEL, type AdminRole, type Section } from "@/lib/admin/rbac";
+// Client component: import the pure model from ./roles, never ./rbac (which pulls
+// in server-only Supabase/redirect code).
+import { sectionsFor, ROLE_LABEL, type AdminRole, type Section } from "@/lib/admin/roles";
 
 const NAV: { section: Section; label: string; href: string; icon: ElementType }[] = [
   { section: "overview", label: "Overview", href: "/admin", icon: LayoutDashboard },
@@ -23,17 +28,34 @@ const NAV: { section: Section; label: string; href: string; icon: ElementType }[
   { section: "roles", label: "Roles", href: "/admin/roles", icon: Shield },
 ];
 
-export function AdminShell({
-  role,
-  active,
-  children,
-}: {
-  role: AdminRole;
-  active: Section;
-  children: ReactNode;
-}) {
+/** The nav item whose href is the longest prefix of the current path wins, so
+ *  `/admin/users/123` lights up "Users" and a bare `/admin` lights up "Overview". */
+function activeSection(pathname: string): Section | null {
+  let best: { section: Section; len: number } | null = null;
+  for (const n of NAV) {
+    if (pathname === n.href || pathname.startsWith(`${n.href}/`)) {
+      if (!best || n.href.length > best.len) best = { section: n.section, len: n.href.length };
+    }
+  }
+  return best?.section ?? null;
+}
+
+/**
+ * Admin console chrome. Rendered once by `app/admin/layout.tsx` and kept mounted
+ * across admin routes, so moving between sections is instant client navigation —
+ * only the page content below swaps, the header and nav never reload.
+ *
+ * `/admin/mfa` is the pre-2FA gate and brings its own chrome, so the shell steps
+ * aside there and renders the page bare.
+ */
+export function AdminShell({ role, children }: { role: AdminRole; children: ReactNode }) {
+  const pathname = usePathname();
+
+  if (pathname === "/admin/mfa") return <>{children}</>;
+
   const allowed = sectionsFor(role);
   const items = NAV.filter((n) => allowed.includes(n.section));
+  const active = activeSection(pathname);
 
   return (
     <div className="min-h-dvh">
@@ -64,6 +86,7 @@ export function AdminShell({
               <Link
                 key={n.section}
                 href={n.href}
+                aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "inline-flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
                   isActive ? "bg-ink text-paper" : "text-ink-2 hover:bg-surface-2 hover:text-ink",

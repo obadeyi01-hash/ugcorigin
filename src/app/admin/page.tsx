@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { AdminShell } from "@/components/admin/admin-shell";
-import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
+import { AdminContentSkeleton } from "@/components/ui/skeleton";
 import { requireSection } from "@/lib/admin/rbac";
 import { createClient } from "@/lib/supabase/server";
 import { formatNaira } from "@/lib/utils";
@@ -14,7 +13,7 @@ async function count(q: PromiseLike<{ count: number | null }>) {
 }
 
 async function OverviewInner() {
-  const { role } = await requireSection("overview");
+  await requireSection("overview");
   const supabase = await createClient();
 
   const cp = () => supabase.from("creator_profiles").select("id", { count: "exact", head: true });
@@ -43,7 +42,7 @@ async function OverviewInner() {
   ];
 
   return (
-    <AdminShell role={role} active="overview">
+    <>
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Overview</h1>
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
         {tiles.map((t) => (
@@ -53,13 +52,13 @@ async function OverviewInner() {
           </div>
         ))}
       </div>
-    </AdminShell>
+    </>
   );
 }
 
 export default function AdminOverviewPage() {
   return (
-    <Suspense fallback={<AdminShellSkeleton />}>
+    <Suspense fallback={<AdminContentSkeleton />}>
       <OverviewInner />
     </Suspense>
   );

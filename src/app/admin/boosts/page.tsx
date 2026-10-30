@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
-import { AdminShell } from "@/components/admin/admin-shell";
-import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
+import { AdminContentSkeleton } from "@/components/ui/skeleton";
 import { Card, CardBody } from "@/components/ui/card";
 import { BoostCancelButton } from "@/components/admin/boost-cancel-button";
 import { AdminListControls } from "@/components/admin/list-controls";
@@ -86,7 +85,7 @@ async function BoostsInner({ searchParams }: { searchParams: Promise<Record<stri
   const liveCount = boosts.filter(isLiveNow).length;
 
   return (
-    <AdminShell role={role} active="boosts">
+    <>
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Boosts</h1>
       <p className="mt-1 text-sm text-ink-2">Paid featured placements. Boosts add a capped, labelled band only, they never change ranking or tier.</p>
 
@@ -143,13 +142,13 @@ async function BoostsInner({ searchParams }: { searchParams: Promise<Record<stri
           </ul>
         </CardBody>
       </Card>
-    </AdminShell>
+    </>
   );
 }
 
 export default function AdminBoostsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
-    <Suspense fallback={<AdminShellSkeleton />}>
+    <Suspense fallback={<AdminContentSkeleton />}>
       <BoostsInner searchParams={searchParams} />
     </Suspense>
   );

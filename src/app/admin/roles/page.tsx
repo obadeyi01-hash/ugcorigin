@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { AdminShell } from "@/components/admin/admin-shell";
-import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
+import { AdminContentSkeleton } from "@/components/ui/skeleton";
 import { RolesManager, type AdminRow } from "@/components/admin/roles-manager";
 import { AdminListControls } from "@/components/admin/list-controls";
 import { requireSection, type AdminRole } from "@/lib/admin/rbac";
@@ -35,7 +34,7 @@ async function RolesInner({ searchParams }: { searchParams: Promise<Record<strin
   const visible = rows.slice((Math.min(page, pages) - 1) * ADMIN_PAGE_SIZE, Math.min(page, pages) * ADMIN_PAGE_SIZE);
 
   return (
-    <AdminShell role={role} active="roles">
+    <>
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Roles & access</h1>
       <p className="mt-1.5 text-sm text-ink-2">Who can do what in the admin. Each role sees only its sections.</p>
       <AdminListControls
@@ -50,13 +49,13 @@ async function RolesInner({ searchParams }: { searchParams: Promise<Record<strin
       <div className="mt-6">
         <RolesManager rows={visible} meId={userId} />
       </div>
-    </AdminShell>
+    </>
   );
 }
 
 export default function AdminRolesPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
-    <Suspense fallback={<AdminShellSkeleton />}>
+    <Suspense fallback={<AdminContentSkeleton />}>
       <RolesInner searchParams={searchParams} />
     </Suspense>
   );

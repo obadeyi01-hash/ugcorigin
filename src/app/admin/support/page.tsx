@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { AdminShell } from "@/components/admin/admin-shell";
-import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
+import { AdminContentSkeleton } from "@/components/ui/skeleton";
 import { Card, CardBody } from "@/components/ui/card";
 import { TicketReply } from "@/components/admin/ticket-reply";
 import { AdminListControls } from "@/components/admin/list-controls";
@@ -79,7 +78,7 @@ async function SupportInner({ searchParams }: { searchParams: Promise<Record<str
   );
 
   return (
-    <AdminShell role={role} active="support">
+    <>
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Support</h1>
       <p className="mt-1 text-sm text-ink-2">
         User tickets. <span className="font-medium text-ink">{openCount ?? 0}</span> open.
@@ -122,13 +121,13 @@ async function SupportInner({ searchParams }: { searchParams: Promise<Record<str
           </ul>
         </CardBody>
       </Card>
-    </AdminShell>
+    </>
   );
 }
 
 export default function AdminSupportPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
-    <Suspense fallback={<AdminShellSkeleton />}>
+    <Suspense fallback={<AdminContentSkeleton />}>
       <SupportInner searchParams={searchParams} />
     </Suspense>
   );

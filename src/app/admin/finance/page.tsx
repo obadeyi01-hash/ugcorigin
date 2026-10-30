@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { AdminShell } from "@/components/admin/admin-shell";
-import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
+import { AdminContentSkeleton } from "@/components/ui/skeleton";
 import { Card, CardBody } from "@/components/ui/card";
 import { EscrowControls, PayoutControls, RetryPayoutControls, ReleaseApprovalControls } from "@/components/admin/finance-controls";
 import { requireSection, isReadonly } from "@/lib/admin/rbac";
@@ -70,7 +69,7 @@ async function FinanceInner({ searchParams }: { searchParams: Promise<Record<str
     .slice(0, 20);
 
   return (
-    <AdminShell role={role} active="finance">
+    <>
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Finance</h1>
       <p className="mt-1 text-sm text-ink-3">
         Releases and refunds of {formatNaira(dualControlThresholdNaira())} or more need a second admin to approve before the money moves.
@@ -204,13 +203,13 @@ async function FinanceInner({ searchParams }: { searchParams: Promise<Record<str
           )}
         </CardBody>
       </Card>
-    </AdminShell>
+    </>
   );
 }
 
 export default function AdminFinancePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
-    <Suspense fallback={<AdminShellSkeleton />}>
+    <Suspense fallback={<AdminContentSkeleton />}>
       <FinanceInner searchParams={searchParams} />
     </Suspense>
   );
