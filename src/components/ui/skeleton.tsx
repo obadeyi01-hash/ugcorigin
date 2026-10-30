@@ -27,6 +27,25 @@ export function PageContentSkeleton({ rows = 4 }: { rows?: number }) {
 }
 
 /**
+ * Content-column placeholder for an admin section. The shell (header + nav) is
+ * rendered by `app/admin/layout.tsx` and stays mounted, so a section only needs
+ * to fill its own column while its data streams in.
+ */
+export function AdminContentSkeleton({ rows = 6 }: { rows?: number }) {
+  return (
+    <div role="status" aria-busy="true">
+      <span className="sr-only">Loading…</span>
+      <Skeleton className="h-8 w-48 rounded-lg" />
+      <div className="mt-6 grid gap-3">
+        {Array.from({ length: rows }).map((_, i) => (
+          <Skeleton key={i} className="h-16 rounded-xl" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
  * Placeholder for a detail page. Use inside an existing `<Container>` (unlike
  * {@link PageContentSkeleton}, which brings its own) so navigating into a brief,
  * campaign or gig keeps the page frame instead of blanking to white.

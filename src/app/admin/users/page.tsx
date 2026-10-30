@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
-import { AdminShell } from "@/components/admin/admin-shell";
-import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
+import { AdminContentSkeleton } from "@/components/ui/skeleton";
 import { Card, CardBody } from "@/components/ui/card";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { FeaturedToggle } from "@/components/admin/featured-toggle";
@@ -69,7 +68,7 @@ async function UsersInner({ searchParams }: { searchParams: Promise<Record<strin
   const brandPages = pageCount(brandCount);
 
   return (
-    <AdminShell role={role} active="users">
+    <>
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Users</h1>
 
       <h2 className="mt-6 font-display text-lg font-semibold text-ink">Creators</h2>
@@ -143,13 +142,13 @@ async function UsersInner({ searchParams }: { searchParams: Promise<Record<strin
           </ul>
         </CardBody>
       </Card>
-    </AdminShell>
+    </>
   );
 }
 
 export default function AdminUsersPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
-    <Suspense fallback={<AdminShellSkeleton />}>
+    <Suspense fallback={<AdminContentSkeleton />}>
       <UsersInner searchParams={searchParams} />
     </Suspense>
   );

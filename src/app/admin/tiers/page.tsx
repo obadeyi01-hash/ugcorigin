@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
-import { AdminShell } from "@/components/admin/admin-shell";
-import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
+import { AdminContentSkeleton } from "@/components/ui/skeleton";
 import { Card, CardBody } from "@/components/ui/card";
 import { TierBadge } from "@/components/ui/tier-badge";
 import { TierConfigEditor } from "@/components/admin/tier-config-editor";
@@ -70,7 +69,7 @@ async function TiersInner({ searchParams }: { searchParams: Promise<Record<strin
     : FALLBACK_GUIDES;
 
   return (
-    <AdminShell role={role} active="tiers">
+    <>
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Tiers</h1>
       <p className="mt-1 text-sm text-ink-2">
         The ladder, price floors and creator standings. Changes are audited. Tiers move one step at a time, overrides here
@@ -142,13 +141,13 @@ async function TiersInner({ searchParams }: { searchParams: Promise<Record<strin
           </div>
         );
       })}
-    </AdminShell>
+    </>
   );
 }
 
 export default function AdminTiersPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
-    <Suspense fallback={<AdminShellSkeleton />}>
+    <Suspense fallback={<AdminContentSkeleton />}>
       <TiersInner searchParams={searchParams} />
     </Suspense>
   );

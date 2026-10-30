@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
 import { Check, X } from "lucide-react";
-import { AdminShell } from "@/components/admin/admin-shell";
-import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
+import { AdminContentSkeleton } from "@/components/ui/skeleton";
 import { Card, CardBody } from "@/components/ui/card";
 import { VerificationRow } from "@/components/admin/verification-row";
 import { BrandVerificationRow } from "@/components/admin/brand-verification-row";
@@ -129,7 +128,7 @@ async function VerificationInner({ searchParams }: { searchParams: Promise<Recor
   const brands = brandData ?? [];
 
   return (
-    <AdminShell role={role} active="verification">
+    <>
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Verification queue</h1>
       <p className="mt-1.5 text-sm text-ink-2">Creators who&apos;ve completed onboarding and are awaiting identity verification.</p>
 
@@ -257,13 +256,13 @@ async function VerificationInner({ searchParams }: { searchParams: Promise<Recor
           </Card>
         ))}
       </div>
-    </AdminShell>
+    </>
   );
 }
 
 export default function AdminVerificationPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
-    <Suspense fallback={<AdminShellSkeleton />}>
+    <Suspense fallback={<AdminContentSkeleton />}>
       <VerificationInner searchParams={searchParams} />
     </Suspense>
   );

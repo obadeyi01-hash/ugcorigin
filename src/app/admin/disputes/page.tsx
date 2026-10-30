@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
-import { AdminShell } from "@/components/admin/admin-shell";
-import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
+import { AdminContentSkeleton } from "@/components/ui/skeleton";
 import { Card, CardBody } from "@/components/ui/card";
 import { ResolveDispute } from "@/components/admin/resolve-dispute";
 import { AdminListControls } from "@/components/admin/list-controls";
@@ -45,7 +44,7 @@ async function DisputesInner({ searchParams }: { searchParams: Promise<Record<st
   const disputes = (data ?? []) as unknown as DisputeRow[];
 
   return (
-    <AdminShell role={role} active="disputes">
+    <>
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Disputes</h1>
       <p className="mt-1.5 text-sm text-ink-2">Resolve against the written brief: release, refund, or split the escrow.</p>
       <AdminListControls
@@ -77,13 +76,13 @@ async function DisputesInner({ searchParams }: { searchParams: Promise<Record<st
           </Card>
         ))}
       </div>
-    </AdminShell>
+    </>
   );
 }
 
 export default function AdminDisputesPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
-    <Suspense fallback={<AdminShellSkeleton />}>
+    <Suspense fallback={<AdminContentSkeleton />}>
       <DisputesInner searchParams={searchParams} />
     </Suspense>
   );

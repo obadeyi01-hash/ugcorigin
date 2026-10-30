@@ -7,6 +7,7 @@ import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { Card, CardBody } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { PortfolioManager } from "@/components/dashboard/portfolio-manager";
 import { VideoManager } from "@/components/media/video-manager";
@@ -49,6 +50,31 @@ function TopBar({ signedIn }: { signedIn: boolean }) {
         )}
       </Container>
     </header>
+  );
+}
+
+/** Shown while the dashboard's data streams in, so the content area keeps the
+ *  page frame instead of blanking below the top bar on navigation. */
+function DashboardSkeleton() {
+  return (
+    <>
+      <TopBar signedIn={false} />
+      <Container className="py-10" role="status" aria-busy="true">
+        <span className="sr-only">Loading your dashboard…</span>
+        <Skeleton className="h-9 w-56 rounded-lg" />
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 rounded-2xl" />
+          ))}
+        </div>
+        <Skeleton className="mt-8 h-6 w-40 rounded" />
+        <div className="mt-3 grid max-w-2xl gap-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-14 rounded-xl" />
+          ))}
+        </div>
+      </Container>
+    </>
   );
 }
 
@@ -417,7 +443,7 @@ async function DashboardInner() {
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<TopBar signedIn={false} />}>
+    <Suspense fallback={<DashboardSkeleton />}>
       <DashboardInner />
     </Suspense>
   );

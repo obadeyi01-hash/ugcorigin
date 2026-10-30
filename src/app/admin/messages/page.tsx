@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
-import { AdminShell } from "@/components/admin/admin-shell";
-import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
+import { AdminContentSkeleton } from "@/components/ui/skeleton";
 import { Card, CardBody } from "@/components/ui/card";
 import { AdminListControls } from "@/components/admin/list-controls";
 import { requireSection } from "@/lib/admin/rbac";
@@ -12,7 +11,7 @@ import { pageCount, pageWindow, readPage, readQuery } from "@/lib/admin/list";
 export const metadata: Metadata = { title: "Admin · Messages" };
 
 async function MessagesInner({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  const { role } = await requireSection("messages");
+  await requireSection("messages");
   const sp = await searchParams;
   const c = sp.c;
   const q = readQuery(sp.q);
@@ -58,7 +57,7 @@ async function MessagesInner({ searchParams }: { searchParams: Promise<Record<st
   }
 
   return (
-    <AdminShell role={role} active="messages">
+    <>
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Messages</h1>
       <p className="mt-1 text-sm text-ink-2">Read-only oversight of brand to creator conversations.</p>
       <AdminListControls
@@ -116,13 +115,13 @@ async function MessagesInner({ searchParams }: { searchParams: Promise<Record<st
           </CardBody>
         </Card>
       </div>
-    </AdminShell>
+    </>
   );
 }
 
 export default function AdminMessagesPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
-    <Suspense fallback={<AdminShellSkeleton />}>
+    <Suspense fallback={<AdminContentSkeleton />}>
       <MessagesInner searchParams={searchParams} />
     </Suspense>
   );

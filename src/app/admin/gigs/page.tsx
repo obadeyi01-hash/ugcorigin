@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
-import { AdminShell } from "@/components/admin/admin-shell";
-import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
+import { AdminContentSkeleton } from "@/components/ui/skeleton";
 import { Card, CardBody } from "@/components/ui/card";
 import { AdminListControls } from "@/components/admin/list-controls";
 import { requireSection } from "@/lib/admin/rbac";
@@ -28,7 +27,7 @@ const GIG_STATUS = [
 ];
 
 async function GigsInner({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  const { role } = await requireSection("gigs");
+  await requireSection("gigs");
   const supabase = await createClient();
   const sp = await searchParams;
   const q = readQuery(sp.q);
@@ -42,7 +41,7 @@ async function GigsInner({ searchParams }: { searchParams: Promise<Record<string
   const pages = pageCount(count);
 
   return (
-    <AdminShell role={role} active="gigs">
+    <>
       <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Gigs</h1>
       <AdminListControls
         pathname="/admin/gigs"
@@ -69,13 +68,13 @@ async function GigsInner({ searchParams }: { searchParams: Promise<Record<string
           </ul>
         </CardBody>
       </Card>
-    </AdminShell>
+    </>
   );
 }
 
 export default function AdminGigsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
-    <Suspense fallback={<AdminShellSkeleton />}>
+    <Suspense fallback={<AdminContentSkeleton />}>
       <GigsInner searchParams={searchParams} />
     </Suspense>
   );
