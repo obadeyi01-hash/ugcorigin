@@ -25,7 +25,7 @@ async function Inner() {
     return (
       <AccessNotice
         title="Brands run campaigns"
-        message="You're signed in as a creator. Per-view campaigns are funded by brands — add a brand account to create one, or browse open campaigns to submit."
+        message="You're signed in as a creator. Per-view campaigns are funded by brands, add a brand account to create one, or browse open campaigns to submit."
         cta={{ label: "Add a brand account", href: "/onboarding?role=brand" }}
       />
     );

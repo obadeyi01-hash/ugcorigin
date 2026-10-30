@@ -42,7 +42,7 @@ export function placementNote(input: {
     ? `None of this is a comment on your worth. ${naira(input.previousRate)} is significantly above the usual starting range for ${who} in ${where} (${range}, around ${usual}). We set ${next} as a starting point per gig for where you are right now, at ${input.tierLabel}. You can always negotiate, and a brand can pay a bit more than this. As you finish work here, the rate can move up. Rising and Pro are earned from that work.`
     : `Your starting rate of ${next} is a starting point per gig at ${input.tierLabel}, not a comment on your worth. It sits in the usual range for ${who} in ${where} (${range}). You can always negotiate, and a brand can pay a bit more.`;
 
-  const subject = `You're live on UGCOrigin — your ${input.tierLabel} starting point`;
+  const subject = `You're live on UGCOrigin: your ${input.tierLabel} starting point`;
   const heading = `You're live, at ${input.tierLabel}`;
   const body = `You're verified and live at ${input.tierLabel}. ${rateLine} Brands look next at a clear bio, a few showcase videos, and packages they can book.`;
   const bodyHtml = `

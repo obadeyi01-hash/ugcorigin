@@ -41,7 +41,7 @@ export function VerifyReminder({
       const res = await adminSendVerifyReminder({ userId, role, message: custom });
       if (res.error) setErr(res.error);
       else {
-        setDone(res.emailed ? "Reminder sent — in-app and email." : "Reminder posted in-app (email isn't configured).");
+        setDone(res.emailed ? "Reminder sent, in-app and email." : "Reminder posted in-app (email isn't configured).");
         setMessage("");
       }
     });

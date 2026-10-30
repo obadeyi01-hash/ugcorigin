@@ -73,7 +73,7 @@ export function ReleaseApprovalControls({
           size="sm"
           loading={pending}
           disabled={isRequester}
-          title={isRequester ? "You filed this request — another admin must approve." : undefined}
+          title={isRequester ? "You filed this request, another admin must approve." : undefined}
           onClick={() => run(() => adminApproveRelease(approvalId))}
         >
           Approve
@@ -82,7 +82,7 @@ export function ReleaseApprovalControls({
           {isRequester ? "Cancel" : "Reject"}
         </Button>
       </div>
-      {isRequester && <span className="text-xs text-ink-3">You requested this — another admin must approve.</span>}
+      {isRequester && <span className="text-xs text-ink-3">You requested this, another admin must approve.</span>}
       {err && <span className="text-xs text-error">{err}</span>}
     </div>
   );

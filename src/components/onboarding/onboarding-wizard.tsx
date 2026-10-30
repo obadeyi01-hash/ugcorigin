@@ -297,7 +297,7 @@ export function OnboardingWizard({
             </Field>
           </div>
           <p className="-mt-1 text-xs text-ink-3">
-            Brands see &ldquo;{c.firstName.trim() || "First"} {c.lastName.trim() ? c.lastName.trim()[0].toUpperCase() + "." : "L."}&rdquo; until you both agree on a booking, then your full name unlocks. We&apos;ll set up your @handle for you — you can change it later in settings.
+            Brands see &ldquo;{c.firstName.trim() || "First"} {c.lastName.trim() ? c.lastName.trim()[0].toUpperCase() + "." : "L."}&rdquo; until you both agree on a booking, then your full name unlocks. We&apos;ll set up your @handle for you, and you can change it later in settings.
           </p>
           <Field label="Location" hint="Where you're based in Nigeria.">
             <Select value={c.location} onChange={(e) => setC({ ...c, location: e.target.value })}>
