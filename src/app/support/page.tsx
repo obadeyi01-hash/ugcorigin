@@ -13,13 +13,13 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Help & support",
-  description: "Answers to common questions about hiring, getting paid, escrow and trust on UGCOrigin, plus a way to reach our team.",
+  description: "Answers to common questions about hiring, getting paid, payment protection and trust on UGCOrigin, plus a way to reach our team.",
 };
 
 const FAQ: { q: string; a: string }[] = [
   {
     q: "How does payment work?",
-    a: "Brands fund escrow upfront through Paystack. The money is held safely and only released to the creator once the brand approves the delivered work, so both sides are protected.",
+    a: "Brands fund the gig upfront through Paystack. The money is held safely and only released to the creator once the brand approves the delivered work, so both sides are protected.",
   },
   {
     q: "When do creators get paid?",
@@ -31,7 +31,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Why can't I share my phone number or email in chat yet?",
-    a: "To keep everyone protected by escrow, contact details are hidden in messages until a gig is funded. Once you're booked, you'll see each other's name and number to coordinate.",
+    a: "To keep everyone protected, contact details are hidden in messages until a gig is funded. Once you're booked, you'll see each other's name and number to coordinate.",
   },
   {
     q: "How do I get verified?",
@@ -43,7 +43,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "What happens if there's a dispute?",
-    a: "Either side can open a dispute before a gig completes. Our Trust & Safety team reviews it against the written brief and decides how the held escrow is split. Funds stay held until it's resolved.",
+    a: "Either side can open a dispute before a gig completes. Our Trust & Safety team reviews it against the written brief and decides how the held payment is split. Funds stay held until it's resolved.",
   },
   {
     q: "Is UGCOrigin only in Nigeria?",

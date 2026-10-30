@@ -22,7 +22,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         </div>
         {/* Mobile-only trust strip — the brand panel carries this on lg+ */}
         <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-ink-3 lg:hidden">
-          <span className="inline-flex items-center gap-1.5"><ShieldCheck className="size-3.5 text-accent" /> Escrow-protected</span>
+          <span className="inline-flex items-center gap-1.5"><ShieldCheck className="size-3.5 text-accent" /> Payment-protected</span>
           <span className="inline-flex items-center gap-1.5"><BadgeCheck className="size-3.5 text-accent" /> Verified humans</span>
           <span className="inline-flex items-center gap-1.5"><Banknote className="size-3.5 text-accent" /> Next-day payouts</span>
         </div>
@@ -40,12 +40,12 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             Original content from <span className="text-accent-bright">real humans</span>.
           </h2>
           <p className="mt-3 max-w-sm text-chalk/80">
-            Hire verified creators, run escrow-protected campaigns, and get UGC that converts, all in one place.
+            Hire verified creators, run payment-protected campaigns, and get UGC that converts, all in one place.
           </p>
         </div>
 
         <ul className="relative space-y-3 text-sm text-chalk/85">
-          <li className="flex items-center gap-2.5"><ShieldCheck className="size-4 text-accent-bright" /> Escrow-protected payments</li>
+          <li className="flex items-center gap-2.5"><ShieldCheck className="size-4 text-accent-bright" /> Protected payments</li>
           <li className="flex items-center gap-2.5"><BadgeCheck className="size-4 text-accent-bright" /> Identity-verified creators</li>
           <li className="flex items-center gap-2.5"><Banknote className="size-4 text-accent-bright" /> Next-day payouts via Paystack</li>
         </ul>

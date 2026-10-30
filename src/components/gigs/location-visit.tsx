@@ -69,7 +69,7 @@ export function LocationVisit({ gigId, role, address, status }: { gigId: string;
               <li>• Confirm the exact address and a contact in UGCOrigin chat before travelling.</li>
               <li>• Shoot during business hours; tell someone you trust where you&rsquo;re going.</li>
               <li>• Meet at the public storefront/venue, not a private residence.</li>
-              <li>• If anything feels off, leave and report it to us, your escrow is safe.</li>
+              <li>• If anything feels off, leave and report it to us, your payment is protected.</li>
               <li>• UGCOrigin facilitates the booking but isn&rsquo;t present at the shoot.</li>
             </ul>
             <Button className="mt-5 w-full" onClick={() => { setShowSafety(false); markVisited(); }} loading={pending}>

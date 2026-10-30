@@ -123,7 +123,7 @@ export async function sendMessage(input: {
       await notifyUser(admin, user.id, {
         type: "ai_warning",
         title: "Keep deals on UGCOrigin",
-        body: "Sharing contact details before a contract is funded breaks our rules and risks a strike. You're protected by escrow only on-platform.",
+        body: "Sharing contact details before a contract is funded breaks our rules and risks a strike. You're protected only on-platform.",
         href: "/support",
       });
     } else if (flags >= 6) {

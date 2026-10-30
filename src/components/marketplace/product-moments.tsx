@@ -65,7 +65,7 @@ function EscrowMock() {
   return (
     <div className="rounded-2xl border border-line bg-paper p-3.5">
       <div className="flex items-center justify-between">
-        <span className="inline-flex items-center gap-1.5 text-2xs font-semibold text-ink-2"><Lock className="size-3.5 text-accent" /> Held in escrow</span>
+        <span className="inline-flex items-center gap-1.5 text-2xs font-semibold text-ink-2"><Lock className="size-3.5 text-accent" /> Held safely</span>
         <span className="text-2xs font-medium text-ink-3">Paystack</span>
       </div>
       <p className="mt-2 font-display text-2xl font-bold text-ink">₦45,000</p>

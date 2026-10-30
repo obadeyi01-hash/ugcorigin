@@ -22,13 +22,13 @@ export const metadata: Metadata = {
     "Join Nigeria's home for original, human content. Keep 100% of your rate, get next-day payouts to your bank, and build a reputation that pays. Free to join.",
   openGraph: {
     title: "UGCOrigin for Creators, keep 100%, get paid next-day",
-    description: "Make content, get hired by real brands, and keep 100% of your rate. Escrow-protected, next-day payouts.",
+    description: "Make content, get hired by real brands, and keep 100% of your rate. Payment-protected, next-day payouts.",
   },
 };
 
 const values = [
   { icon: Wallet, title: "Keep 100% of your rate", text: "No creator-side cut. What you quote is exactly what lands in your bank account." },
-  { icon: ShieldCheck, title: "You always get paid", text: "Brands fund escrow before you start, so the money is really there. Deliver, get approved, get paid." },
+  { icon: ShieldCheck, title: "You always get paid", text: "Brands fund the gig before you start, so the money is really there and held safely. Deliver, get approved, get paid." },
   { icon: TrendingUp, title: "Climb, earn more", text: "Price fairly with tier floors, then rise through 7 tiers as you deliver great work, unlocking higher floors and more visibility." },
   { icon: IdCard, title: "A card that sells you", text: "Your shareable profile shows your rate, packages, socials and work, send it anywhere, get booked." },
 ];
@@ -42,10 +42,10 @@ const steps = [
 
 const faqs = [
   { q: "Does it cost anything to join?", a: "No. Creating your profile, building your card and applying to work are all free. There's no creator-side cut either, you keep 100% of your agreed rate." },
-  { q: "How and when do I get paid?", a: "When a brand approves your work, your payout is queued automatically to the Nigerian bank account you verified, a next-day bank payout. The money was already held in escrow, so there's nothing to chase." },
+  { q: "How and when do I get paid?", a: "When a brand approves your work, your payout is queued automatically to the Nigerian bank account you verified, a next-day bank payout. The money was already held safely, so there's nothing to chase." },
   { q: "How much can I charge?", a: `You set your own rate. Each tier has a minimum floor (starting at ${formatNaira(FLOOR)}) so you're never pushed to underprice yourself, and as you complete gigs and earn reviews you climb tiers and unlock higher floors.` },
   { q: "How do I get discovered?", a: "You're matched to briefs and shown in the directory based on real outcomes, great work lifts you. New creators also get reserved exploration visibility so you can land your first gigs, and you can optionally boost your profile." },
-  { q: "What makes UGCOrigin different?", a: "It's built for real, verified humans making original content, the opposite of AI slop. Verification, escrow and a clean workspace mean brands trust you and you always get paid." },
+  { q: "What makes UGCOrigin different?", a: "It's built for real, verified humans making original content, the opposite of AI slop. Verification, payment protection and a clean workspace mean brands trust you and you always get paid." },
 ];
 
 export default function ForCreatorsPage() {

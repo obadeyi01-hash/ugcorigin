@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     template: "%s · UGCOrigin",
   },
   description:
-    "UGCOrigin is the creator network for original, human-made content. Hire identity-verified creators, pay safely through escrow, and get UGC that converts. Nigeria-first.",
+    "UGCOrigin is the creator network for original, human-made content. Hire identity-verified creators, pay safely with payment protection, and get UGC that converts. Nigeria-first.",
   applicationName: "UGCOrigin",
   authors: [{ name: "Dream Intrepid Ltd." }],
   keywords: [
@@ -37,13 +37,13 @@ export const metadata: Metadata = {
     "user generated content",
     "verified creators",
     "influencer marketing Nigeria",
-    "escrow creator payments",
+    "protected creator payments",
   ],
   alternates: { canonical: "/" },
   openGraph: {
     title: "UGCOrigin, Hire real creators for original UGC",
     description:
-      "Hire identity-verified human creators for authentic UGC. Escrow-protected. Nigeria-first.",
+      "Hire identity-verified human creators for authentic UGC. Payment-protected. Nigeria-first.",
     siteName: "UGCOrigin",
     type: "website",
     locale: "en_NG",
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     site: "@ugcorigin",
     creator: "@ugcorigin",
     title: "UGCOrigin, Hire real creators for original UGC",
-    description: "Identity-verified human creators. Escrow-protected. Nigeria-first.",
+    description: "Identity-verified human creators. Payment-protected. Nigeria-first.",
   },
   ...siteVerification(),
 };
@@ -83,7 +83,7 @@ const orgLd = {
   url: SITE_URL,
   logo: `${SITE_URL}/brand/favicon.png`,
   description:
-    "UGCOrigin is the creator network for original, human, verified content, hire identity-verified creators with escrow-protected payments. Nigeria-first.",
+    "UGCOrigin is the creator network for original, human, verified content, hire identity-verified creators with payment-protected transactions. Nigeria-first.",
   parentOrganization: { "@type": "Organization", name: "Dream Intrepid Ltd." },
   areaServed: { "@type": "Country", name: "Nigeria" },
 };

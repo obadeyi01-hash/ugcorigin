@@ -134,7 +134,7 @@ export async function resolveDisputeAction(
   const shares = disputeShares(gig.price_naira, resolution, partialToCreatorNaira);
   const moving = Math.max(shares.toCreator, shares.toBrand);
   if (requiresDualControl(moving)) {
-    return { error: "This amount needs two finance admins. Use the finance console to release or refund the whole escrow." };
+    return { error: "This amount needs two finance admins. Use the finance console to release or refund the whole payment." };
   }
 
   const settled = await settleDispute(admin, {

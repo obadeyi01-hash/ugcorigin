@@ -249,7 +249,7 @@ export function CreatorProfile({ data }: { data: ProfileData }) {
             </div>
 
             <ul className="mt-5 space-y-2 border-t border-line pt-4 text-sm text-ink-2">
-              <li className="flex items-center gap-2"><ShieldCheck className="size-4 text-success" /> Escrow-protected, pay on approval</li>
+              <li className="flex items-center gap-2"><ShieldCheck className="size-4 text-success" /> Payment-protected, pay on approval</li>
               {data.verified && <li className="flex items-center gap-2"><Check className="size-4 text-success" /> Identity-verified human</li>}
             </ul>
           </CardBody>

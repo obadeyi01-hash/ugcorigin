@@ -18,7 +18,7 @@ const STATIC: { path: string; priority: number; freq: "daily" | "weekly" | "mont
   { path: "/trust", priority: 0.4, freq: "monthly" },
   { path: "/terms", priority: 0.3, freq: "monthly" },
   { path: "/privacy", priority: 0.3, freq: "monthly" },
-  { path: "/escrow-terms", priority: 0.3, freq: "monthly" },
+  { path: "/payment-protection-terms", priority: 0.3, freq: "monthly" },
   { path: "/creator-agreement", priority: 0.3, freq: "monthly" },
   { path: "/brand-agreement", priority: 0.3, freq: "monthly" },
 ];

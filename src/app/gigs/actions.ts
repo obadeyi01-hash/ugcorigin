@@ -138,7 +138,7 @@ export async function approveReleaseAction(
     deliverableId,
     memo: "Released to creator on approval",
   });
-  if (!released.ok) return { error: released.error ?? "Could not release escrow." };
+  if (!released.ok) return { error: released.error ?? "Could not release the payment." };
   const payoutQueued = !!released.payoutQueued;
 
   await notifyMany(admin, [
@@ -219,7 +219,7 @@ export async function setShippingStatusAction(gigId: string, status: "sent" | "r
   await notifyUser(admin, other, {
     type: "gig_update",
     title: status === "sent" ? "Your product is on the way" : "The creator received the product",
-    body: `"${gig.title}" — ${status === "sent" ? "the brand marked the product as sent." : "the creator confirmed delivery."}`,
+    body: `"${gig.title}": ${status === "sent" ? "the brand marked the product as sent." : "the creator confirmed delivery."}`,
     href: `/gigs/${gigId}`,
     ctaLabel: "View the gig",
   });

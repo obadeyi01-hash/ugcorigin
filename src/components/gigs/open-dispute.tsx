@@ -34,7 +34,7 @@ export function OpenDispute({ gigId }: { gigId: string }) {
   return (
     <div className="rounded-2xl border border-line bg-surface p-5">
       <p className="font-semibold text-ink">Open a dispute</p>
-      <p className="mt-0.5 text-sm text-ink-2">Our team reviews disputes against the written brief. Escrow stays held until it's resolved.</p>
+      <p className="mt-0.5 text-sm text-ink-2">Our team reviews disputes against the written brief. Your payment stays held safely until it's resolved.</p>
       <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="What went wrong?" className="mt-3 min-h-20" />
       {err && <p className="mt-2 text-sm text-error">{err}</p>}
       <div className="mt-3 flex gap-2">

@@ -41,7 +41,7 @@ const steps = [
   {
     icon: ShieldCheck,
     title: "Fund it, safely",
-    body: "Your payment is held in escrow the moment you hire. Creators know they'll be paid; you know the work will be delivered. Nobody gets ghosted.",
+    body: "Your payment is held safely the moment you hire. Creators know they'll be paid; you know the work will be delivered. Nobody gets ghosted.",
   },
   {
     icon: CircleCheckBig,
@@ -53,7 +53,7 @@ const steps = [
 const values = [
   {
     icon: ShieldCheck,
-    title: "Escrow by default",
+    title: "Payment protection by default",
     body: "Money is locked until you approve the work. Every deal is protected, and disputes are judged against the written brief, not who shouts loudest.",
   },
   {
@@ -152,7 +152,7 @@ export default function Home() {
               <Reveal delay={240}>
                 <div className="mt-6 flex flex-wrap items-center justify-start gap-x-5 gap-y-2 text-sm text-chalk/65 sm:justify-center">
                   <span className="inline-flex items-center gap-1.5">
-                    <Lock className="size-4 text-accent-bright" /> Escrow-protected
+                    <Lock className="size-4 text-accent-bright" /> Payment-protected
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <BadgeCheck className="size-4 text-accent-bright" /> Verified creators

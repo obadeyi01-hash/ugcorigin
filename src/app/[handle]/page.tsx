@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: { params: Promise<{ handle: s
   const title = `${name} (@${handle}), UGC Creator`;
   const description =
     bio?.trim() ||
-    `Hire ${name}, a verified UGC creator on UGCOrigin${niches.length ? ` for ${niches.slice(0, 3).join(", ")}` : ""}. Escrow-protected, Nigeria-first.`;
+    `Hire ${name}, a verified UGC creator on UGCOrigin${niches.length ? ` for ${niches.slice(0, 3).join(", ")}` : ""}. Payment-protected, Nigeria-first.`;
   const ogImage = `${SITE_URL}/card/${handle}`;
 
   return {

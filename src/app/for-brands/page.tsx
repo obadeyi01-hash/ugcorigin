@@ -18,23 +18,23 @@ const SIGNUP = "/signup?role=brand";
 export const metadata: Metadata = {
   title: "Hire verified UGC creators",
   description:
-    "Get authentic, human UGC that converts, from identity-verified Nigerian creators. Escrow-protected, pay only on approval, next-day payouts. Post a brief free.",
+    "Get authentic, human UGC that converts, from identity-verified Nigerian creators. Payment-protected, pay only on approval, next-day payouts. Post a brief free.",
   openGraph: {
     title: "UGCOrigin for Brands, authentic UGC from verified creators",
-    description: "Hire identity-verified human creators. Escrow-protected. Pay only for work you approve.",
+    description: "Hire identity-verified human creators. Payment-protected. Pay only for work you approve.",
   },
 };
 
 const values = [
   { icon: BadgeCheck, title: "Real, verified humans", text: "Every creator passes identity verification. Original human content, never AI, never fake." },
-  { icon: ShieldCheck, title: "Escrow on every deal", text: "Your money is held safely and released only when you approve the work." },
+  { icon: ShieldCheck, title: "Payment protection on every deal", text: "Your money is held safely and released only when you approve the work." },
   { icon: MessageSquare, title: "One clean workspace", text: "Brief, drafts, time-stamped feedback and approval, all in one place, on the record." },
-  { icon: Wallet, title: "Pay only on approval", text: "Fund up front into escrow, but release only for work you accept. Fair for everyone." },
+  { icon: Wallet, title: "Pay only on approval", text: "Fund up front and your payment is held safely, released only for work you accept. Fair for everyone." },
 ];
 
 const steps = [
   { n: "01", t: "Post a brief or browse", d: "Describe what you need, or find verified creators by niche, budget and location." },
-  { n: "02", t: "Fund escrow", d: "Agree a deal and fund it safely. You see the exact total before you pay, nothing hidden." },
+  { n: "02", t: "Fund the gig", d: "Agree a deal and fund it safely. You see the exact total before you pay, nothing hidden." },
   { n: "03", t: "Review the work", d: "Get drafts in the workspace and leave time-stamped feedback or request a revision." },
   { n: "04", t: "Approve & release", d: "Happy? Approve, and the creator is paid. Not right? Dispute against the brief." },
 ];
@@ -42,7 +42,7 @@ const steps = [
 const faqs = [
   { q: "What does it cost to post?", a: "Posting a brief and browsing creators is free. You only pay when you fund a deal, and the exact service fee is always shown before you pay, see our documentation for the full detail." },
   { q: "Are creators actually vetted?", a: "Yes. Every creator passes identity verification and a verified bank account before they can be hired, so you're always working with a real, accountable human." },
-  { q: "What if the work isn't good?", a: "You review everything in the workspace and can request revisions. Funds stay in escrow until you approve, and if something goes wrong, you can open a dispute that's decided against your written brief." },
+  { q: "What if the work isn't good?", a: "You review everything in the workspace and can request revisions. Funds stay held safely until you approve, and if something goes wrong, you can open a dispute that's decided against your written brief." },
   { q: "How fast can I get content?", a: "You can post a brief in minutes and start receiving applications or send direct offers the same day. Turnaround is agreed with each creator." },
   { q: "Who owns the content?", a: "Usage rights are agreed as part of each deal and covered by the creator agreement. You get the content you paid for, for the usage you agreed." },
 ];
@@ -73,7 +73,7 @@ export default function ForBrandsPage() {
               </Reveal>
               <Reveal delay={120}>
                 <p className="mt-4 max-w-xl text-pretty text-chalk/75 sm:mx-auto sm:mt-5 sm:text-lg">
-                  Hire identity-verified Nigerian creators for content that sells. Escrow-protected, reviewed in one clean
+                  Hire identity-verified Nigerian creators for content that sells. Payment-protected, reviewed in one clean
                   workspace, and you only ever pay for work you approve.
                 </p>
               </Reveal>
@@ -82,7 +82,7 @@ export default function ForBrandsPage() {
                   <Link href={SIGNUP} className="w-full sm:w-auto"><Button size="lg" className="w-full sm:w-auto">Post a brief, it&apos;s free <ArrowRight className="size-4" /></Button></Link>
                   <Link href="/creators" className="w-full sm:w-auto"><Button size="lg" variant="secondary" className="w-full sm:w-auto">Browse creators</Button></Link>
                 </div>
-                <p className="mt-4 text-xs text-chalk/55">Free to post · Escrow-protected · Verified humans, no AI slop</p>
+                <p className="mt-4 text-xs text-chalk/55">Free to post · Payment-protected · Verified humans, no AI slop</p>
               </Reveal>
             </div>
           </section>

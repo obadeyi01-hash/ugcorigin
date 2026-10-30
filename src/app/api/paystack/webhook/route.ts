@@ -269,7 +269,7 @@ export async function POST(request: Request) {
 
   await notifyMany(admin, [
     { userId: offer.creator_id, payload: { type: "gig_update", title: "You've been hired", body: `"${offer.title}" is funded and ready to start.`, href: `/gigs/${gig.id}`, ctaLabel: "Start the gig" } },
-    { userId: offer.brand_id, payload: { type: "gig_update", title: "Escrow funded", body: `"${offer.title}" is funded. The creator can start now.`, href: `/gigs/${gig.id}`, ctaLabel: "View the gig" } },
+    { userId: offer.brand_id, payload: { type: "gig_update", title: "Payment secured", body: `"${offer.title}" is funded. The creator can start now.`, href: `/gigs/${gig.id}`, ctaLabel: "View the gig" } },
   ]);
   await awardReferral(admin, { creatorId: offer.creator_id, gigId: gig.id, brandId: offer.brand_id });
 
@@ -318,7 +318,7 @@ async function handleTransferEvent(
   await notifyUser(admin, payout.creator_id, {
     type: "payout",
     title: "Payout needs attention",
-    body: "Your bank transfer didn't go through. We're on it — please confirm your payout bank details are correct.",
+    body: "Your bank transfer didn't go through. We're on it, please confirm your payout bank details are correct.",
     href: "/settings",
     ctaLabel: "Check payout details",
   });

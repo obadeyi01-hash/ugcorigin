@@ -21,8 +21,8 @@ type AuditRow = { id: string; action: string; target_type: string | null; target
 type ApprovalRow = { id: string; kind: "release" | "refund"; amount_naira: number; requested_by: string | null; created_at: string; gig: { title: string } | null };
 
 const AUDIT_LABEL: Record<string, string> = {
-  "escrow.release": "Escrow released",
-  "escrow.refund": "Escrow refunded",
+  "escrow.release": "Payment released",
+  "escrow.refund": "Payment refunded",
   "escrow.release_requested": "Release submitted for approval",
   "escrow.refund_requested": "Refund submitted for approval",
   "escrow.release_approved": "Release approved (2nd admin)",
@@ -99,7 +99,7 @@ async function FinanceInner({ searchParams }: { searchParams: Promise<Record<str
         </>
       )}
 
-      <h2 className="mt-8 font-display text-lg font-semibold text-ink">Escrow held</h2>
+      <h2 className="mt-8 font-display text-lg font-semibold text-ink">Funds held</h2>
       <AdminListControls
         pathname="/admin/finance"
         q=""
@@ -112,7 +112,7 @@ async function FinanceInner({ searchParams }: { searchParams: Promise<Record<str
         hidden={{ ppage: ppage > 1 ? String(ppage) : undefined, fpage: fpage > 1 ? String(fpage) : undefined }}
       />
       <div className="mt-3 grid gap-3">
-        {escrowRows.length === 0 && <Card variant="outline"><CardBody className="py-10 text-center text-ink-2">No escrow currently held.</CardBody></Card>}
+        {escrowRows.length === 0 && <Card variant="outline"><CardBody className="py-10 text-center text-ink-2">No funds currently held.</CardBody></Card>}
         {escrowRows.map((e) => (
           <Card key={e.id}>
             <CardBody className="flex flex-wrap items-center justify-between gap-3">
@@ -158,7 +158,7 @@ async function FinanceInner({ searchParams }: { searchParams: Promise<Record<str
 
       {failedRows.length > 0 && (
         <>
-          <h2 className="mt-8 font-display text-lg font-semibold text-error">Failed payouts — need attention</h2>
+          <h2 className="mt-8 font-display text-lg font-semibold text-error">Failed payouts, need attention</h2>
           <AdminListControls
             pathname="/admin/finance"
             q=""
