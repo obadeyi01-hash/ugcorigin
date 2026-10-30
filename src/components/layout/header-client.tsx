@@ -60,6 +60,7 @@ export function HeaderClient({ nav }: { nav: NavItem[] }) {
     }
     const supabase = createClient();
     let cancelled = false;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
     async function load() {
       const {
@@ -95,7 +96,28 @@ export function HeaderClient({ nav }: { nav: NavItem[] }) {
       setLoading(false);
     }
 
+    // Re-fetch the header when this account's own creator/brand row changes, so a
+    // verification approval or identity submit flips the banner and menu live —
+    // no manual reload. Mirrors the notification bell's realtime subscription.
+    async function subscribeToProfile() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      channel = supabase
+        .channel(`acct:${user.id}:${crypto.randomUUID()}`)
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "creator_profiles", filter: `id=eq.${user.id}` }, () => load())
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "brand_profiles", filter: `id=eq.${user.id}` }, () => load())
+        .subscribe();
+      // If cleanup already ran before the channel was created, tear it down now.
+      if (cancelled && channel) {
+        supabase.removeChannel(channel);
+        channel = null;
+      }
+    }
+
     load();
+    subscribeToProfile();
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
         setAccount(null);
@@ -107,6 +129,7 @@ export function HeaderClient({ nav }: { nav: NavItem[] }) {
     return () => {
       cancelled = true;
       sub.subscription.unsubscribe();
+      if (channel) supabase.removeChannel(channel);
     };
   }, []);
 
