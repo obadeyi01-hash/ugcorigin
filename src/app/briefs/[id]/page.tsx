@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
-import { MapPin, Users } from "lucide-react";
+import { CalendarClock, MapPin, Users } from "lucide-react";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { Container } from "@/components/ui/container";
-import { PillRow } from "@/components/ui/pill-row";
 import { Button } from "@/components/ui/button";
-import { Chip } from "@/components/ui/chip";
 import { Card, CardBody } from "@/components/ui/card";
+import { BrandByline, BriefTagList, PRIVATE_BRAND } from "@/components/briefs/brief-facts";
 import { ApplyForm } from "@/components/briefs/apply-form";
 import { ApplicationsList, type AppRow } from "@/components/briefs/applications-list";
 import { BoostButton } from "@/components/boost/boost-button";
@@ -48,7 +47,7 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
 
   const { data: brief } = await supabase
     .from("briefs")
-    .select("id, brand_id, title, description, budget_naira, slots, deadline, niches, status, created_at, brand:brand_profiles(company_name)")
+    .select("id, brand_id, title, description, budget_naira, slots, deadline, location, format, niches, tags, conceal_brand, status, created_at, brand:brand_profiles(company_name)")
     .eq("id", id)
     .maybeSingle();
 
@@ -67,7 +66,14 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
   const isOwner = !!user && brief.brand_id === user.id;
   // Applying is a creator action — hide the form from brand-only accounts.
   const { showCreatorCtas, isCreator, creatorLive } = await getViewer();
-  const company = (brief as unknown as { brand?: { company_name: string | null } }).brand?.company_name || "A brand";
+  const conceal = !!(brief as { conceal_brand?: boolean }).conceal_brand;
+  const companyName = (brief as unknown as { brand?: { company_name: string | null } }).brand?.company_name ?? null;
+  // Never name the company in structured data when the brief is masked; RLS
+  // also nulls the join for viewers who aren't the brand, an admin, or hired.
+  const company = conceal ? PRIVATE_BRAND : (companyName || "A brand");
+  const location = (brief as { location?: string | null }).location ?? null;
+  const format = (brief as { format?: string | null }).format ?? null;
+  const tags = (brief as { tags?: string[] | null }).tags ?? [];
 
   let apps: AppRow[] = [];
   let myAppStatus: string | null = null;
@@ -119,10 +125,10 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
       {jobLd && <JsonLd data={jobLd} />}
       <div>
         <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{brief.title}</h1>
-        <p className="mt-1.5 text-ink-3">{company}</p>
-        <PillRow className="mt-4">
-          {(brief.niches ?? []).map((n: string) => <Chip key={n}>{n}</Chip>)}
-        </PillRow>
+        <div className="mt-1.5"><BrandByline conceal={conceal} company={companyName} /></div>
+        <div className="mt-4">
+          <BriefTagList location={location} format={format} niches={brief.niches ?? []} tags={tags} />
+        </div>
         {brief.description && <p className="mt-6 max-w-prose whitespace-pre-line leading-relaxed text-ink-2">{brief.description}</p>}
 
         {isOwner && (
@@ -139,7 +145,8 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
             <p className="text-xs text-ink-3">Budget per creator</p>
             <p className="font-display text-3xl font-bold text-ink">{brief.budget_naira ? formatNaira(brief.budget_naira) : "Open budget"}</p>
             <p className="mt-3 flex items-center gap-1.5 text-sm text-ink-2"><Users className="size-4" /> {brief.slots} creator{brief.slots === 1 ? "" : "s"} needed</p>
-            {brief.deadline && <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-2"><MapPin className="size-4" /> Due {brief.deadline}</p>}
+            {location && <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-2"><MapPin className="size-4" /> {location}</p>}
+            {brief.deadline && <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-2"><CalendarClock className="size-4" /> Due {brief.deadline}</p>}
 
             {isOwner && brief.status === "open" && (
               <div className="mt-5">

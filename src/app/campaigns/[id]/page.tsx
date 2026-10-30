@@ -13,6 +13,7 @@ import { SubmissionsList, type Submission } from "@/components/campaigns/submiss
 import { CampaignSubmit } from "@/components/campaigns/campaign-submit";
 import { FundPool } from "@/components/campaigns/fund-pool";
 import { BoostButton } from "@/components/boost/boost-button";
+import { BrandByline } from "@/components/briefs/brief-facts";
 import { createClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/role";
 import { formatNaira } from "@/lib/utils";
@@ -29,7 +30,7 @@ async function Inner({ params }: { params: Promise<{ id: string }> }) {
 
   const { data: c } = await supabase
     .from("campaigns")
-    .select("id, brand_id, title, description, niches, pool_naira, spent_naira, rate_per_1000_naira, funded, status, brand:brand_profiles(company_name)")
+    .select("id, brand_id, title, description, niches, pool_naira, spent_naira, rate_per_1000_naira, funded, status, conceal_brand, brand:brand_profiles(company_name)")
     .eq("id", id)
     .maybeSingle();
   if (!c) {
@@ -42,7 +43,8 @@ async function Inner({ params }: { params: Promise<{ id: string }> }) {
   const isOwner = !!user && c.brand_id === user.id;
   // Submitting is a creator action — hide the form from brand-only accounts.
   const { showCreatorCtas, isCreator, creatorLive } = await getViewer();
-  const company = (c as unknown as { brand?: { company_name: string | null } }).brand?.company_name || "A brand";
+  const conceal = !!(c as { conceal_brand?: boolean }).conceal_brand;
+  const companyName = (c as unknown as { brand?: { company_name: string | null } }).brand?.company_name ?? null;
   const remaining = c.pool_naira - c.spent_naira;
   const isOpen = c.funded && c.status === "open";
 
@@ -74,7 +76,7 @@ async function Inner({ params }: { params: Promise<{ id: string }> }) {
     <div className="grid gap-8 py-10 md:grid-cols-[1fr_340px]">
       <div>
         <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{c.title}</h1>
-        <p className="mt-1.5 text-ink-3">{company}</p>
+        <div className="mt-1.5"><BrandByline conceal={conceal} company={companyName} /></div>
         <PillRow className="mt-4">{(c.niches ?? []).map((n: string) => <Chip key={n}>{n}</Chip>)}</PillRow>
         {c.description && <p className="mt-6 max-w-prose whitespace-pre-line leading-relaxed text-ink-2">{c.description}</p>}
 
