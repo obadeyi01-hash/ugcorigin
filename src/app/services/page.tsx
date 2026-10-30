@@ -15,22 +15,37 @@ export const metadata: Metadata = {
   description: "Browse ready-to-buy UGC packages from verified Nigerian creators.",
 };
 
+type SP = { page?: string };
+
+const PAGE_SIZE = 24;
+
 type Row = {
   id: string; title: string; type: string; price_naira: number; format: string | null;
   creator: { handle: string; display_name: string | null; location: string | null } | null;
 };
 
-async function Inner() {
+async function Inner({ searchParams }: { searchParams: Promise<SP> }) {
+  const sp = await searchParams;
+  let page = Math.max(1, Number(sp.page) || 1);
+  let total = 0;
   let rows: Row[] = [];
   if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
     const supabase = await createClient();
     // RLS returns only active packages of live creators for public viewers.
+    const { count } = await supabase
+      .from("packages")
+      .select("id", { count: "exact", head: true })
+      .eq("active", true);
+    total = count ?? 0;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    if (page > totalPages) page = totalPages;
+    const from = (page - 1) * PAGE_SIZE;
     const { data } = await supabase
       .from("packages")
       .select("id, title, type, price_naira, format, creator:creator_profiles(handle, display_name, location)")
       .eq("active", true)
       .order("created_at", { ascending: false })
-      .limit(60);
+      .range(from, from + PAGE_SIZE - 1);
     rows = (data ?? []) as unknown as Row[];
   }
 
@@ -45,8 +60,15 @@ async function Inner() {
     );
   }
 
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const qs = (p: number) => (p > 1 ? `/services?page=${p}` : "/services");
+
   return (
-    <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <>
+    {totalPages > 1 && (
+      <p className="mt-6 text-sm text-ink-3">{total} service{total === 1 ? "" : "s"} · page {page} of {totalPages}</p>
+    )}
+    <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {rows.map((p) => (
         <Card key={p.id} interactive className="h-full">
           <CardBody>
@@ -66,10 +88,23 @@ async function Inner() {
         </Card>
       ))}
     </div>
+
+    {totalPages > 1 && (
+      <nav className="mt-10 flex items-center justify-center gap-2" aria-label="Pagination">
+        {page > 1 && (
+          <Link href={qs(page - 1)} className="rounded-full border border-line px-4 py-2 text-sm font-medium text-ink-2 transition-colors hover:border-accent hover:text-accent">Previous</Link>
+        )}
+        <span className="px-2 text-sm text-ink-3">{page} / {totalPages}</span>
+        {page < totalPages && (
+          <Link href={qs(page + 1)} className="rounded-full border border-line px-4 py-2 text-sm font-medium text-ink-2 transition-colors hover:border-accent hover:text-accent">Next</Link>
+        )}
+      </nav>
+    )}
+    </>
   );
 }
 
-export default function ServicesPage() {
+export default function ServicesPage({ searchParams }: { searchParams: Promise<SP> }) {
   return (
     <>
       <SiteHeader />
@@ -79,7 +114,7 @@ export default function ServicesPage() {
             <h1 className="font-display text-3xl font-bold tracking-tight text-ink sm:text-4xl">Services</h1>
             <p className="mt-2 text-ink-2">Ready-to-buy UGC packages from verified creators, pick one and send an offer.</p>
           </div>
-          <Suspense fallback={<div className="mt-8 h-40 animate-pulse rounded-2xl bg-surface-2" />}><Inner /></Suspense>
+          <Suspense fallback={<div className="mt-8 h-40 animate-pulse rounded-2xl bg-surface-2" />}><Inner searchParams={searchParams} /></Suspense>
         </Container>
       </main>
       <SiteFooter />
