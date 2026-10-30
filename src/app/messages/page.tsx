@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { MessageSquare } from "lucide-react";
 import { SiteHeader } from "@/components/layout/site-header";
+import { PageContentSkeleton } from "@/components/ui/skeleton";
 import { Container } from "@/components/ui/container";
 import { Card, CardBody } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
@@ -79,7 +80,7 @@ export default function MessagesPage() {
     <>
       <SiteHeader />
       <main className="flex-1">
-        <Suspense fallback={<div className="min-h-dvh" />}>
+        <Suspense fallback={<PageContentSkeleton rows={5} />}>
           <InboxInner />
         </Suspense>
       </main>

@@ -5,6 +5,7 @@ import { Eye } from "lucide-react";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { Container } from "@/components/ui/container";
+import { DetailSkeleton } from "@/components/ui/skeleton";
 import { PillRow } from "@/components/ui/pill-row";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
@@ -138,7 +139,7 @@ export default function CampaignPage({ params }: { params: Promise<{ id: string 
   return (
     <>
       <SiteHeader />
-      <main className="flex-1"><Container><Suspense fallback={<div className="py-20" />}><Inner params={params} /></Suspense></Container></main>
+      <main className="flex-1"><Container><Suspense fallback={<DetailSkeleton />}><Inner params={params} /></Suspense></Container></main>
       <SiteFooter />
     </>
   );

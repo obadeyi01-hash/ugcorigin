@@ -3,6 +3,7 @@ import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
 import { Card, CardBody } from "@/components/ui/card";
 import { TierBadge } from "@/components/ui/tier-badge";
 import { requireSection } from "@/lib/admin/rbac";
@@ -285,7 +286,7 @@ async function UserInner({ params }: { params: Promise<{ id: string }> }) {
 
 export default function AdminUserPage({ params }: { params: Promise<{ id: string }> }) {
   return (
-    <Suspense fallback={<div className="min-h-dvh" />}>
+    <Suspense fallback={<AdminShellSkeleton />}>
       <UserInner params={params} />
     </Suspense>
   );

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { AlertTriangle, Phone } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { Container } from "@/components/ui/container";
+import { DetailSkeleton } from "@/components/ui/skeleton";
 import { GigWorkspace, type Comment } from "@/components/gigs/gig-workspace";
 import { ReviewForm } from "@/components/gigs/review-form";
 import { AddVerifiedWork } from "@/components/gigs/add-verified-work";
@@ -229,7 +230,7 @@ export default function GigPage({ params }: { params: Promise<{ id: string }> })
         </Container>
       </header>
       <Container>
-        <Suspense fallback={<div className="py-20" />}>
+        <Suspense fallback={<DetailSkeleton />}>
           <GigInner params={params} />
         </Suspense>
       </Container>

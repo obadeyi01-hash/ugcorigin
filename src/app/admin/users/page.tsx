@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
 import { Card, CardBody } from "@/components/ui/card";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { FeaturedToggle } from "@/components/admin/featured-toggle";
@@ -148,7 +149,7 @@ async function UsersInner({ searchParams }: { searchParams: Promise<Record<strin
 
 export default function AdminUsersPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
-    <Suspense fallback={<div className="min-h-dvh" />}>
+    <Suspense fallback={<AdminShellSkeleton />}>
       <UsersInner searchParams={searchParams} />
     </Suspense>
   );

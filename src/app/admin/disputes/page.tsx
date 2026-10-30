@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminShellSkeleton } from "@/components/admin/admin-shell-skeleton";
 import { Card, CardBody } from "@/components/ui/card";
 import { ResolveDispute } from "@/components/admin/resolve-dispute";
 import { AdminListControls } from "@/components/admin/list-controls";
@@ -82,7 +83,7 @@ async function DisputesInner({ searchParams }: { searchParams: Promise<Record<st
 
 export default function AdminDisputesPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   return (
-    <Suspense fallback={<div className="min-h-dvh" />}>
+    <Suspense fallback={<AdminShellSkeleton />}>
       <DisputesInner searchParams={searchParams} />
     </Suspense>
   );
