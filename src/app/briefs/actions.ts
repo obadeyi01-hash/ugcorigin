@@ -103,10 +103,36 @@ export async function selectApplicantAction(applicationId: string): Promise<{ ur
     .eq("id", app.brief_id)
     .maybeSingle();
   if (!brief || brief.brand_id !== user.id) return { error: "Not allowed." };
+  if (brief.status !== "open") return { error: "This brief is no longer open." };
   const gate = await requireVerifiedBrand(supabase, user.id);
   if (!gate.ok) return { error: gate.error };
 
   const admin = createAdminClient();
+
+  // This path inserts the offer with the service-role client, which bypasses the
+  // offers_insert RLS policy — so re-check its live-creator guard here. A creator
+  // who was live when they applied may have been suspended/unpublished since, and
+  // we don't create (or fund) an offer for someone who can no longer take work.
+  const { data: creator } = await admin
+    .from("creator_profiles")
+    .select("is_live, suspended")
+    .eq("id", app.creator_id)
+    .maybeSingle();
+  if (!creator || !creator.is_live || creator.suspended) {
+    return { error: "This creator isn't live anymore, so they can't be hired from this brief." };
+  }
+
+  // Claim the application (compare-and-swap on applied → selected) so a double
+  // click or replay can't create two offers and charge twice. Only the caller
+  // who flips it proceeds.
+  const { data: claimed } = await admin
+    .from("applications")
+    .update({ status: "selected" })
+    .eq("id", applicationId)
+    .eq("status", "applied")
+    .select("id")
+    .maybeSingle();
+  if (!claimed) return { error: "This applicant has already been selected." };
 
   // Create an accepted offer derived from the brief (the creator opted in by applying).
   const { data: offer, error: offerErr } = await admin
@@ -122,9 +148,11 @@ export async function selectApplicantAction(applicationId: string): Promise<{ ur
     })
     .select("id")
     .single();
-  if (offerErr || !offer) return { error: offerErr?.message ?? "Could not create the offer." };
-
-  await admin.from("applications").update({ status: "selected" }).eq("id", applicationId);
+  if (offerErr || !offer) {
+    // Offer didn't get created — release the claim so the brand can retry.
+    await admin.from("applications").update({ status: "applied" }).eq("id", applicationId).eq("status", "selected");
+    return { error: offerErr?.message ?? "Could not create the offer." };
+  }
 
   // Fund it via the existing escrow flow.
   return await fundOfferAction(offer.id);

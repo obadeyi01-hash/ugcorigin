@@ -10,7 +10,7 @@ import { refundHeldGig, releaseHeldGig } from "@/lib/payments/settle";
 import { placeCreator } from "@/lib/tiering/placement";
 import { notifyUser, notifyMany } from "@/lib/notify";
 import { sendEmail, emailConfigured } from "@/lib/email/send";
-import { identityRejectedEmail } from "@/lib/email/templates";
+import { identityRejectedEmail, verifyPromptEmail } from "@/lib/email/templates";
 import { logAudit } from "@/lib/admin/audit";
 import { requiresDualControl } from "@/lib/admin/security";
 import { formatNaira } from "@/lib/utils";
@@ -235,6 +235,108 @@ export async function adminSetEntrySignals(
   });
   revalidatePath("/admin/verification");
   return { ok: true };
+}
+
+/** Escape + turn a reviewer's free-text message into safe HTML paragraphs. */
+function messageToHtml(message: string): string {
+  const P = "margin:0 0 12px;color:#3f3f46;font-size:15px;line-height:1.6";
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+  return message
+    .trim()
+    .split(/\n{2,}/)
+    .map((para) => `<p style="${P}">${esc(para).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+}
+
+/**
+ * Nudge a user who hasn't finished verification, from the verification console.
+ * The admin either sends the default branded verify-prompt email or writes a
+ * custom message for this one send. Always posts a re-surfacing in-app note,
+ * only emails when email is configured, refuses to nag an already-done account,
+ * and audits who reminded whom. Never moves any state.
+ */
+export async function adminSendVerifyReminder(input: {
+  userId: string;
+  role: "creator" | "brand";
+  message?: string;
+}): Promise<{ error?: string; ok?: boolean; emailed?: boolean }> {
+  const { ctx, error } = await guardWrite("verification");
+  if (error) return { error };
+  const admin = createAdminClient();
+  const creator = input.role === "creator";
+
+  // Only remind accounts that still have something to finish.
+  let name: string | null = null;
+  if (creator) {
+    const { data: c } = await admin
+      .from("creator_profiles")
+      .select("first_name, display_name, is_live, suspended")
+      .eq("id", input.userId)
+      .maybeSingle();
+    if (!c) return { error: "No creator profile for that user." };
+    if (c.suspended) return { error: "That profile is suspended — contact them directly instead." };
+    if (c.is_live) return { error: "That creator is already live." };
+    name = c.first_name || c.display_name;
+  } else {
+    const { data: b } = await admin
+      .from("brand_profiles")
+      .select("contact_first_name, company_name, verification_status")
+      .eq("id", input.userId)
+      .maybeSingle();
+    if (!b) return { error: "No brand profile for that user." };
+    if (b.verification_status === "verified") return { error: "That brand is already verified." };
+    name = b.contact_first_name || b.company_name;
+  }
+
+  const custom = (input.message ?? "").trim().slice(0, 2000);
+  const href = creator ? "/verify" : "/settings";
+
+  // In-app note (re-surfaces as a verify prompt; the email is sent separately).
+  await notifyUser(admin, input.userId, {
+    type: "verify_prompt",
+    title: creator ? "A reminder to finish verification" : "A reminder to verify your brand",
+    body: custom || (creator
+      ? "Add your bank, submit your photo and NIN, and accept the agreement to go live."
+      : "Submit your registered business name and CAC/RC number to turn on the Verified brand badge."),
+    href,
+    ctaLabel: creator ? "Continue verification" : "Verify your brand",
+    skipEmail: true,
+  });
+
+  // Resolve the recipient email (profiles first, auth as fallback).
+  let to = "";
+  const { data: account } = await admin.from("profiles").select("email").eq("id", input.userId).maybeSingle();
+  to = account?.email?.trim() || "";
+  if (!to) {
+    const { data } = await admin.auth.admin.getUserById(input.userId);
+    to = data.user?.email ?? "";
+  }
+
+  let emailed = false;
+  if (to && emailConfigured()) {
+    if (custom) {
+      emailed = await sendEmail({
+        to,
+        subject: creator ? "Finish verification on UGCOrigin" : "Verify your brand on UGCOrigin",
+        heading: creator ? "Finish your verification" : "Verify your brand",
+        body: custom,
+        bodyHtml: messageToHtml(custom),
+        preheader: creator ? "A note from the UGCOrigin team about going live." : "A note from the UGCOrigin team about your brand badge.",
+        ctaLabel: creator ? "Continue verification" : "Verify your brand",
+        ctaUrl: href,
+      });
+    } else {
+      emailed = await sendEmail(verifyPromptEmail(to, { name, role: input.role }));
+    }
+  }
+
+  await logAudit(admin, ctx!.userId, creator ? "creator.verify_reminder" : "brand.verify_reminder", {
+    targetType: creator ? "creator" : "brand",
+    targetId: input.userId,
+    after: { custom: !!custom, emailed },
+  });
+  revalidatePath("/admin/verification");
+  return { ok: true, emailed };
 }
 
 // ---- Users -----------------------------------------------------------------
