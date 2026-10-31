@@ -80,7 +80,7 @@ async function issueLink(email: string, redirectTo: string, hint: AccountHint | 
     ctaLabel: "Sign in to UGCOrigin",
     ctaUrl: minted.url,
   });
-  if (!sent) {
+  if (!sent.ok) {
     if (socialOnly) return { status: "error", message: noticeFor(hint, mode, false) ?? MESSAGES.sendFailed };
     return { status: "error", message: MESSAGES.sendFailed };
   }
