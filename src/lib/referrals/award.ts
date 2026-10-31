@@ -5,13 +5,14 @@ import { initiateTransfer, paystackConfigured } from "@/lib/payments/paystack";
 
 type Admin = ReturnType<typeof createAdminClient>;
 
-/** Paid to the inviter when the invited creator is hired. Not taken from their rate. */
+/** Paid to the inviter for each of an invited creator's first two contracts. Not taken from their rate. */
 export const REFERRAL_HIRE_NAIRA = 5_000;
 
 /**
- * One bounty per invited creator, and only after a brand has actually funded
- * their gig. A creator cannot earn it by inviting themselves, and the brand
- * who paid cannot be the inviter.
+ * Up to TWO bounties per invited creator, one for each of their first two
+ * funded contracts, and only after a brand has actually funded the gig. A
+ * creator cannot earn it by inviting themselves, and the brand who paid cannot
+ * be the inviter. Rewards are idempotent per (invited creator, gig).
  */
 export async function awardReferral(
   admin: Admin,
@@ -26,25 +27,46 @@ export async function awardReferral(
     const referrerId = creator?.referred_by as string | null | undefined;
     if (!referrerId || referrerId === hire.creatorId || referrerId === hire.brandId) return;
 
-    const { data: inserted } = await admin
-      .from("referral_rewards")
-      .insert({
-        referrer_id: referrerId,
-        referred_id: hire.creatorId,
-        gig_id: hire.gigId,
-        amount_naira: REFERRAL_HIRE_NAIRA,
-        status: "earned",
-      })
-      .select("id, payout_id")
-      .maybeSingle();
-
-    const reward = inserted ?? (
+    // Idempotent per gig: if this contract was already rewarded, finish it.
+    // Otherwise create a new reward, but only for the first two contracts.
+    let reward = (
       await admin
         .from("referral_rewards")
         .select("id, payout_id")
         .eq("referred_id", hire.creatorId)
+        .eq("gig_id", hire.gigId)
         .maybeSingle()
     ).data;
+
+    if (!reward) {
+      const { count } = await admin
+        .from("referral_rewards")
+        .select("id", { count: "exact", head: true })
+        .eq("referred_id", hire.creatorId);
+      if ((count ?? 0) >= 2) return; // cap: first two contracts only
+
+      const { data: inserted } = await admin
+        .from("referral_rewards")
+        .insert({
+          referrer_id: referrerId,
+          referred_id: hire.creatorId,
+          gig_id: hire.gigId,
+          amount_naira: REFERRAL_HIRE_NAIRA,
+          status: "earned",
+        })
+        .select("id, payout_id")
+        .maybeSingle();
+
+      // A concurrent hire may have inserted this same gig first; fall back to it.
+      reward = inserted ?? (
+        await admin
+          .from("referral_rewards")
+          .select("id, payout_id")
+          .eq("referred_id", hire.creatorId)
+          .eq("gig_id", hire.gigId)
+          .maybeSingle()
+      ).data;
+    }
     if (!reward || reward.payout_id) return;
 
     const { data: payout, error } = await admin
