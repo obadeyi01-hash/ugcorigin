@@ -70,9 +70,19 @@ function render({ heading, body, bodyHtml, preheader, ctaLabel, ctaUrl }: EmailI
   </div></body></html>`;
 }
 
-/** Send one transactional email. Returns true if actually sent. */
+/** Send one transactional email. Returns true if actually sent.
+ *
+ * Failures are logged (never thrown) so the reason is visible in the server
+ * logs: a missing env var, or the exact rejection Resend returned (an
+ * unverified sending domain and a malformed `EMAIL_FROM` are the usual two).
+ * The logged `from` makes a stray quote or wrong domain obvious at a glance. */
 export async function sendEmail(input: EmailInput): Promise<boolean> {
-  if (!emailConfigured()) return false;
+  if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) {
+    console.warn(
+      `[email] skipped: ${!process.env.RESEND_API_KEY ? "RESEND_API_KEY" : "EMAIL_FROM"} is not set in this environment`,
+    );
+    return false;
+  }
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -87,8 +97,16 @@ export async function sendEmail(input: EmailInput): Promise<boolean> {
         html: render(input),
       }),
     });
-    return res.ok;
-  } catch {
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      console.error(
+        `[email] Resend rejected the send (HTTP ${res.status}) from=${JSON.stringify(process.env.EMAIL_FROM)} to=${JSON.stringify(input.to)}: ${detail.slice(0, 500)}`,
+      );
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[email] request to Resend failed:", err instanceof Error ? err.message : "unknown");
     return false;
   }
 }
