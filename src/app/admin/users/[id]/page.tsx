@@ -9,6 +9,7 @@ import { requireSection } from "@/lib/admin/rbac";
 import { ROLE_LABEL, type AdminRole } from "@/lib/admin/roles";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { privateUrlFromRef } from "@/lib/cloudinary-server";
+import { listBanks } from "@/lib/payments/paystack";
 import { fullName } from "@/lib/names";
 import { formatPhone } from "@/lib/phone";
 import { formatNaira } from "@/lib/utils";
@@ -92,6 +93,11 @@ async function UserInner({ params }: { params: Promise<{ id: string }> }) {
     admin.from("profile_notes").select("id, kind, subject, body, created_at").eq("user_id", id).order("created_at", { ascending: false }).limit(50),
   ]);
 
+  // Resolve the stored payout bank CODE (e.g. "058", or "999992" for Paystack's
+  // test bank) to a human bank name, so the profile doesn't show a bare number.
+  const banks = creator?.payout_bank_code ? await listBanks() : [];
+  const payoutBankName = banks.find((b) => b.code === creator?.payout_bank_code)?.name ?? null;
+
   const selfieUrl = seeIdentity && submission?.selfie_ref ? privateUrlFromRef(submission.selfie_ref) : null;
   const legalName = creator
     ? fullName({ first: creator.first_name, middle: creator.middle_name, last: creator.last_name, display: creator.display_name, handle: creator.handle })
@@ -164,7 +170,16 @@ async function UserInner({ params }: { params: Promise<{ id: string }> }) {
             <Fact label="Benched" value={yesNo(creator.benched)} />
             <Fact label="Strike note" value={creator.strike_note} />
             <Fact label="Joined" value={creator.created_at ? new Date(creator.created_at).toLocaleString() : "—"} />
-            <Fact label="Payout bank" value={creator.payout_bank_code || "—"} />
+            <Fact
+              label="Payout bank"
+              value={
+                creator.payout_bank_code
+                  ? payoutBankName
+                    ? `${payoutBankName} (${creator.payout_bank_code})`
+                    : creator.payout_bank_code
+                  : "—"
+              }
+            />
             <Fact label="Account number" value={mask(creator.payout_account_number, seePayout)} />
           </dl>
         </Section>
