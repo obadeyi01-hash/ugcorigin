@@ -360,9 +360,9 @@ async function DashboardInner() {
         {creator?.handle && (
           <Card className="mt-6 max-w-2xl">
             <CardBody>
-              <p className="font-display font-semibold text-ink">Invite a creator, earn {formatNaira(REFERRAL_HIRE_NAIRA)}</p>
+              <p className="font-display font-semibold text-ink">Invite a creator, earn up to {formatNaira(REFERRAL_HIRE_NAIRA * 2)}</p>
               <p className="mt-1 text-sm text-ink-2">
-                When someone joins with your link and a brand hires them, you earn {formatNaira(REFERRAL_HIRE_NAIRA)}. It is paid to your bank, and it is not taken from their rate. You can earn it even if you are not the one hired.
+                When someone joins with your link and a brand hires them, you earn {formatNaira(REFERRAL_HIRE_NAIRA)} for each of their first two contracts (up to {formatNaira(REFERRAL_HIRE_NAIRA * 2)} per creator). It is paid to your bank, and it is not taken from their rate. You can earn it even if you are not the one hired.
               </p>
               <p className="mt-3 break-all text-xs text-ink-3">{SITE_URL}/signup?role=creator&amp;ref={creator.referral_code || creator.handle}</p>
               <div className="mt-3">
