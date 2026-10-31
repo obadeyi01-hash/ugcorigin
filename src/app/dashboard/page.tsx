@@ -28,6 +28,7 @@ import { CopyInviteLink } from "@/components/dashboard/invite-earn";
 import { SITE_URL } from "@/components/seo/json-ld";
 import { formatNaira } from "@/lib/utils";
 import { REFERRAL_HIRE_NAIRA } from "@/lib/referrals/award";
+import { captureFirstSeen } from "@/lib/signals/capture";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -182,6 +183,10 @@ async function DashboardInner() {
     pick(top, false);
     pick(fresh, true);
   }
+
+  // Backfill an integrity signal for brands that predate signal capture, so
+  // existing brands are covered on their next visit (one-time, then a no-op).
+  if (brand) await captureFirstSeen(user.id);
 
   // Premium upsell eligibility. Creators who aren't already Pro get a Creator
   // Pro nudge; brands that haven't verified get a Verified-brand nudge. Shown
@@ -390,26 +395,16 @@ async function DashboardInner() {
           </Card>
         )}
 
+        {/* The cross-role possibility is kept, but as a quiet line, not a
+            promoted card. We don't push creators and brands to mix accounts. */}
         {(!creator || !brand) && (
-          <Card variant="outline" className="mt-6 max-w-2xl border-dashed">
-            <CardBody className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="font-semibold text-ink">
-                  {creator ? "Also want to hire creators?" : "Also want to earn as a creator?"}
-                </p>
-                <p className="text-sm text-ink-2">
-                  {creator
-                    ? "Add a brand account on this same email, kept separate from your creator profile."
-                    : "Set up a creator profile on this same email, kept separate from your brand account."}
-                </p>
-              </div>
-              <Link href={creator ? "/onboarding?role=brand" : "/onboarding?role=creator"}>
-                <Button size="sm" variant="secondary">
-                  {creator ? "Add a brand account" : "Become a creator"} <ArrowRight className="size-4" />
-                </Button>
-              </Link>
-            </CardBody>
-          </Card>
+          <p className="mt-6 max-w-2xl text-xs text-ink-3">
+            {creator ? (
+              <>Need to hire creators yourself? You can <Link href="/onboarding?role=brand" className="underline underline-offset-2 hover:text-accent">add a separate brand account</Link> on this email.</>
+            ) : (
+              <>You can also <Link href="/onboarding?role=creator" className="underline underline-offset-2 hover:text-accent">set up a separate creator profile</Link> on this email.</>
+            )}
+          </p>
         )}
 
         {creator && (

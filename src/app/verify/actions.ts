@@ -12,6 +12,7 @@ import { identityFolder } from "@/lib/cloudinary";
 import { notifyAdminsPendingReview } from "@/lib/notify";
 import { identityTokenHash, parseVirtualNin } from "@/lib/identity/token";
 import { publishFacePhoto } from "@/lib/identity/face-photo";
+import { captureAccountSignal } from "@/lib/signals/capture";
 
 const MIN_COMPLETENESS = 80;
 
@@ -177,6 +178,8 @@ export async function submitIdentityAction(input: {
 
   // The face photo is the public profile photo until the creator uploads another.
   await publishFacePhoto(user.id, input.selfieRef);
+
+  await captureAccountSignal(user.id, "creator_verify");
 
   // Mirror a pending row into verifications for the audit trail / queue parity.
   const { data: v } = await admin

@@ -19,6 +19,16 @@ export const metadata: Metadata = { title: "Admin · User" };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const SIGNAL_LABEL: Record<string, string> = {
+  brand_signup: "Brand signup",
+  brand_verify: "Brand verification",
+  creator_signup: "Creator signup",
+  creator_verify: "Creator verification",
+  first_seen: "First seen",
+};
+
+type Signal = { event: string; ip: string | null; country: string | null; region: string | null; city: string | null; user_agent: string | null; created_at: string };
+
 function yesNo(value: boolean | null | undefined) {
   return value ? "Yes" : "No";
 }
@@ -76,7 +86,7 @@ async function UserInner({ params }: { params: Promise<{ id: string }> }) {
   const email = authResult.data?.user?.email ?? null;
   if (!creator && !brand && !membership && !email) notFound();
 
-  const [{ data: socials }, { data: portfolio }, { data: videos }, { data: packages }, { data: submission }, { data: notes }] = await Promise.all([
+  const [{ data: socials }, { data: portfolio }, { data: videos }, { data: packages }, { data: submission }, { data: notes }, { data: signals }] = await Promise.all([
     creator
       ? admin.from("social_accounts").select("platform, handle, url, verified").eq("creator_id", id)
       : Promise.resolve({ data: [] as { platform: string; handle: string; url: string | null; verified: boolean }[] }),
@@ -91,12 +101,14 @@ async function UserInner({ params }: { params: Promise<{ id: string }> }) {
       : Promise.resolve({ data: [] as { title: string; price_naira: number; active: boolean }[] }),
     admin.from("identity_submissions").select("nin, nin_hash, selfie_ref, phone, status, reject_reason, submitted_at").eq("user_id", id).order("submitted_at", { ascending: false }).limit(1).maybeSingle(),
     admin.from("profile_notes").select("id, kind, subject, body, created_at").eq("user_id", id).order("created_at", { ascending: false }).limit(50),
+    admin.from("account_signals").select("event, ip, country, region, city, user_agent, created_at").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
   ]);
 
   // Resolve the stored payout bank CODE (e.g. "058", or "999992" for Paystack's
   // test bank) to a human bank name, so the profile doesn't show a bare number.
   const banks = creator?.payout_bank_code ? await listBanks() : [];
   const payoutBankName = banks.find((b) => b.code === creator?.payout_bank_code)?.name ?? null;
+  const sigs = (signals ?? []) as Signal[];
 
   const selfieUrl = seeIdentity && submission?.selfie_ref ? privateUrlFromRef(submission.selfie_ref) : null;
   const legalName = creator
@@ -294,6 +306,28 @@ async function UserInner({ params }: { params: Promise<{ id: string }> }) {
           </dl>
         </Section>
       )}
+
+      <Section
+        title="Integrity signals"
+        note="IP, approximate location and device captured at signup and verification (and on first visit for older accounts). Watch for signups that cluster on one IP, or a location that does not match the stated business."
+      >
+        {sigs.length === 0 ? (
+          <p className="text-sm text-ink-3">No signals yet. Captured on the next signup or verification, and backfilled on the next visit.</p>
+        ) : (
+          <ul className="divide-y divide-line">
+            {sigs.map((s, i) => (
+              <li key={i} className="grid gap-0.5 py-2 sm:grid-cols-[11rem_1fr_auto] sm:items-baseline sm:gap-3">
+                <span className="text-sm font-medium text-ink">{SIGNAL_LABEL[s.event] ?? s.event}</span>
+                <span className="min-w-0 text-sm text-ink-2">
+                  {[s.city, s.region, s.country].filter(Boolean).join(", ") || "Location unknown"}
+                  <span className="ml-2 font-mono text-xs text-ink-3">{s.ip || "no IP"}</span>
+                </span>
+                <span className="shrink-0 text-xs text-ink-3">{s.created_at ? new Date(s.created_at).toLocaleString() : ""}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
     </>
   );
 }
