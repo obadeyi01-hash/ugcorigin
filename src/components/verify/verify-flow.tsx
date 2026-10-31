@@ -216,7 +216,7 @@ function IdentityStep({
       ? "Under review. Our team is confirming you're a real person. Usually within 24 hours."
       : status === "rejected"
         ? "Your last submission couldn't be approved. Please resubmit."
-        : "Add a clear photo of your face and a Virtual NIN. Reviewed by a human, usually within 24 hours.";
+        : "Confirm you're a real person with a photo and a one-time NIMC code, never your 11-digit NIN. A human reviews it, usually within 24 hours.";
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -321,7 +321,7 @@ function IdentityStep({
             </div>
           </div>
 
-          <Field label="Virtual NIN or Share Code" hint="From the NIMC app. Do not type your 11-digit NIN. The code is deleted after review.">
+          <Field label="Virtual NIN or Share Code" hint="A one-time code from the official NIMC app, never your 11-digit NIN. We delete it after review.">
             <Input
               autoComplete="off"
               placeholder="Share Code or 16-character Virtual NIN"
@@ -356,8 +356,13 @@ function IdentityCodeGuide() {
     <details className="rounded-xl bg-surface-2 px-3 py-2.5 text-xs text-ink-2">
       <summary className="cursor-pointer font-medium text-ink">How to get your code</summary>
       <div className="mt-3 grid gap-3">
+        <p>
+          You never give us your 11-digit NIN, here or anywhere. You generate a
+          short code from NIMC&apos;s own app that proves who you are without exposing
+          it, and you can revoke it whenever you like.
+        </p>
         <div>
-          <p className="font-medium text-ink">Share Code</p>
+          <p className="font-medium text-ink">Share Code <span className="font-normal text-ink-3">(easiest)</span></p>
           <ol className="mt-1 list-decimal space-y-1 pl-4">
             <li>Install the official NINAuth app from ninauth.nimc.gov.ng. Skip download links sent in chats.</li>
             <li>Sign in with the NIN you already have.</li>
@@ -370,14 +375,8 @@ function IdentityCodeGuide() {
           <ol className="mt-1 list-decimal space-y-1 pl-4">
             <li>Install or update the NIMC MWS Mobile ID app.</li>
             <li>Unlock it with your PIN, then tap GET VIRTUAL NIN.</li>
-            <li>Read the privacy notice, then tap the + button.</li>
-            <li>
-              Or, on your own phone, dial *346*3*your NIN*agent code# and wait for the SMS. The code is 16 characters and expires after 72 hours.
-            </li>
+            <li>Read the privacy notice, tap the + button, and paste the 16-character code here.</li>
           </ol>
-          <p className="mt-1.5">
-            NIMC ties a Virtual NIN to the business that asked for it. UGCOrigin does not have an enterprise code yet, so if the app asks for one, use a Share Code.
-          </p>
         </div>
       </div>
     </details>

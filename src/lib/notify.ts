@@ -236,7 +236,7 @@ export async function broadcastNotify(
             body: p.body,
             ctaLabel: p.ctaLabel || "Open UGCOrigin",
             ctaUrl,
-          }).catch(() => false),
+          }).then((r) => r.ok).catch(() => false),
         ),
       );
       emailed += sent.filter(Boolean).length;

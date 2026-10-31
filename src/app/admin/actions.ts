@@ -259,7 +259,13 @@ export async function adminSendVerifyReminder(input: {
   userId: string;
   role: "creator" | "brand";
   message?: string;
-}): Promise<{ error?: string; ok?: boolean; emailed?: boolean }> {
+}): Promise<{
+  error?: string;
+  ok?: boolean;
+  emailed?: boolean;
+  emailStatus?: "sent" | "no_recipient" | "not_configured" | "rejected" | "error";
+  emailDetail?: string;
+}> {
   const { ctx, error } = await guardWrite("verification");
   if (error) return { error };
   const admin = createAdminClient();
@@ -312,31 +318,37 @@ export async function adminSendVerifyReminder(input: {
     to = data.user?.email ?? "";
   }
 
+  // Send, and keep the precise outcome so the admin UI can distinguish sent
+  // from "no email on file", "email not configured", and a Resend rejection
+  // (with the reason, e.g. an unverified sending domain).
   let emailed = false;
-  if (to && emailConfigured()) {
-    if (custom) {
-      emailed = await sendEmail({
-        to,
-        subject: creator ? "Finish verification on UGCOrigin" : "Verify your brand on UGCOrigin",
-        heading: creator ? "Finish your verification" : "Verify your brand",
-        body: custom,
-        bodyHtml: messageToHtml(custom),
-        preheader: creator ? "A note from the UGCOrigin team about going live." : "A note from the UGCOrigin team about your brand badge.",
-        ctaLabel: creator ? "Continue verification" : "Verify your brand",
-        ctaUrl: href,
-      });
-    } else {
-      emailed = await sendEmail(verifyPromptEmail(to, { name, role: input.role }));
-    }
+  let emailStatus: "sent" | "no_recipient" | "not_configured" | "rejected" | "error" = "no_recipient";
+  let emailDetail: string | undefined;
+  if (to) {
+    const result = custom
+      ? await sendEmail({
+          to,
+          subject: creator ? "Finish verification on UGCOrigin" : "Verify your brand on UGCOrigin",
+          heading: creator ? "Finish your verification" : "Verify your brand",
+          body: custom,
+          bodyHtml: messageToHtml(custom),
+          preheader: creator ? "A note from the UGCOrigin team about going live." : "A note from the UGCOrigin team about your brand badge.",
+          ctaLabel: creator ? "Continue verification" : "Verify your brand",
+          ctaUrl: href,
+        })
+      : await sendEmail(verifyPromptEmail(to, { name, role: input.role }));
+    emailed = result.ok;
+    emailStatus = result.ok ? "sent" : result.reason;
+    if (!result.ok) emailDetail = result.detail;
   }
 
   await logAudit(admin, ctx!.userId, creator ? "creator.verify_reminder" : "brand.verify_reminder", {
     targetType: creator ? "creator" : "brand",
     targetId: input.userId,
-    after: { custom: !!custom, emailed },
+    after: { custom: !!custom, emailed, emailStatus },
   });
   revalidatePath("/admin/verification");
-  return { ok: true, emailed };
+  return { ok: true, emailed, emailStatus, emailDetail };
 }
 
 // ---- Users -----------------------------------------------------------------

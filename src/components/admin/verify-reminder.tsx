@@ -6,6 +6,26 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { adminSendVerifyReminder } from "@/app/admin/actions";
 
+/** Turn the send outcome into a precise line for the admin, so a silent email
+ * failure (unverified domain, missing config) is visible, not mistaken for a
+ * send. The in-app notification always posts regardless. */
+function describeSend(status: string | undefined, detail: string | undefined): string {
+  switch (status) {
+    case "sent":
+      return "Reminder sent, in-app and email.";
+    case "no_recipient":
+      return "Reminder posted in-app. No email address is on file for this user.";
+    case "not_configured":
+      return "Reminder posted in-app. Email is not set up yet, so none was sent.";
+    case "rejected":
+      return `Reminder posted in-app, but the email was rejected${detail ? `: ${detail}` : "."}`;
+    case "error":
+      return `Reminder posted in-app, but the email could not be sent${detail ? `: ${detail}` : "."}`;
+    default:
+      return "Reminder posted in-app.";
+  }
+}
+
 /**
  * Per-user "nudge them to verify" control for the verification console. The
  * admin sends the default branded verify email, or unticks it to write a custom
@@ -41,7 +61,7 @@ export function VerifyReminder({
       const res = await adminSendVerifyReminder({ userId, role, message: custom });
       if (res.error) setErr(res.error);
       else {
-        setDone(res.emailed ? "Reminder sent, in-app and email." : "Reminder posted in-app (email isn't configured).");
+        setDone(describeSend(res.emailStatus, res.emailDetail));
         setMessage("");
       }
     });

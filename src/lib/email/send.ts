@@ -6,11 +6,18 @@ import "server-only";
 //
 // Env:
 //   RESEND_API_KEY   server-side key
-//   EMAIL_FROM       e.g. "UGCOrigin <hello@ugcorigin.com>" (verified sender)
+//   EMAIL_FROM       e.g. UGCOrigin <no-reply@hey.ugcorigin.com> (NO quotes).
+//                    Must be an address on the Resend-VERIFIED sending domain:
+//                    the hey.ugcorigin.com subdomain, not the apex ugcorigin.com.
+//                    A From on an unverified domain is rejected on every send.
 
 const BRAND = "UGCOrigin";
 
 export const emailConfigured = () => !!process.env.RESEND_API_KEY && !!process.env.EMAIL_FROM;
+
+/** Why a send did not go out, so callers (and the admin UI) can say which. */
+export type SendFailure = "not_configured" | "rejected" | "error";
+export type SendResult = { ok: true } | { ok: false; reason: SendFailure; detail: string };
 
 export type EmailInput = {
   to: string;
@@ -70,9 +77,31 @@ function render({ heading, body, bodyHtml, preheader, ctaLabel, ctaUrl }: EmailI
   </div></body></html>`;
 }
 
-/** Send one transactional email. Returns true if actually sent. */
-export async function sendEmail(input: EmailInput): Promise<boolean> {
-  if (!emailConfigured()) return false;
+/** Pull a short human reason out of a Resend error body (it returns JSON like
+ * {"message":"The hey.ugcorigin.com domain is not verified..."}). */
+function resendReason(status: number, body: string): string {
+  try {
+    const parsed = JSON.parse(body);
+    if (parsed && typeof parsed.message === "string" && parsed.message.trim()) return parsed.message.trim();
+  } catch {
+    /* not JSON */
+  }
+  return `Resend returned HTTP ${status}`;
+}
+
+/** Send one transactional email.
+ *
+ * Never throws. Returns a typed result so callers can tell a missing env var
+ * (`not_configured`) from a Resend rejection (`rejected`, e.g. an unverified
+ * sending domain or a malformed `EMAIL_FROM`) from a transport failure
+ * (`error`). Every failure is also logged, with the `from` echoed so a stray
+ * quote or wrong sending domain is obvious at a glance. */
+export async function sendEmail(input: EmailInput): Promise<SendResult> {
+  if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) {
+    const missing = !process.env.RESEND_API_KEY ? "RESEND_API_KEY" : "EMAIL_FROM";
+    console.warn(`[email] skipped: ${missing} is not set in this environment`);
+    return { ok: false, reason: "not_configured", detail: `${missing} is not set` };
+  }
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -87,8 +116,18 @@ export async function sendEmail(input: EmailInput): Promise<boolean> {
         html: render(input),
       }),
     });
-    return res.ok;
-  } catch {
-    return false;
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      const detail = resendReason(res.status, body);
+      console.error(
+        `[email] Resend rejected the send (HTTP ${res.status}) from=${JSON.stringify(process.env.EMAIL_FROM)} to=${JSON.stringify(input.to)}: ${body.slice(0, 500)}`,
+      );
+      return { ok: false, reason: "rejected", detail };
+    }
+    return { ok: true };
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : "unknown";
+    console.error("[email] request to Resend failed:", detail);
+    return { ok: false, reason: "error", detail };
   }
 }
