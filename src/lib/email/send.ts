@@ -6,7 +6,10 @@ import "server-only";
 //
 // Env:
 //   RESEND_API_KEY   server-side key
-//   EMAIL_FROM       e.g. "UGCOrigin <hello@ugcorigin.com>" (verified sender)
+//   EMAIL_FROM       e.g. UGCOrigin <no-reply@hey.ugcorigin.com> (NO quotes).
+//                    Must be an address on the Resend-VERIFIED sending domain:
+//                    the hey.ugcorigin.com subdomain, not the apex ugcorigin.com.
+//                    A From on an unverified domain is rejected on every send.
 
 const BRAND = "UGCOrigin";
 
