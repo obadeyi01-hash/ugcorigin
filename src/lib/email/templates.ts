@@ -60,7 +60,7 @@ export function verifyPromptEmail(
     <p style="${P}">Three things, then you go live:</p>
     ${nextSteps([
       "Add the bank account payouts should land in.",
-      "Submit a photo of yourself and your NIN. A person on the team reviews it.",
+      "Add a clear photo of yourself and a one-time NIMC code (a NINAuth Share Code or Virtual NIN), never your 11-digit NIN. A person on the team reviews it.",
       "Accept the creator agreement.",
     ])}
     <p style="${P}">Once those are approved, your card shows up in the directory and brands can hire you.</p>`

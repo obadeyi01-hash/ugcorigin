@@ -161,7 +161,7 @@ async function DashboardInner() {
   // Brand recommendations: a mix of top performers + newly-vetted creators.
   let recs: RecCreator[] = [];
   if (brand) {
-    const base = "id, handle, display_name, first_name, last_name, niches, starting_rate_naira, created_at";
+    const base = "id, handle, display_name, first_name, last_name, niches, starting_rate_naira, created_at, avatar_url, location, bio, tier";
     const [{ data: top }, { data: fresh }] = await Promise.all([
       supabase.from("creator_profiles").select(base).eq("is_live", true).eq("shadowbanned", false).order("earned_reputation", { ascending: false, nullsFirst: false }).limit(3),
       supabase.from("creator_profiles").select(base).eq("is_live", true).eq("shadowbanned", false).order("created_at", { ascending: false }).limit(4),
@@ -177,6 +177,10 @@ async function DashboardInner() {
           niches: c.niches ?? [],
           startingRate: c.starting_rate_naira ?? 0,
           newbie,
+          image: c.avatar_url ?? null,
+          location: c.location ?? null,
+          bio: c.bio ?? null,
+          tier: c.tier ?? null,
         });
       });
     pick(top, false);
