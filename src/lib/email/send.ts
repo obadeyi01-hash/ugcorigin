@@ -15,6 +15,10 @@ const BRAND = "UGCOrigin";
 
 export const emailConfigured = () => !!process.env.RESEND_API_KEY && !!process.env.EMAIL_FROM;
 
+/** Why a send did not go out, so callers (and the admin UI) can say which. */
+export type SendFailure = "not_configured" | "rejected" | "error";
+export type SendResult = { ok: true } | { ok: false; reason: SendFailure; detail: string };
+
 export type EmailInput = {
   to: string;
   subject: string;
@@ -73,18 +77,30 @@ function render({ heading, body, bodyHtml, preheader, ctaLabel, ctaUrl }: EmailI
   </div></body></html>`;
 }
 
-/** Send one transactional email. Returns true if actually sent.
+/** Pull a short human reason out of a Resend error body (it returns JSON like
+ * {"message":"The hey.ugcorigin.com domain is not verified..."}). */
+function resendReason(status: number, body: string): string {
+  try {
+    const parsed = JSON.parse(body);
+    if (parsed && typeof parsed.message === "string" && parsed.message.trim()) return parsed.message.trim();
+  } catch {
+    /* not JSON */
+  }
+  return `Resend returned HTTP ${status}`;
+}
+
+/** Send one transactional email.
  *
- * Failures are logged (never thrown) so the reason is visible in the server
- * logs: a missing env var, or the exact rejection Resend returned (an
- * unverified sending domain and a malformed `EMAIL_FROM` are the usual two).
- * The logged `from` makes a stray quote or wrong domain obvious at a glance. */
-export async function sendEmail(input: EmailInput): Promise<boolean> {
+ * Never throws. Returns a typed result so callers can tell a missing env var
+ * (`not_configured`) from a Resend rejection (`rejected`, e.g. an unverified
+ * sending domain or a malformed `EMAIL_FROM`) from a transport failure
+ * (`error`). Every failure is also logged, with the `from` echoed so a stray
+ * quote or wrong sending domain is obvious at a glance. */
+export async function sendEmail(input: EmailInput): Promise<SendResult> {
   if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) {
-    console.warn(
-      `[email] skipped: ${!process.env.RESEND_API_KEY ? "RESEND_API_KEY" : "EMAIL_FROM"} is not set in this environment`,
-    );
-    return false;
+    const missing = !process.env.RESEND_API_KEY ? "RESEND_API_KEY" : "EMAIL_FROM";
+    console.warn(`[email] skipped: ${missing} is not set in this environment`);
+    return { ok: false, reason: "not_configured", detail: `${missing} is not set` };
   }
   try {
     const res = await fetch("https://api.resend.com/emails", {
@@ -101,15 +117,17 @@ export async function sendEmail(input: EmailInput): Promise<boolean> {
       }),
     });
     if (!res.ok) {
-      const detail = await res.text().catch(() => "");
+      const body = await res.text().catch(() => "");
+      const detail = resendReason(res.status, body);
       console.error(
-        `[email] Resend rejected the send (HTTP ${res.status}) from=${JSON.stringify(process.env.EMAIL_FROM)} to=${JSON.stringify(input.to)}: ${detail.slice(0, 500)}`,
+        `[email] Resend rejected the send (HTTP ${res.status}) from=${JSON.stringify(process.env.EMAIL_FROM)} to=${JSON.stringify(input.to)}: ${body.slice(0, 500)}`,
       );
-      return false;
+      return { ok: false, reason: "rejected", detail };
     }
-    return true;
+    return { ok: true };
   } catch (err) {
-    console.error("[email] request to Resend failed:", err instanceof Error ? err.message : "unknown");
-    return false;
+    const detail = err instanceof Error ? err.message : "unknown";
+    console.error("[email] request to Resend failed:", detail);
+    return { ok: false, reason: "error", detail };
   }
 }
