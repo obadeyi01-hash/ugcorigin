@@ -18,7 +18,7 @@ const BRAND_STATUSES = ["unverified", "pending", "verified", "rejected"] as cons
 // delivery pass respects (see PREF_BY_TYPE in notify.ts). "announcement" is not
 // in that map, so it always delivers (for important, non-marketing messages).
 export const BROADCAST_CATEGORIES: { value: string; label: string; note: string }[] = [
-  { value: "announcement", label: "Announcement", note: "Always delivered — use for important news." },
+  { value: "announcement", label: "Announcement", note: "Always delivered, use for important news." },
   { value: "product", label: "Product update", note: "Respects each user's product-update email preference." },
   { value: "offer", label: "Offers & gigs", note: "Respects offers email preference." },
 ];

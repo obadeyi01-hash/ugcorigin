@@ -11,7 +11,7 @@ import { PRO_PRICE_NAIRA } from "@/lib/pro";
 
 export const metadata: Metadata = {
   title: "Creator Pro",
-  description: "Unlock extra perks for serious UGCOrigin creators — more username changes, visibility and more.",
+  description: "Unlock extra perks for serious UGCOrigin creators: more username changes, visibility and more.",
 };
 
 const PERKS = [

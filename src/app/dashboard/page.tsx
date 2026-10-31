@@ -218,7 +218,7 @@ async function DashboardInner() {
           dismissKey="ugc:upsell:creator-pro"
           eyebrow="Creator Pro"
           title="Get more from your profile"
-          body="Unlock extra username changes, a Pro badge that signals you're serious, and priority support — from ₦2,500/mo."
+          body="Unlock extra username changes, a Pro badge that signals you're serious, and priority support, from ₦2,500/mo."
           ctaLabel="See Creator Pro"
           ctaHref="/pro"
         />
@@ -228,7 +228,7 @@ async function DashboardInner() {
           dismissKey="ugc:upsell:brand-verify"
           eyebrow="Verified brand"
           title="Win more creators' trust"
-          body="Verify your business to earn the Verified brand badge on your offers — verified brands get more (and better) applicants."
+          body="Verify your business to earn the Verified brand badge on your offers, verified brands get more (and better) applicants."
           ctaLabel="Verify your brand"
           ctaHref="/settings"
         />
@@ -324,11 +324,11 @@ async function DashboardInner() {
               <div className="mt-5 grid gap-2 text-sm">
                 <p className="flex items-center gap-2 text-ink-2">
                   <BadgeCheck className={creator.identity_verified ? "size-4 text-success" : "size-4 text-ink-3"} />
-                  Identity {creator.identity_verified ? "verified" : "— verify to go live"}
+                  Identity {creator.identity_verified ? "verified" : "not verified, verify to go live"}
                 </p>
                 <p className="flex items-center gap-2 text-ink-2">
                   <ShieldCheck className={creator.bank_verified ? "size-4 text-success" : "size-4 text-ink-3"} />
-                  Bank {creator.bank_verified ? "verified" : "— add to receive payouts"}
+                  Bank {creator.bank_verified ? "verified" : "not added, add to receive payouts"}
                 </p>
               </div>
 

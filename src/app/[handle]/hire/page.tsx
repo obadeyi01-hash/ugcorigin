@@ -32,7 +32,7 @@ async function HireInner({ params, searchParams }: { params: Promise<{ handle: s
     return (
       <AccessNotice
         title="Only brands can make offers"
-        message="Hiring a creator is a brand action. You're signed in as a creator — add a brand account to send offers."
+        message="Hiring a creator is a brand action. You're signed in as a creator, add a brand account to send offers."
         cta={{ label: "Add a brand account", href: "/onboarding?role=brand" }}
       />
     );

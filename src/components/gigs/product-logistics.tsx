@@ -104,7 +104,7 @@ export function ProductLogistics({ gigId, role, address, status }: Props) {
         {stepIdx >= 2 && (
           <p className="mt-4 flex items-center gap-1.5 text-sm text-ink-2">
             <Truck className="size-4 text-success" />
-            {stepIdx >= 3 ? "Delivered — the creator confirmed receipt." : "On the way to the creator."}
+            {stepIdx >= 3 ? "Delivered. The creator confirmed receipt." : "On the way to the creator."}
           </p>
         )}
         {role === "creator" && stepIdx === 2 && (
@@ -144,7 +144,7 @@ export function ProductLogistics({ gigId, role, address, status }: Props) {
               </div>
             </div>
             <Button className="mt-5 w-full" onClick={() => { setShowSafety(false); advance("sent"); }} loading={pending}>
-              I understand — mark as sent
+              I understand, mark as sent
             </Button>
             <button onClick={() => setShowSafety(false)} className="mt-2 w-full text-center text-xs text-ink-3 hover:text-ink">Not yet</button>
           </div>

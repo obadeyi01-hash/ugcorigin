@@ -27,7 +27,7 @@ export async function respondToTicket(ticketId: string, response: string, status
   await notifyUser(admin, ticket.user_id, {
     type: "support",
     title: "Support replied to your ticket",
-    body: `Re: "${ticket.subject}" — ${reply.slice(0, 160)}`,
+    body: `Re: "${ticket.subject}": ${reply.slice(0, 160)}`,
     href: "/support",
     ctaLabel: "View the reply",
   });

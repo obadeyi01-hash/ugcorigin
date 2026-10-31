@@ -25,7 +25,7 @@ async function NewBriefInner() {
     return (
       <AccessNotice
         title="Brands post briefs"
-        message="You're signed in as a creator. Briefs are posted by brands — add a brand account to post one, or browse open briefs to apply."
+        message="You're signed in as a creator. Briefs are posted by brands, add a brand account to post one, or browse open briefs to apply."
         cta={{ label: "Add a brand account", href: "/onboarding?role=brand" }}
       />
     );

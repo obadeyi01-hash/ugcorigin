@@ -31,7 +31,7 @@ export const LIMITS: Record<UploadKind, UploadLimit> = {
     maxBytes: 10 * MB,
     types: ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"],
     typeHint: "JPG, PNG or WebP",
-    guide: "A clear, well-lit photo of your face. Square works best — we optimize it automatically.",
+    guide: "A clear, well-lit photo of your face. Square works best, we optimize it automatically.",
   },
   logo: {
     label: "Brand logo",
@@ -92,7 +92,7 @@ export function validateFile(file: File, kind: UploadKind): Validation {
     return {
       ok: false,
       error: `That file is ${mb(file.size)}. ${L.label}s must be under ${mb(L.maxBytes)}${
-        isVideo ? " — try trimming it or exporting at 1080p." : "."
+        isVideo ? ", try trimming it or exporting at 1080p." : "."
       }`,
     };
   }
