@@ -10,6 +10,7 @@ import { generateUniqueHandle } from "@/lib/username";
 import { sendVerifyPrompt } from "@/lib/notify";
 import { cleanNicheList } from "@/lib/niches";
 import { cleanReferralCode } from "@/lib/referrals/code";
+import { captureAccountSignal } from "@/lib/signals/capture";
 
 const configured = () => !!process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -113,6 +114,7 @@ export async function createCreatorProfile(input: CreatorInput): Promise<ActionR
   }
   await admin.from("creator_profiles").update({ referral_code: handle, referred_by: referredBy }).eq("id", user.id);
 
+  await captureAccountSignal(user.id, "creator_signup");
   await sendVerifyPrompt(admin, user.id, "creator");
   revalidatePath("/dashboard");
   redirect("/dashboard");
@@ -149,6 +151,7 @@ export async function createBrandProfile(input: BrandInput): Promise<ActionResul
   }
 
   const admin = createAdminClient();
+  await captureAccountSignal(user.id, "brand_signup");
   await sendVerifyPrompt(admin, user.id, "brand");
   revalidatePath("/dashboard");
   redirect("/dashboard");

@@ -8,6 +8,7 @@ import { notifyAdminsPendingReview, notifyUser } from "@/lib/notify";
 import { recordProfileNote } from "@/lib/admin/profile-notes";
 import { sendEmail, emailConfigured } from "@/lib/email/send";
 import { brandApprovedEmail, brandRejectedEmail } from "@/lib/email/templates";
+import { captureAccountSignal } from "@/lib/signals/capture";
 
 type Res = { ok?: boolean; error?: string };
 
@@ -38,6 +39,8 @@ export async function submitBrandVerification(input: { companyName: string; rcNu
     body: `${company} submitted a CAC/RC number for review.`,
     href: "/admin/verification",
   });
+
+  await captureAccountSignal(user.id, "brand_verify");
 
   revalidatePath("/settings");
   revalidatePath("/dashboard");
