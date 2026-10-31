@@ -76,7 +76,7 @@ async function UserInner({ params }: { params: Promise<{ id: string }> }) {
       .maybeSingle(),
     admin
       .from("brand_profiles")
-      .select("company_name, contact_first_name, contact_last_name, website, store_url, logo_url, phone, rc_number, verification_status, verification_note, verification_submitted_at, goal, ad_platforms, content_types, business_type, contact_role, team_size, trust_tier, created_at")
+      .select("company_name, contact_first_name, contact_last_name, website, store_url, logo_url, phone, rc_number, verification_status, verification_note, verification_submitted_at, goal, ad_platforms, content_types, business_type, contact_role, team_size, trust_tier, registered_address, director_name, director_id_hash, director_consent_at, person_verified, created_at")
       .eq("id", id)
       .maybeSingle(),
     admin.from("admin_users").select("role, created_at").eq("user_id", id).maybeSingle(),
@@ -293,6 +293,11 @@ async function UserInner({ params }: { params: Promise<{ id: string }> }) {
             <Fact label="Website" value={brand.website} />
             <Fact label="Store" value={brand.store_url} />
             <Fact label="RC / CAC" value={brand.rc_number} />
+            <Fact label="Registered address" value={brand.registered_address} />
+            <Fact label="Responsible person" value={brand.director_name} />
+            <Fact label="Person ID (vNIN)" value={brand.director_id_hash ? (brand.person_verified ? "Verified, code cleared" : "Submitted, pending review") : "—"} />
+            <Fact label="Person verified" value={yesNo(brand.person_verified)} />
+            <Fact label="Person consent" value={brand.director_consent_at ? new Date(brand.director_consent_at).toLocaleString() : "—"} />
             <Fact label="Verification" value={brand.verification_status} />
             <Fact label="Note" value={brand.verification_note} />
             <Fact label="Submitted" value={brand.verification_submitted_at ? new Date(brand.verification_submitted_at).toLocaleString() : "—"} />
