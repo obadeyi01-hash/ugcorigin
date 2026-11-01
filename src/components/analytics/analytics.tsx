@@ -117,19 +117,13 @@ export function Analytics() {
           <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl border border-line bg-surface/95 p-4 shadow-xl backdrop-blur-xl sm:flex-row sm:items-center sm:gap-4 sm:p-5">
             <Cookie className="hidden size-6 shrink-0 text-accent sm:block" />
             <p className="flex-1 text-sm text-ink-2">
-              We use cookies to understand how UGCOrigin is used and improve it. Nothing loads until you choose.{" "}
+              We use cookies to understand how UGCOrigin is used and improve it. See our{" "}
               <Link href="/privacy" className="font-medium text-accent hover:underline">Privacy Policy</Link>.
             </p>
             <div className="flex shrink-0 gap-2">
               <button
-                onClick={() => choose("declined")}
-                className="rounded-full border border-line px-4 py-2 text-sm font-medium text-ink-2 hover:text-ink"
-              >
-                Decline
-              </button>
-              <button
                 onClick={() => choose("accepted")}
-                className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-ink hover:bg-accent-bright"
+                className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-ink hover:bg-accent-bright"
               >
                 Accept
               </button>

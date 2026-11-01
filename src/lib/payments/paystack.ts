@@ -82,6 +82,7 @@ export type VerifiedTransaction = {
   amountNaira: number; // converted from kobo
   currency: string; // 'NGN'
   reference: string;
+  email: string | null; // payer's email (for Conversions API match quality)
   metadata: Record<string, unknown>;
 };
 
@@ -105,6 +106,7 @@ export async function verifyTransaction(reference: string): Promise<VerifiedTran
     amountNaira: Math.round((d.amount as number) / 100),
     currency: d.currency as string,
     reference: d.reference as string,
+    email: (d.customer?.email as string | undefined) ?? null,
     metadata: (d.metadata ?? {}) as Record<string, unknown>,
   };
 }

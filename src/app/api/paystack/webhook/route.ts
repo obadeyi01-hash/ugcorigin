@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { feeFor, taxBpsFromMetadata, taxFor } from "@/lib/fees";
 import { notifyUser, notifyMany } from "@/lib/notify";
 import { awardReferral, markReferralPaid } from "@/lib/referrals/award";
+import { sendCapiEvent } from "@/lib/analytics/capi";
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -94,6 +95,7 @@ export async function POST(request: Request) {
       const periodEnd = start.toISOString();
       await admin.from("subscriptions").update({ status: "active", current_period_end: periodEnd, provider_ref: reference, updated_at: new Date().toISOString() }).eq("id", subscriptionId);
       await admin.from("creator_profiles").update({ pro_until: periodEnd }).eq("id", s.user_id);
+      await sendCapiEvent({ eventName: "Subscribe", eventId: reference, email: verified.email, value: paid, currency: "NGN", contentName: "creator_pro", contentType: "subscription", custom: { gross_naira: paid, renewal: true } });
       return NextResponse.json({ received: true, extended: true });
     }
     if (s && s.status === "pending") {
@@ -117,6 +119,7 @@ export async function POST(request: Request) {
         body: "Your Pro membership is active. Enjoy your perks for the next 30 days.",
         href: "/pro",
       });
+      await sendCapiEvent({ eventName: "Subscribe", eventId: reference, email: verified.email, value: paid, currency: "NGN", contentName: "creator_pro", contentType: "subscription", custom: { gross_naira: paid, renewal: false } });
     }
     return NextResponse.json({ received: true });
   }
@@ -154,6 +157,7 @@ export async function POST(request: Request) {
         body: `Your ${b.target_type} is now featured for ${b.days} days.`,
         href: b.target_type === "creator" ? "/dashboard" : `/${b.target_type}s/${b.target_id}`,
       });
+      await sendCapiEvent({ eventName: "Purchase", eventId: reference, email: verified.email, value: paid, currency: "NGN", contentName: "boost", contentType: b.target_type, contentIds: [b.target_id], custom: { gross_naira: paid } });
     }
     return NextResponse.json({ received: true });
   }
@@ -178,6 +182,8 @@ export async function POST(request: Request) {
       }
       await admin.from("campaigns").update({ funded: true, status: "open", provider_ref: reference, fee_naira: campFee, tax_naira: campTax }).eq("id", campaignId).eq("funded", false);
       await admin.from("ledger_entries").insert({ entry_type: "escrow_in", amount_naira: c.pool_naira, memo: `Campaign pool funded (${campaignId})` });
+      // Value = our platform revenue (the fee); the pool itself is pass-through to creators.
+      await sendCapiEvent({ eventName: "Purchase", eventId: reference, email: verified.email, value: campFee, currency: "NGN", contentName: "campaign_funding", contentType: "campaign", contentIds: [campaignId], custom: { gross_naira: paid, pool_naira: c.pool_naira, fee_naira: campFee } });
     }
     return NextResponse.json({ received: true });
   }
@@ -272,6 +278,9 @@ export async function POST(request: Request) {
     { userId: offer.brand_id, payload: { type: "gig_update", title: "Payment secured", body: `"${offer.title}" is funded. The creator can start now.`, href: `/gigs/${gig.id}`, ctaLabel: "View the gig" } },
   ]);
   await awardReferral(admin, { creatorId: offer.creator_id, gigId: gig.id, brandId: offer.brand_id });
+
+  // Value = our platform revenue (the fee); the creator rate is pass-through escrow.
+  await sendCapiEvent({ eventName: "Purchase", eventId: reference, email: verified.email, value: fee, currency: "NGN", contentName: "gig_funding", contentType: "gig", contentIds: [offer.id], custom: { gross_naira: paid, rate_naira: offer.price_naira, fee_naira: fee } });
 
   return NextResponse.json({ received: true });
 }
