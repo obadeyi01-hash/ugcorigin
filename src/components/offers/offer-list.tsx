@@ -1,4 +1,5 @@
 "use client";
+import { track } from "@/components/analytics/track";
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -42,7 +43,7 @@ export function OfferList({ offers, taxBps = DEFAULT_TAX_BPS }: { offers: OfferR
     start(async () => {
       const res = await fn();
       setPendingId(null);
-      if (res?.url) { window.location.href = res.url; return; }
+      if (res?.url) { track("InitiateCheckout", { content_name: "gig_funding" }); window.location.href = res.url; return; }
       if (res?.configured === false) { setNote((n) => ({ ...n, [id]: "Payments aren't connected yet (add your Paystack key)." })); return; }
       if (res?.error) { setNote((n) => ({ ...n, [id]: res.error! })); return; }
       router.refresh();

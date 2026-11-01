@@ -21,6 +21,7 @@ import { formatNaira } from "@/lib/utils";
 import { feeFor, taxFor, taxPercentLabel } from "@/lib/fees";
 import { loadTaxBps } from "@/lib/fees-server";
 import { Notice } from "@/components/ui/notice";
+import { FireEvent } from "@/components/analytics/fire-event";
 
 export const metadata: Metadata = { title: "Campaign" };
 
@@ -75,6 +76,7 @@ async function Inner({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <div className="grid gap-8 py-10 md:grid-cols-[1fr_340px]">
+      <FireEvent name="ViewContent" params={{ content_type: "campaign", content_ids: [c.id], content_name: c.title }} />
       <div>
         <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{c.title}</h1>
         <div className="mt-1.5"><BrandByline conceal={conceal} company={companyName} /></div>

@@ -1,4 +1,5 @@
 "use client";
+import { track } from "@/components/analytics/track";
 
 import { useState, useTransition } from "react";
 import { Rocket, Loader2, X, Check } from "lucide-react";
@@ -32,6 +33,7 @@ export function BoostButton({
     start(async () => {
       const r = await createBoostCheckout({ targetType, targetId, days });
       if (r.url) {
+        track("InitiateCheckout", { content_name: "boost", content_type: targetType, content_ids: [targetId] });
         window.location.href = r.url;
         return;
       }
