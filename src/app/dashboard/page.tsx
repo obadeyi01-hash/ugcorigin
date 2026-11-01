@@ -29,6 +29,7 @@ import { SITE_URL } from "@/components/seo/json-ld";
 import { formatNaira } from "@/lib/utils";
 import { REFERRAL_HIRE_NAIRA } from "@/lib/referrals/award";
 import { captureFirstSeen } from "@/lib/signals/capture";
+import { FireEvent } from "@/components/analytics/fire-event";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -440,9 +441,18 @@ async function DashboardInner() {
   );
 }
 
-export default function DashboardPage() {
+/** Fire CompleteRegistration once when a freshly-onboarded creator/brand lands
+ * here (the onboarding action redirects with ?welcome=creator|brand). */
+async function WelcomeTracker({ searchParams }: { searchParams: Promise<{ welcome?: string }> }) {
+  const sp = await searchParams;
+  if (sp?.welcome !== "creator" && sp?.welcome !== "brand") return null;
+  return <FireEvent name="CompleteRegistration" params={{ content_name: `${sp.welcome}_signup` }} once="signup" />;
+}
+
+export default function DashboardPage({ searchParams }: { searchParams: Promise<{ welcome?: string }> }) {
   return (
     <Suspense fallback={<DashboardSkeleton />}>
+      <WelcomeTracker searchParams={searchParams} />
       <DashboardInner />
     </Suspense>
   );
