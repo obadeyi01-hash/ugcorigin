@@ -1,4 +1,5 @@
 "use client";
+import { track } from "@/components/analytics/track";
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
@@ -26,7 +27,7 @@ export function ApplicationsList({ apps }: { apps: AppRow[] }) {
     start(async () => {
       const res = await selectApplicantAction(id);
       setPendingId(null);
-      if (res?.url) { window.location.href = res.url; return; }
+      if (res?.url) { track("InitiateCheckout", { content_name: "gig_funding" }); window.location.href = res.url; return; }
       if (res?.configured === false) { setNote((n) => ({ ...n, [id]: "Selected, fund the gig in Offers (Paystack not connected yet)." })); return; }
       if (res?.error) { setNote((n) => ({ ...n, [id]: res.error! })); return; }
     });

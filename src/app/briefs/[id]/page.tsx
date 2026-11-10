@@ -17,6 +17,7 @@ import { getViewer } from "@/lib/auth/role";
 import { formatNaira } from "@/lib/utils";
 import { Notice } from "@/components/ui/notice";
 import { JsonLd, SITE_URL } from "@/components/seo/json-ld";
+import { FireEvent } from "@/components/analytics/fire-event";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -130,6 +131,8 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
   return (
     <div className="grid gap-8 py-10 md:grid-cols-[1fr_340px]">
       {jobLd && <JsonLd data={jobLd} />}
+      <FireEvent name="ViewContent" params={{ content_type: "brief", content_ids: [id], content_name: brief.title, value: brief.budget_naira ?? undefined, currency: "NGN" }} />
+
       <div>
         <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{brief.title}</h1>
         <div className="mt-1.5"><BrandByline conceal={conceal} company={companyName} /></div>

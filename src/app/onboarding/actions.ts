@@ -117,7 +117,7 @@ export async function createCreatorProfile(input: CreatorInput): Promise<ActionR
   await captureAccountSignal(user.id, "creator_signup");
   await sendVerifyPrompt(admin, user.id, "creator");
   revalidatePath("/dashboard");
-  redirect("/dashboard");
+  redirect("/dashboard?welcome=creator");
 }
 
 export async function createBrandProfile(input: BrandInput): Promise<ActionResult> {
@@ -154,5 +154,5 @@ export async function createBrandProfile(input: BrandInput): Promise<ActionResul
   await captureAccountSignal(user.id, "brand_signup");
   await sendVerifyPrompt(admin, user.id, "brand");
   revalidatePath("/dashboard");
-  redirect("/dashboard");
+  redirect("/dashboard?welcome=brand");
 }

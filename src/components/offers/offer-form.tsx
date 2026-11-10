@@ -1,4 +1,5 @@
 "use client";
+import { track } from "@/components/analytics/track";
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
@@ -46,6 +47,7 @@ export function OfferForm({
     setHref(null);
     setNeedsBrand(false);
     start(async () => {
+      track("Lead", { content_name: "brand_offer" });
       const res = await sendOfferAction({ handle, title, brief, price, deadline, needsProduct, needsLocation, locationAddress });
       if (res?.needsBrand) setNeedsBrand(true);
       if (res?.error) {

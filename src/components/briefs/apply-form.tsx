@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea, Field } from "@/components/ui/input";
 import { Card, CardBody } from "@/components/ui/card";
 import { applyToBriefAction } from "@/app/briefs/actions";
+import { track } from "@/components/analytics/track";
 import { Notice } from "@/components/ui/notice";
 import { useToast } from "@/components/ui/toaster";
 
@@ -33,6 +34,7 @@ export function ApplyForm({ briefId }: { briefId: string }) {
       } else if (res?.ok) {
         toast("Application sent", "success");
         setDone(true);
+        track("SubmitApplication", { content_type: "brief", content_ids: [briefId] });
       }
     });
   }

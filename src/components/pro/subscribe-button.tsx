@@ -1,4 +1,5 @@
 "use client";
+import { track } from "@/components/analytics/track";
 
 import { useState, useTransition } from "react";
 import { Loader2, Sparkles } from "lucide-react";
@@ -21,7 +22,7 @@ export function SubscribeButton({ active }: { active: boolean }) {
     setNote(null);
     start(async () => {
       const r = await startSubscription();
-      if (r.url) { window.location.href = r.url; return; }
+      if (r.url) { track("InitiateCheckout", { content_name: "creator_pro", content_category: "subscription" }); window.location.href = r.url; return; }
       if (r.configured === false) { setNote("Payments aren't connected yet."); return; }
       if (r.error) setNote(r.error);
     });

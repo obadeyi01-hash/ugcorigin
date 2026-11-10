@@ -1,4 +1,5 @@
 "use client";
+import { track } from "@/components/analytics/track";
 
 import { useState, useTransition } from "react";
 import { Banknote } from "lucide-react";
@@ -15,7 +16,7 @@ export function FundPool({ campaignId, note: chargeNote }: { campaignId: string;
         onClick={() =>
           start(async () => {
             const r = await fundCampaignAction(campaignId);
-            if (r.url) { window.location.href = r.url; return; }
+            if (r.url) { track("InitiateCheckout", { content_name: "campaign_funding", content_ids: [campaignId] }); window.location.href = r.url; return; }
             if (r.configured === false) setNote("Payments aren't connected yet (add your Paystack key).");
             else if (r.error) setNote(r.error);
           })
