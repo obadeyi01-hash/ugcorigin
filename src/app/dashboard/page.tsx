@@ -20,6 +20,7 @@ import { publicName } from "@/lib/names";
 import { RecommendationsPopup, type RecCreator } from "@/components/dashboard/recommendations-popup";
 import { UpsellNudge } from "@/components/upsell/upsell-nudge";
 import { VerifyBanner } from "@/components/dashboard/verify-banner";
+import { ProfileChecklist } from "@/components/dashboard/profile-checklist";
 import { getAdminContext } from "@/lib/admin/rbac";
 import { ROLE_LABEL } from "@/lib/admin/roles";
 import { loadRateSuggestion } from "@/lib/rates/load";
@@ -115,7 +116,7 @@ async function DashboardInner() {
   // Named columns only. phone, bank fields, and rc_number are not selectable
   // by the signed-in role, and select("*") would fail once that migration is applied.
   const [{ data: creator }, { data: brand }] = await Promise.all([
-    supabase.from("creator_profiles").select("id, handle, display_name, location, niches, starting_rate_naira, avatar_url, tier, is_live, suspended, completeness, identity_verified, bank_verified, referral_code").eq("id", user.id).maybeSingle(),
+    supabase.from("creator_profiles").select("id, handle, display_name, bio, location, niches, starting_rate_naira, avatar_url, tier, is_live, suspended, completeness, identity_verified, bank_verified, referral_code").eq("id", user.id).maybeSingle(),
     supabase.from("brand_profiles").select("id, company_name, website, verification_status").eq("id", user.id).maybeSingle(),
   ]);
 
@@ -340,10 +341,6 @@ async function DashboardInner() {
                 </span>
               </div>
               <p className="mt-2 text-xs text-ink-3">{tierMeta(creator.tier).tagline}</p>
-              <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-surface-2">
-                <div className="h-full rounded-full bg-accent" style={{ width: `${creator.completeness ?? 0}%` }} />
-              </div>
-              <p className="mt-1.5 text-xs text-ink-3">Profile {creator.completeness ?? 0}% complete</p>
               {!creator.avatar_url && (
                 <p className="mt-3 text-sm text-ink-2">
                   Brands see your initials until a profile photo is saved.{" "}
@@ -394,6 +391,19 @@ async function DashboardInner() {
               </div>
             </CardBody>
           </Card>
+        )}
+
+        {creator && (
+          <ProfileChecklist
+            avatarUrl={creator.avatar_url ?? null}
+            bio={creator.bio ?? null}
+            niches={creator.niches ?? null}
+            startingRate={creator.starting_rate_naira ?? 0}
+            videoCount={(videos ?? []).length}
+            portfolioCount={(portfolio ?? []).length}
+            identityVerified={!!creator.identity_verified}
+            bankVerified={!!creator.bank_verified}
+          />
         )}
 
         {creator?.handle && (
@@ -484,9 +494,9 @@ async function DashboardInner() {
         )}
 
         {creator && (
-          <div className="mt-6 max-w-2xl">
+          <div className="mt-6 max-w-2xl" id="portfolio">
             <PortfolioManager links={portfolio ?? []} />
-            <div className="mt-6">
+            <div className="mt-6" id="videos">
               <Card><CardBody>
                 <VideoManager videos={videos ?? []} />
               </CardBody></Card>
