@@ -1,4 +1,6 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { getSessionUser } from "@/lib/auth/session";
 import { getAdminContext } from "@/lib/admin/rbac";
 
 /**
@@ -54,14 +56,11 @@ const GUEST: Viewer = {
  * capability-based: a creator-only account never sees brand actions and a
  * brand-only account never sees creator actions.
  */
-export async function getViewer(): Promise<Viewer> {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return GUEST;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export const getViewer = cache(async (): Promise<Viewer> => {
+  const user = await getSessionUser();
   if (!user) return GUEST;
 
+  const supabase = await createClient();
   const [{ data: creator }, { data: brand }, adminCtx] = await Promise.all([
     supabase.from("creator_profiles").select("id, is_live, suspended").eq("id", user.id).maybeSingle(),
     supabase.from("brand_profiles").select("id, verification_status").eq("id", user.id).maybeSingle(),
@@ -92,4 +91,4 @@ export async function getViewer(): Promise<Viewer> {
     brandVerified: brand?.verification_status === "verified",
     creatorLive: !!creator?.is_live && !creator?.suspended,
   };
-}
+});
