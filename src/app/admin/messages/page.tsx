@@ -5,7 +5,7 @@ import { AdminContentSkeleton } from "@/components/ui/skeleton";
 import { Card, CardBody } from "@/components/ui/card";
 import { AdminListControls } from "@/components/admin/list-controls";
 import { requireSection } from "@/lib/admin/rbac";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { pageCount, pageWindow, readPage, readQuery } from "@/lib/admin/list";
 
 export const metadata: Metadata = { title: "Admin · Messages" };
@@ -17,16 +17,16 @@ async function MessagesInner({ searchParams }: { searchParams: Promise<Record<st
   const q = readQuery(sp.q);
   const page = readPage(sp.page);
   const window = pageWindow(page);
-  const supabase = await createClient();
+  const admin = createAdminClient();
 
-  let convQuery = supabase
+  let convQuery = admin
     .from("conversations")
     .select("id, brand_id, creator_id, last_message_at", { count: "exact" })
     .order("last_message_at", { ascending: false });
   if (q) {
     const [{ data: creators }, { data: brands }] = await Promise.all([
-      supabase.from("creator_profiles").select("id").or(`handle.ilike.%${q}%,display_name.ilike.%${q}%`).limit(40),
-      supabase.from("brand_profiles").select("id").ilike("company_name", `%${q}%`).limit(40),
+      admin.from("creator_profiles").select("id").or(`handle.ilike.%${q}%,display_name.ilike.%${q}%`).limit(40),
+      admin.from("brand_profiles").select("id").ilike("company_name", `%${q}%`).limit(40),
     ]);
     const ids = [...new Set([...(creators ?? []).map((row) => row.id), ...(brands ?? []).map((row) => row.id)])];
     if (ids.length === 0) convQuery = convQuery.eq("id", "00000000-0000-0000-0000-000000000000");
@@ -36,20 +36,35 @@ async function MessagesInner({ searchParams }: { searchParams: Promise<Record<st
   const pages = pageCount(count);
   const list = convs ?? [];
 
+  const creatorIds = [...new Set(list.map((row) => row.creator_id))];
+  const brandIds = [...new Set(list.map((row) => row.brand_id))];
+  const [{ data: creatorRows }, { data: brandRows }] = await Promise.all([
+    creatorIds.length
+      ? admin.from("creator_profiles").select("id, display_name, handle").in("id", creatorIds)
+      : Promise.resolve({ data: [] as { id: string; display_name: string | null; handle: string | null }[] }),
+    brandIds.length
+      ? admin.from("brand_profiles").select("id, company_name").in("id", brandIds)
+      : Promise.resolve({ data: [] as { id: string; company_name: string | null }[] }),
+  ]);
+  const creatorLabel = new Map(
+    (creatorRows ?? []).map((row) => [row.id, row.display_name || (row.handle ? `@${row.handle}` : "Creator")]),
+  );
+  const brandLabel = new Map((brandRows ?? []).map((row) => [row.id, row.company_name || "Brand"]));
+
   let thread: { id: string; sender_id: string; body: string; flagged: boolean; attachment_name: string | null; created_at: string }[] = [];
   let parties = { brand: "Brand", creator: "Creator", brandId: "", creatorId: "" };
   if (c) {
-    const sel = list.find((x) => x.id === c);
+    const sel = list.find((x) => x.id === c) ?? (await admin.from("conversations").select("id, brand_id, creator_id, last_message_at").eq("id", c).maybeSingle()).data;
     if (sel) {
       const [{ data: msgs }, { data: cr }, { data: br }] = await Promise.all([
-        supabase.from("messages").select("id, sender_id, body, flagged, attachment_name, created_at").eq("conversation_id", c).order("created_at", { ascending: true }).limit(500),
-        supabase.from("creator_profiles").select("display_name, handle").eq("id", sel.creator_id).maybeSingle(),
-        supabase.from("brand_profiles").select("company_name").eq("id", sel.brand_id).maybeSingle(),
+        admin.from("messages").select("id, sender_id, body, flagged, attachment_name, created_at").eq("conversation_id", c).order("created_at", { ascending: true }).limit(500),
+        admin.from("creator_profiles").select("display_name, handle").eq("id", sel.creator_id).maybeSingle(),
+        admin.from("brand_profiles").select("company_name").eq("id", sel.brand_id).maybeSingle(),
       ]);
       thread = msgs ?? [];
       parties = {
         brand: br?.company_name || "Brand",
-        creator: cr?.display_name || `@${cr?.handle ?? ""}`,
+        creator: cr?.display_name || (cr?.handle ? `@${cr.handle}` : "Creator"),
         brandId: sel.brand_id,
         creatorId: sel.creator_id,
       };
@@ -80,7 +95,7 @@ async function MessagesInner({ searchParams }: { searchParams: Promise<Record<st
                     href={`/admin/messages?c=${conv.id}${q ? `&q=${encodeURIComponent(q)}` : ""}${page > 1 ? `&page=${page}` : ""}`}
                     className={`block px-4 py-3 text-sm hover:bg-surface-2 ${c === conv.id ? "bg-surface-2 font-medium text-ink" : "text-ink-2"}`}
                   >
-                    {conv.id.slice(0, 8)}
+                    {(brandLabel.get(conv.brand_id) ?? "Brand")} <span className="text-ink-3">↔</span> {(creatorLabel.get(conv.creator_id) ?? "Creator")}
                     <span className="block text-xs text-ink-3">{new Date(conv.last_message_at).toLocaleString()}</span>
                   </Link>
                 </li>

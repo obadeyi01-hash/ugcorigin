@@ -30,6 +30,8 @@ import { formatNaira } from "@/lib/utils";
 import { REFERRAL_HIRE_NAIRA } from "@/lib/referrals/award";
 import { captureFirstSeen } from "@/lib/signals/capture";
 import { FireEvent } from "@/components/analytics/fire-event";
+import { ApplicationsList, type AppRow } from "@/components/briefs/applications-list";
+import { loadBriefApplications } from "@/lib/briefs/applicants";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -135,6 +137,33 @@ async function DashboardInner() {
     .or(`creator_id.eq.${user.id},brand_id.eq.${user.id}`)
     .order("created_at", { ascending: false })
     .limit(10);
+
+  let brandBriefs: {
+    id: string;
+    title: string;
+    status: string;
+    location: string | null;
+    deadline: string | null;
+    in_house: boolean;
+    slots: number;
+  }[] = [];
+  let appsByBrief = new Map<string, AppRow[]>();
+  if (brand) {
+    const { data: posted } = await createAdminClient()
+      .from("briefs")
+      .select("id, title, status, location, deadline, in_house, slots")
+      .eq("brand_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(40);
+    brandBriefs = posted ?? [];
+    appsByBrief = await loadBriefApplications(
+      brandBriefs.map((row) => row.id),
+      user.id,
+    );
+    brandBriefs.sort(
+      (a, b) => (appsByBrief.get(b.id)?.length ?? 0) - (appsByBrief.get(a.id)?.length ?? 0),
+    );
+  }
 
   const { data: portfolio } = creator
     ? await supabase.from("portfolio_links").select("id, platform, url").eq("creator_id", user.id).order("position", { ascending: true })
@@ -395,9 +424,51 @@ async function DashboardInner() {
                 <Link href="/briefs/new"><Button size="sm" variant="secondary">Post a brief</Button></Link>
                 <Link href="/saved"><Button size="sm" variant="ghost">Saved</Button></Link>
                 <Link href="/offers"><Button size="sm" variant="ghost">Offers</Button></Link>
+                <Link href="/messages"><Button size="sm" variant="ghost">Messages</Button></Link>
               </div>
             </CardBody>
           </Card>
+        )}
+
+        {brand && (
+          <div className="mt-8 max-w-2xl">
+            <h2 className="font-display text-lg font-semibold text-ink">Your briefs</h2>
+            <p className="mt-1 text-sm text-ink-2">
+              People who applied show here. Before you accept, you see their name, pitch, sample, location and niches. Accepting an in-house brief starts the job and the conversation, and their phone and socials open with the contract. No payment is taken on in-house work.
+            </p>
+            {brandBriefs.length === 0 ? (
+              <p className="mt-4 text-sm text-ink-3">No briefs posted yet.</p>
+            ) : (
+              <div className="mt-4 grid gap-6">
+                {brandBriefs.map((row) => {
+                  const apps = appsByBrief.get(row.id) ?? [];
+                  const where = [row.location, row.deadline ? `due ${row.deadline}` : null].filter(Boolean).join(" · ");
+                  return (
+                    <section key={row.id}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <Link href={`/briefs/${row.id}`} className="font-medium text-ink hover:text-accent">
+                            {row.title}
+                          </Link>
+                          <p className="mt-0.5 text-xs text-ink-3">
+                            {where ? `${where} · ` : ""}
+                            {apps.length} applied · need {row.slots}
+                            {row.in_house ? " · in-house" : ""}
+                            {` · ${row.status}`}
+                          </p>
+                        </div>
+                      </div>
+                      {apps.length > 0 && (
+                        <div className="mt-3">
+                          <ApplicationsList apps={apps} inHouse={row.in_house} />
+                        </div>
+                      )}
+                    </section>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
 
         {/* The cross-role possibility is kept, but as a quiet line, not a

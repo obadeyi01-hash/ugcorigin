@@ -14,6 +14,8 @@ import { ApplicationsList, type AppRow } from "@/components/briefs/applications-
 import { BoostButton } from "@/components/boost/boost-button";
 import { createClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/role";
+import { getAdminContext } from "@/lib/admin/rbac";
+import { loadBriefApplications } from "@/lib/briefs/applicants";
 import { formatNaira } from "@/lib/utils";
 import { Notice } from "@/components/ui/notice";
 import { JsonLd, SITE_URL } from "@/components/seo/json-ld";
@@ -50,7 +52,7 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
 
   const { data: brief } = await supabase
     .from("briefs")
-    .select("id, brand_id, title, description, budget_naira, slots, deadline, location, format, niches, tags, conceal_brand, status, created_at, brand:brand_profiles(company_name)")
+    .select("id, brand_id, title, description, budget_naira, slots, deadline, location, format, niches, tags, conceal_brand, in_house, status, created_at, brand:brand_profiles(company_name)")
     .eq("id", id)
     .maybeSingle();
 
@@ -67,6 +69,9 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
     data: { user },
   } = await supabase.auth.getUser();
   const isOwner = !!user && brief.brand_id === user.id;
+  const adminCtx = user && !isOwner ? await getAdminContext() : null;
+  const isAdmin = !!adminCtx;
+  const inHouse = !!(brief as { in_house?: boolean }).in_house;
   // Applying is a creator action — hide the form from brand-only accounts.
   const { userId, showCreatorCtas, isCreator, creatorLive } = await getViewer();
   // A past-deadline brief is closed to the public even if its status is still
@@ -85,24 +90,11 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
 
   let apps: AppRow[] = [];
   let myAppStatus: string | null = null;
-  if (isOwner) {
-    const { data } = await supabase
-      .from("applications")
-      .select("id, pitch, sample_url, status, creator:creator_profiles(handle, display_name)")
-      .eq("brief_id", id)
-      .order("created_at", { ascending: true });
-    apps = (data ?? []).map((a) => {
-      const c = (a as unknown as { creator?: { handle: string | null; display_name: string | null } }).creator;
-      return {
-        id: a.id,
-        pitch: a.pitch,
-        sample_url: a.sample_url,
-        status: a.status,
-        creatorHandle: c?.handle ?? null,
-        creatorName: c?.display_name || (c?.handle ? `@${c.handle}` : "Creator"),
-      };
-    });
-  } else if (user) {
+  if (isOwner || isAdmin) {
+    const byBrief = await loadBriefApplications([id], brief.brand_id, isOwner ? "brand" : "admin");
+    apps = byBrief.get(id) ?? [];
+  }
+  if (!isOwner && user) {
     const { data: mine } = await supabase.from("applications").select("status").eq("brief_id", id).eq("creator_id", user.id).maybeSingle();
     myAppStatus = mine?.status ?? null;
   }
@@ -141,10 +133,12 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
         </div>
         {brief.description && <p className="mt-6 max-w-prose whitespace-pre-line leading-relaxed text-ink-2">{brief.description}</p>}
 
-        {isOwner && (
+        {(isOwner || isAdmin) && (
           <div className="mt-10">
             <h2 className="font-display text-lg font-semibold text-ink">Applications ({apps.length})</h2>
-            <div className="mt-4"><ApplicationsList apps={apps} /></div>
+            <div className="mt-4">
+              <ApplicationsList apps={apps} inHouse={inHouse} canAct={isOwner} />
+            </div>
           </div>
         )}
       </div>
