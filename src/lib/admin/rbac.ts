@@ -1,5 +1,7 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getSessionUser } from "@/lib/auth/session";
 import { adminMfaRequired } from "./security";
 import { canAccess, isReadonly, type AdminRole, type Section, type AdminContext } from "./roles";
 
@@ -16,17 +18,14 @@ export {
   type AdminContext,
 } from "./roles";
 
-export async function getAdminContext(): Promise<AdminContext | null> {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return null;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export const getAdminContext = cache(async (): Promise<AdminContext | null> => {
+  const user = await getSessionUser();
   if (!user) return null;
+  const supabase = await createClient();
   const { data } = await supabase.from("admin_users").select("role").eq("user_id", user.id).maybeSingle();
   if (!data) return null;
   return { userId: user.id, role: (data.role as AdminRole) ?? "support" };
-}
+});
 
 /**
  * MFA posture for the signed-in admin. Admins must reach assurance level aal2
