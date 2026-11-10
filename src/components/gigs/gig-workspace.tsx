@@ -53,11 +53,17 @@ export function GigWorkspace({
   role,
   deliverable,
   comments,
+  inHouse = false,
+  readOnly = false,
 }: {
   gig: GigData;
   role: "brand" | "creator";
   deliverable: Deliverable;
   comments: Comment[];
+  /** Company-run work. Completing it does not release a payment. */
+  inHouse?: boolean;
+  /** Admin oversight. The workspace is visible and the actions stay with the two parties. */
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -68,8 +74,8 @@ export function GigWorkspace({
   const [uploading, setUploading] = useState(false);
 
   const completed = gig.status === "completed";
-  const canUpload = role === "creator" && (!deliverable || deliverable.status === "revision_requested") && !completed;
-  const canReview = role === "brand" && deliverable && deliverable.status === "submitted" && !completed;
+  const canUpload = !readOnly && role === "creator" && (!deliverable || deliverable.status === "revision_requested") && !completed;
+  const canReview = !readOnly && role === "brand" && deliverable && deliverable.status === "submitted" && !completed;
 
   function seek(t: number | null) {
     if (videoRef.current && t != null) {
@@ -155,7 +161,7 @@ export function GigWorkspace({
         </div>
 
         {/* Report a submitted delivery (AI/fake, infringing, abusive, off-brief). */}
-        {deliverable && role === "brand" && (
+        {deliverable && role === "brand" && !readOnly && (
           <div className="mt-2 flex justify-end">
             <ReportButton targetType="deliverable" targetId={deliverable.id} label="Report this delivery" />
           </div>
@@ -181,12 +187,14 @@ export function GigWorkspace({
         {deliverable && (
           <div className="mt-6">
             <h2 className="font-display text-lg font-semibold text-ink">Feedback</h2>
-            <div className="mt-3 flex gap-2">
-              <Input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Add a note at the current timestamp…" onKeyDown={(e) => e.key === "Enter" && addComment()} />
-              <Button onClick={addComment} loading={pending} disabled={!comment.trim()}>
-                <MessageSquarePlus className="size-4" /> At {fmt(videoRef.current?.currentTime ?? 0)}
-              </Button>
-            </div>
+            {!readOnly && (
+              <div className="mt-3 flex gap-2">
+                <Input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Add a note at the current timestamp…" onKeyDown={(e) => e.key === "Enter" && addComment()} />
+                <Button onClick={addComment} loading={pending} disabled={!comment.trim()}>
+                  <MessageSquarePlus className="size-4" /> At {fmt(videoRef.current?.currentTime ?? 0)}
+                </Button>
+              </div>
+            )}
             <ul className="mt-4 space-y-2">
               {comments.length === 0 && <li className="text-sm text-ink-3">No feedback yet. Play the video and leave time-stamped notes.</li>}
               {comments.map((c) => (
@@ -210,24 +218,30 @@ export function GigWorkspace({
         <Card className="lg:sticky lg:top-20">
           <CardBody>
             <div className="flex items-center gap-2 text-sm text-ink-2">
-              <ShieldCheck className="size-4 text-success" /> Payment-protected
+              <ShieldCheck className="size-4 text-success" /> {inHouse ? "In-house · no payment held" : "Payment-protected"}
             </div>
             <div className="mt-4 grid gap-1.5 text-sm">
               <div className="flex justify-between"><span className="text-ink-2">Creator rate</span><span className="text-ink">{formatNaira(gig.price_naira)}</span></div>
-              {role === "brand" && <div className="flex justify-between"><span className="text-ink-2">Platform fee</span><span className="text-ink">{formatNaira(gig.fee_naira)}</span></div>}
-              {role === "brand" && <div className="flex justify-between"><span className="text-ink-2">Tax</span><span className="text-ink">{formatNaira(gig.tax_naira ?? 0)}</span></div>}
+              {role === "brand" && !inHouse && <div className="flex justify-between"><span className="text-ink-2">Platform fee</span><span className="text-ink">{formatNaira(gig.fee_naira)}</span></div>}
+              {role === "brand" && !inHouse && <div className="flex justify-between"><span className="text-ink-2">Tax</span><span className="text-ink">{formatNaira(gig.tax_naira ?? 0)}</span></div>}
             </div>
 
             {completed ? (
               <div className="mt-5 rounded-xl border border-success/30 bg-success/10 p-3 text-sm text-ink">
                 <Check className="mb-1 size-5 text-success" />
-                Approved, payment released{role === "creator" ? ". Your payout is on the way." : " to the creator."}
+                {inHouse
+                  ? "Marked complete. This was in-house work, so nothing was paid out from here."
+                  : `Approved, payment released${role === "creator" ? ". Your payout is on the way." : " to the creator."}`}
               </div>
             ) : canReview ? (
               <div className="mt-5 grid gap-2">
-                <Button onClick={approve} loading={pending}><Check className="size-4" /> Approve &amp; release</Button>
+                <Button onClick={approve} loading={pending}><Check className="size-4" /> {inHouse ? "Mark complete" : "Approve & release"}</Button>
                 <Button variant="secondary" onClick={revise} loading={pending}><RotateCcw className="size-4" /> Request revision</Button>
-                <p className="text-xs text-ink-3">Approving releases {formatNaira(gig.price_naira)} to the creator.</p>
+                <p className="text-xs text-ink-3">
+                  {inHouse
+                    ? "Marking this complete closes the job. It does not send a payout."
+                    : `Approving releases ${formatNaira(gig.price_naira)} to the creator.`}
+                </p>
               </div>
             ) : (
               <p className="mt-5 text-sm text-ink-3">

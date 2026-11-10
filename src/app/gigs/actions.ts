@@ -128,12 +128,33 @@ export async function approveReleaseAction(
 
   const { data: gig } = await supabase
     .from("gigs")
-    .select("id, brand_id, creator_id, title, price_naira, status")
+    .select("id, brand_id, creator_id, title, price_naira, status, in_house")
     .eq("id", gigId)
     .maybeSingle();
   if (!gig || gig.brand_id !== user.id) return { error: "Not allowed." };
 
   const admin = createAdminClient();
+
+  // In-house work was never charged. Completing it closes the job and does not
+  // queue a payout or write a ledger row.
+  if (gig.in_house) {
+    const { data: done } = await admin
+      .from("gigs")
+      .update({ status: "completed" })
+      .eq("id", gigId)
+      .in("status", ["funded", "in_progress", "in_review", "revision", "approved"])
+      .select("id")
+      .maybeSingle();
+    if (!done) return { error: "This job can't be marked complete from its current state." };
+    await admin.from("deliverables").update({ status: "approved" }).eq("id", deliverableId).eq("gig_id", gigId);
+    await notifyMany(admin, [
+      { userId: gig.creator_id, payload: { type: "gig_update", title: "Your work was marked complete", body: `"${gig.title}" is complete. This was in-house work, so there is no payout from the platform.`, href: `/gigs/${gigId}`, ctaLabel: "View the gig" } },
+      { userId: gig.brand_id, payload: { type: "gig_update", title: "Job marked complete", body: `You marked "${gig.title}" complete.`, href: `/gigs/${gigId}`, ctaLabel: "View the gig" } },
+    ]);
+    revalidatePath(`/gigs/${gigId}`);
+    return { ok: true, payoutQueued: false };
+  }
+
   const released = await releaseHeldGig(admin, gigId, {
     deliverableId,
     memo: "Released to creator on approval",

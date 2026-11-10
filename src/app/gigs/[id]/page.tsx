@@ -52,12 +52,14 @@ async function GigInner({ params }: { params: Promise<{ id: string }> }) {
 
   const { data: gig } = await supabase
     .from("gigs")
-    .select("id, title, status, price_naira, fee_naira, tax_naira, brand_id, creator_id, needs_product, shipping_address, shipping_status, needs_location, location_address, location_status")
+    .select("id, title, status, price_naira, fee_naira, tax_naira, in_house, brand_id, creator_id, needs_product, shipping_address, shipping_status, needs_location, location_address, location_status")
     .eq("id", id)
     .maybeSingle();
   if (!gig) return <div className="py-20 text-center text-ink-2">Gig not found.</div>;
 
-  const role: "brand" | "creator" = gig.brand_id === user.id ? "brand" : "creator";
+  const observer = gig.brand_id !== user.id && gig.creator_id !== user.id;
+  const role: "brand" | "creator" = gig.brand_id === user.id || observer ? "brand" : "creator";
+  const inHouse = !!gig.in_house;
 
   // A gig means a funded contract, so the two parties can see each other's
   // real name + phone to coordinate (hidden everywhere else until this point).
@@ -131,6 +133,15 @@ async function GigInner({ params }: { params: Promise<{ id: string }> }) {
   }
 
   const funded = ["funded", "in_progress", "in_review", "revision", "approved", "released", "completed"].includes(gig.status);
+  const { data: convo } = funded
+    ? await createAdminClient()
+        .from("conversations")
+        .select("id")
+        .eq("brand_id", gig.brand_id)
+        .eq("creator_id", gig.creator_id)
+        .maybeSingle()
+    : { data: null };
+  const messageHref = convo ? (observer ? `/admin/messages?c=${convo.id}` : `/messages/${convo.id}`) : null;
   const { data: meetings } = funded
     ? await supabase
         .from("meetings")
@@ -156,16 +167,26 @@ async function GigInner({ params }: { params: Promise<{ id: string }> }) {
         role={role}
         deliverable={deliverable}
         comments={comments}
+        inHouse={inHouse}
+        readOnly={observer}
       />
 
       <div className="max-w-2xl pb-14">
-        {funded && (
+        {observer && (
+          <p className="mb-6 text-sm text-ink-3">Admin view. The brand and the creator are the ones who work this job.</p>
+        )}
+        {messageHref && (
+          <p className="mb-6 text-sm">
+            <Link href={messageHref} className="font-medium text-accent hover:underline">Open the conversation</Link>
+          </p>
+        )}
+        {funded && !observer && (
           <MeetingScheduler gigId={gig.id} currentUserId={user.id} meetings={(meetings ?? []) as Meeting[]} />
         )}
-        {gig.needs_product && funded && (
+        {gig.needs_product && funded && !observer && (
           <ProductLogistics gigId={gig.id} role={role} address={gig.shipping_address} status={gig.shipping_status} />
         )}
-        {gig.needs_location && funded && (
+        {gig.needs_location && funded && !observer && (
           <LocationVisit gigId={gig.id} role={role} address={gig.location_address} status={gig.location_status} />
         )}
         {contact && (contact.phone || contact.name) && (
@@ -200,17 +221,17 @@ async function GigInner({ params }: { params: Promise<{ id: string }> }) {
           </div>
         )}
 
-        {!dispute && gig.status === "completed" && !myReview && (
+        {!observer && !dispute && gig.status === "completed" && !myReview && (
           <ReviewForm gigId={id} subjectLabel={role === "brand" ? "the creator" : "the brand"} />
         )}
 
-        {!dispute && gig.status === "completed" && role === "creator" && (
+        {!observer && !dispute && gig.status === "completed" && role === "creator" && (
           <div className="mt-6">
             <AddVerifiedWork gigId={id} alreadyFeatured={!!featured} />
           </div>
         )}
 
-        {!dispute && !["completed", "cancelled", "disputed"].includes(gig.status) && (
+        {!observer && !dispute && !["completed", "cancelled", "disputed"].includes(gig.status) && (
           <div className="mt-6">
             <OpenDispute gigId={id} />
           </div>

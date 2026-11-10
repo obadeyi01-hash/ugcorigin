@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fundOfferAction } from "@/app/offers/actions";
+import { getOrCreateConversation } from "@/app/messages/actions";
+import { notifyUser } from "@/lib/notify";
 import { requireLiveCreator, requireVerifiedBrand } from "@/lib/verification/gates";
 
 async function auth() {
@@ -85,8 +87,8 @@ export async function applyToBriefAction(
   return { ok: true };
 }
 
-/** Brand selects an applicant → creates an accepted offer → funds it (reuses escrow flow). */
-export async function selectApplicantAction(applicationId: string): Promise<{ url?: string; configured?: boolean; error?: string }> {
+/** Brand selects an applicant. Paid briefs fund an offer. In-house briefs start the job and the conversation with no charge. */
+export async function selectApplicantAction(applicationId: string): Promise<{ url?: string; configured?: boolean; href?: string; error?: string }> {
   const { supabase, user } = await auth();
   if (!user) return { error: "Please sign in again." };
 
@@ -99,7 +101,7 @@ export async function selectApplicantAction(applicationId: string): Promise<{ ur
 
   const { data: brief } = await supabase
     .from("briefs")
-    .select("id, brand_id, title, description, budget_naira, deadline, status")
+    .select("id, brand_id, title, description, budget_naira, deadline, status, in_house")
     .eq("id", app.brief_id)
     .maybeSingle();
   if (!brief || brief.brand_id !== user.id) return { error: "Not allowed." };
@@ -133,6 +135,60 @@ export async function selectApplicantAction(applicationId: string): Promise<{ ur
     .select("id")
     .maybeSingle();
   if (!claimed) return { error: "This applicant has already been selected." };
+
+  // In-house work is the company's own. Accepting starts the job and opens the
+  // conversation. No charge, no escrow, no payout.
+  if (brief.in_house) {
+    const { data: gig, error: gigError } = await admin
+      .from("gigs")
+      .insert({
+        brand_id: user.id,
+        creator_id: app.creator_id,
+        brief_id: brief.id,
+        title: brief.title,
+        price_naira: brief.budget_naira ?? 0,
+        fee_naira: 0,
+        tax_naira: 0,
+        in_house: true,
+        status: "in_progress",
+        review_window_days: 7,
+        deadline: brief.deadline ?? null,
+      })
+      .select("id")
+      .single();
+    if (gigError || !gig) {
+      await admin.from("applications").update({ status: "applied" }).eq("id", applicationId).eq("status", "selected");
+      return { error: gigError?.message ?? "Could not start the job." };
+    }
+
+    const convo = await getOrCreateConversation(app.creator_id);
+    if (!convo.id) {
+      await admin.from("gigs").delete().eq("id", gig.id);
+      await admin.from("applications").update({ status: "applied" }).eq("id", applicationId).eq("status", "selected");
+      return { error: convo.error ?? "Could not open the conversation." };
+    }
+
+    await admin.from("messages").insert({
+      conversation_id: convo.id,
+      sender_id: user.id,
+      body: `You're selected for “${brief.title}”. Reply here and we'll go through the brief together.`,
+    });
+    await admin.from("conversations").update({ last_message_at: new Date().toISOString() }).eq("id", convo.id);
+
+    await notifyUser(admin, app.creator_id, {
+      type: "offer_accepted",
+      title: `You're selected for “${brief.title}”`,
+      body: "The brand accepted your application. The conversation is open, so you can reply and start the work.",
+      href: `/messages/${convo.id}`,
+      ctaLabel: "Open the conversation",
+    });
+
+    revalidatePath(`/briefs/${brief.id}`);
+    revalidatePath("/dashboard");
+    revalidatePath("/messages");
+    revalidatePath("/admin/gigs");
+    return { href: `/messages/${convo.id}` };
+  }
 
   // Create an accepted offer derived from the brief (the creator opted in by applying).
   const { data: offer, error: offerErr } = await admin
