@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatNaira } from "@/lib/utils";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/services" },
   title: "Services",
   description: "Browse ready-to-buy UGC packages from verified Nigerian creators.",
 };

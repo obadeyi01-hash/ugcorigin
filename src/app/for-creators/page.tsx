@@ -17,6 +17,7 @@ const SIGNUP = "/signup?role=creator";
 const FLOOR = tierMeta("origin").floorNaira; // honest: the Origin-tier price floor
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/for-creators" },
   title: "Get paid for the content you make",
   description:
     "Join Nigeria's home for original, human content. Keep 100% of your rate, get next-day payouts to your bank, and build a reputation that pays. Free to join.",

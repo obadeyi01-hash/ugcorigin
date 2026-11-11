@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { SimplePage } from "@/components/layout/simple-page";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/trust" },
   title: "Trust & Safety",
   description: "How UGCOrigin keeps brands and creators safe, payment protection, verification, and fair disputes.",
 };

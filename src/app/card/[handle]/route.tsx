@@ -66,6 +66,20 @@ function cleanHandle(h: string) {
   return decodeURIComponent(h).replace(/^@/, "").toLowerCase();
 }
 
+// next/og (Satori) ignores EXIF orientation, so a phone photo renders sideways
+// and the raw original is heavy. Route a Cloudinary avatar through a transform:
+// Cloudinary auto-applies EXIF orientation on any derivation, and c_fill crops
+// to the photo panel while q_auto + f_jpg keep it light and Satori-decodable.
+// Non-Cloudinary URLs pass through unchanged.
+function cardAvatar(url: string | null): string | null {
+  if (!url) return null;
+  const marker = "/image/upload/";
+  const i = url.indexOf(marker);
+  if (i === -1) return url;
+  const at = i + marker.length;
+  return `${url.slice(0, at)}c_fill,g_auto,w_450,h_630,q_auto:good,f_jpg/${url.slice(at)}`;
+}
+
 async function loadCard(handleRaw: string): Promise<Card | null> {
   const handle = cleanHandle(handleRaw);
   if (handle === "demo") return DEMO;
@@ -144,7 +158,7 @@ export async function GET(
         <div style={{ display: "flex", width: 450, height: H }}>
           {card.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={card.avatarUrl} width={450} height={H} style={{ objectFit: "cover" }} alt="" />
+            <img src={cardAvatar(card.avatarUrl) ?? card.avatarUrl} width={450} height={H} style={{ objectFit: "cover" }} alt="" />
           ) : (
             <div style={{ display: "flex", width: 450, height: H, alignItems: "center", justifyContent: "center", background: "#ec4899", color: "#fff", fontSize: 180, fontWeight: 800 }}>
               {initials(card.name)}

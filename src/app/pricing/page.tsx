@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/pricing" },
   title: "Pricing",
   description:
     "Free to join and browse. One clear cost of doing business for brands: verified human creators, payment released only when you approve, and full usage rights. Creators keep what they earn.",

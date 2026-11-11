@@ -14,7 +14,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/role";
 import { formatNaira } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "Per-view campaigns" };
+export const metadata: Metadata = { title: "Per-view campaigns", alternates: { canonical: "/campaigns" } };
 
 type SP = { page?: string };
 

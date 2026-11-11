@@ -12,6 +12,7 @@ import { tierMeta } from "@/lib/tiers";
 import { publicName } from "@/lib/names";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/leaderboard" },
   title: "Weekly creator leaderboard",
   description:
     "The top-performing verified UGC creators on UGCOrigin this week, ranked by real delivered work, reputation and reviews.",

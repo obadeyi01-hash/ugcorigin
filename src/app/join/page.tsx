@@ -46,10 +46,20 @@ type BriefRow = {
  * is open right now, not a promise. The hiring company stays private (same
  * masking as the public briefs board). A DB hiccup must never break the page.
  */
+// /join is the ad landing page, so it takes bursts of cold clicks. Cache the
+// public snapshot for a minute (in-memory, per server instance) so repeated
+// hits don't re-query the DB. The data is public and changes slowly, so a
+// minute of staleness is fine.
+let briefsCache: { at: number; data: { total: number; sample: BriefRow[] } } | null = null;
+const BRIEFS_TTL_MS = 60_000;
+
 async function openBriefs(): Promise<{ total: number; sample: BriefRow[] }> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return { total: 0, sample: [] };
+  // createClient stays above the cache check so the page's dynamic behavior is
+  // unchanged; only the two queries are skipped on a warm cache.
+  const supabase = await createClient();
+  if (briefsCache && Date.now() - briefsCache.at < BRIEFS_TTL_MS) return briefsCache.data;
   try {
-    const supabase = await createClient();
     const today = new Date().toISOString().slice(0, 10);
     const notExpired = `deadline.is.null,deadline.gte.${today}`;
     const [{ count }, { data }] = await Promise.all([
@@ -62,9 +72,11 @@ async function openBriefs(): Promise<{ total: number; sample: BriefRow[] }> {
         .order("created_at", { ascending: false })
         .limit(4),
     ]);
-    return { total: count ?? 0, sample: ((data ?? []) as unknown as BriefRow[]) };
+    const result = { total: count ?? 0, sample: ((data ?? []) as unknown as BriefRow[]) };
+    briefsCache = { at: Date.now(), data: result };
+    return result;
   } catch {
-    return { total: 0, sample: [] };
+    return briefsCache?.data ?? { total: 0, sample: [] };
   }
 }
 

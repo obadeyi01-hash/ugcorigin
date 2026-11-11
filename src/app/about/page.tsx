@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { SimplePage } from "@/components/layout/simple-page";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/about" },
   title: "About",
   description: "UGCOrigin is the creator network for original, human, verified content, Nigeria-first.",
 };

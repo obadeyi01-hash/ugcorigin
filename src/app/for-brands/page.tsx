@@ -16,6 +16,7 @@ import { SAMPLE_CREATORS } from "@/lib/sample-data";
 const SIGNUP = "/signup?role=brand";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/for-brands" },
   title: "Hire verified UGC creators",
   description:
     "Get authentic, human UGC that converts, from identity-verified Nigerian creators. Payment-protected, pay only on approval, next-day payouts. Post a brief free.",

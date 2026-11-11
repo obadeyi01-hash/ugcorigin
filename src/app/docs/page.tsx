@@ -9,6 +9,7 @@ import { Card, CardBody } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/docs" },
   title: "Documentation",
   description: "How UGCOrigin works, fees, payment protection, payouts, trust & safety, and guides for brands and creators.",
 };

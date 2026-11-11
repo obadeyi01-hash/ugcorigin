@@ -20,6 +20,7 @@ import { formatNaira } from "@/lib/utils";
 import { Notice } from "@/components/ui/notice";
 import { JsonLd, SITE_URL } from "@/components/seo/json-ld";
 import { FireEvent } from "@/components/analytics/fire-event";
+import { ShareButton } from "@/components/share/share-button";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -109,7 +110,7 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
     validThrough: brief.deadline ?? undefined,
     employmentType: "CONTRACTOR",
     directApply: true,
-    hiringOrganization: { "@type": "Organization", name: company, url: SITE_URL },
+    hiringOrganization: { "@type": "Organization", name: "UGCOrigin", url: SITE_URL },
     jobLocation: { "@type": "Place", address: { "@type": "PostalAddress", addressCountry: "NG" } },
     applicantLocationRequirements: { "@type": "Country", name: "Nigeria" },
     baseSalary: {
@@ -151,6 +152,10 @@ async function BriefInner({ params }: { params: Promise<{ id: string }> }) {
             <p className="mt-3 flex items-center gap-1.5 text-sm text-ink-2"><Users className="size-4" /> {brief.slots} creator{brief.slots === 1 ? "" : "s"} needed</p>
             {location && <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-2"><MapPin className="size-4" /> {location}</p>}
             {brief.deadline && <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-2"><CalendarClock className="size-4" /> Due {brief.deadline}</p>}
+
+            <div className="mt-4">
+              <ShareButton url={`${SITE_URL}/briefs/${id}`} title={brief.title} label="Share brief" />
+            </div>
 
             {isOwner && brief.status === "open" && (
               <div className="mt-5">
