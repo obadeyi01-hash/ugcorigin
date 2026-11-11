@@ -79,8 +79,15 @@ const audiences = [
 // strip instances. Falls back to the pre-launch sample set until real creators
 // exist. Fetched inside Suspense so the static landing shell isn't blocked.
 const getStrip = cache(async () => {
-  const live = await topRankedCreators(8);
-  return live.length >= 4 ? live : SAMPLE_CREATORS;
+  // Hold the homepage on the curated pre-launch personas until the founder opts
+  // in — even once 4+ real creators are live. The directory (/creators) already
+  // shows real people; this just controls the marketing homepage so we choose
+  // when to put real faces up front. Set HOMEPAGE_LIVE_CREATORS=true to switch.
+  if (process.env.HOMEPAGE_LIVE_CREATORS === "true") {
+    const live = await topRankedCreators(8);
+    if (live.length >= 4) return live;
+  }
+  return SAMPLE_CREATORS;
 });
 
 async function HeroStrip() {
